@@ -1,0 +1,2 @@
+const COMPATIBILITY_ID = 26586;
+<!DOCTYPE html><html><body>503 Service Unavailable</body></html>
