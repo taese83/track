@@ -27,7 +27,7 @@ allowlist 밖 host, 존재하지 않는 코드, 업스트림 5xx/네트워크 �
 
 - `api/track.ts` — Vercel serverless function 엔트리 (입력 검증 → 업스트림 fetch → `compat`/`text` 추출 → 응답)
 - `src/shared/lib/track/extract-upstream-vars.ts` — 업스트림 JS 텍스트에서 `compat`/`text` 정규식 추출
-- `src/entities/track/model/schema.ts` — `trackCodeSchema`, `rawTrackResponseSchema`
+- `src/entities/track/model/schema.ts` — `TRACK_CODE_PATTERN`/`isTrackCode`, `isRawTrackResponse` (zod 미채택 — 정규식+수기 타입가드)
 - `src/entities/track/model/types.ts` — `RawTrackResponse`, `TrackErrorCode`, `ResponseErrorType`
 - `fixtures/track/*.js.txt` — 7종 업스트림 원문 + 서버 에러 fixture
 - 참고: `ParsedPiece`/`RestoredPath`/`ElevatedSegment` 스키마는 이 API의 응답 경계가 아니라
