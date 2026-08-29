@@ -958,7 +958,7 @@
   ],
   "sourceSnapshot": {
     "algorithm": "sha256",
-    "digest": "19ca8f754d0028ee6e0f9c25ff2281694dd7203894576e65dd8e01f0d62e5910",
+    "digest": "3ce9eb36d41384469f56d269e69505fd541e3dd32783b741037275b5dbae3cc8",
     "files": [
       {
         "path": "_workspace/01_plan/feature-plan/data-model.md",
@@ -982,7 +982,7 @@
       },
       {
         "path": "_workspace/01_plan/feature-plan/specs-surfaces.md",
-        "sha256": "cd4f5aecb67e5cd779c88d42272ebbb14c6478d1e018f432ec7c3db9d50ddbd1"
+        "sha256": "d767ab3e89b377f8e450fb8889cac894f1783b8a3ac766762bf27aa743be467e"
       },
       {
         "path": "_workspace/01_plan/feature-plan/traceability.md",
@@ -1026,7 +1026,7 @@
       },
       {
         "path": "_workspace/02_design/component-spec/widgets.md",
-        "sha256": "33bc38264966006be8e0db06ea7183bc256da2450007ddd0a597a31f40887812"
+        "sha256": "0c0ec70e475a9782e70543ea6e4fc72e748059116e60b19bdca2cbd8cb5422cd"
       },
       {
         "path": "_workspace/02_design/design-system/accessibility.md",
@@ -1046,7 +1046,7 @@
       },
       {
         "path": "_workspace/02_design/layout-spec/a11y-responsive.md",
-        "sha256": "50d990e71325cfb24224adb2cf3ac6d673fcaa12ffdfb1c92fe48e47dcb0c961"
+        "sha256": "6143849505290f62e29b6e9a9481eebd413e2c7e7c2823ca5fc5eec7c7e67235"
       },
       {
         "path": "_workspace/02_design/layout-spec/global-shell.md",

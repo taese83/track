@@ -47,8 +47,8 @@ interface SectionListProps {
   focusedIndex: number             // 키보드 roving 포커스 — currentIndex와 분리(아래 참고)
   onFocusMove: (index: number) => void   // ↑↓ 이동, setCursor 호출 안 함
   onSelect: (index: number) => void      // Enter/클릭 — 내부에서 setCursor(index,'list') 호출
-  expanded: boolean                // WebGL 미지원 시 true 강제(토글 불가)
-  onToggleExpanded?: () => void     // 그 외 상태에서만 제공(접이식)
+  expanded: boolean                // sidebar: 목록 폭/사이드 레일 전환, WebGL 미지원 시 true 강제
+  onToggleExpanded?: () => void     // 그 외 상태에서만 제공(접이식, 선택·focusedIndex 보존)
   variant: 'sidebar' | 'full-width'
   loading?: boolean
 }
@@ -59,9 +59,9 @@ interface SectionListProps {
 - **실패 행**: `aria-disabled="true"`, `onSelect` 호출 자체를 막는다(1차 방어) + `useTrackCursor().isReachable()`이 2차 방어(shared.md). 시각: `--color-fail-segment` 배경 + 아이콘, 텍스트로도 "연결 실패로 접근 불가" sr-only 부기(색 단독 금지).
 - **미지원 행**: `unsupportedLabel`을 라벨 옆에 그대로 노출, 뭉뚱그리지 않음(TC-009-3).
 - **로딩**: 320px/100% 폭 그대로 shimmer 스켈레톤 행(개수는 이전 로드 시 알려진 총량 없으면 12행 고정 placeholder) — 셸 치수 불변(layout-spec §1 규칙 #2).
+- **데스크톱/태블릿 접힘**: `variant='sidebar' && expanded=false`이면 목록 행을 `hidden`으로 상호작용 트리에서 제외하고 패널은 왼쪽 56px 사이드 레일로 유지한다. 토글은 레일 안에 남아 접근 가능한 이름 `펼치기`, `aria-expanded=false`, 유효한 `aria-controls` 대상을 제공하며, 캔버스가 남은 가로 폭을 사용한다. 다시 펼칠 때 `currentIndex`, `focusedIndex`, 토글의 키보드 포커스를 보존한다(TC-013-1).
 - **WebGL 미지원**: `variant='full-width'`, `expanded=true` 고정, 토글 컨트롤 자체를 렌더하지 않는다 — **이것은 토글이 아니라 대체 화면**이므로 "접었다 펼 수 있는 옵션"으로 보이면 안 된다(제품 계약 §4, 협상 불가).
-- **측면 접기 계약**: `variant='sidebar'`에서 `expanded=false`이면 패널을 제거하거나 위로 접지 않고 좌측 56px 레일을 유지한다. 레일에는 세로 제목과 "펼치기" 버튼만 남기고, 캔버스가 나머지 폭을 사용한다. 토글은 `aria-controls`와 `aria-expanded`를 동기화하고 재렌더 뒤에도 포커스를 유지한다. 다시 펼치면 기존 280~340px 폭과 전체 행을 복원한다.
-- **모바일 reflow**: 640px 이하에서 `variant='sidebar'`는 측면 레일 대신 캔버스 아래의 가로 아코디언(기본 접힘 + "132개 구간" 배지 카운트)으로 전환한다(a11y-responsive §반응형).
+- **모바일 reflow**: `variant='sidebar'`가 아코디언(기본 접힘 + "132개 구간" 배지 카운트)으로 전환(a11y-responsive §반응형).
 
 ### ProfileStrip — FEAT-007/012 owner
 

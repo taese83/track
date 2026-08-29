@@ -3,7 +3,7 @@
 html, body {
   margin: 0;
   height: 100%;
-  min-width: 0;
+  min-width: 960px; /* 데스크탑 전용 데이터 밀집 앱 — 축소 대신 가로 스크롤(design-preview-builder 규칙 5-2) */
   background: var(--bg-canvas);
   color: var(--text-primary);
   font-family: var(--font-ui);
@@ -109,7 +109,7 @@ a.btn-link, a.source-link { color: var(--fall-fg); }
 
 /* ---------- 3분할 셸 ---------- */
 .viewer-shell { flex: 1; display: grid; grid-template-rows: 1fr auto; min-height: 0; }
-.viewer-main { display: grid; grid-template-columns: minmax(280px, 340px) minmax(0, 1fr); min-height: 0; transition: grid-template-columns var(--duration-base); }
+.viewer-main { display: grid; grid-template-columns: 340px minmax(0, 1fr); min-height: 0; }
 .viewer-main.list-collapsed { grid-template-columns: 56px minmax(0, 1fr); }
 .viewer-main.full-width { grid-template-columns: 1fr; }
 
@@ -124,16 +124,16 @@ a.btn-link, a.source-link { color: var(--fall-fg); }
 }
 .section-list-header h2 { font-size: 14px; font-weight: 600; }
 .section-list-header .count-badge { font-size: 11px; color: var(--text-secondary); background: var(--bg-raised); border-radius: var(--radius-pill); padding: 2px 8px; }
-.section-list-toggle { flex: 0 0 auto; padding: 2px 8px; font-size: 11px; }
+.toggle-section-list { font-size: 11px; padding: 2px 8px; white-space: nowrap; }
 .section-list-panel.collapsed .section-list-header {
   flex: 1; flex-direction: column; justify-content: flex-start; gap: var(--spacing-3);
-  padding: var(--spacing-3) var(--spacing-2); border-bottom: 0;
+  padding: var(--spacing-3) 4px; border-bottom: none;
 }
-.section-list-panel.collapsed .section-list-header h2 {
-  writing-mode: vertical-rl; text-orientation: mixed; white-space: nowrap;
+.section-list-panel.collapsed .section-list-header h2,
+.section-list-panel.collapsed .section-list-header .count-badge { display: none; }
+.section-list-panel.collapsed .toggle-section-list {
+  writing-mode: vertical-rl; width: 32px; padding: 8px 4px;
 }
-.section-list-panel.collapsed .count-badge { display: none; }
-.section-list-panel.collapsed .section-list-toggle { padding: 6px 4px; writing-mode: vertical-rl; }
 [role="listbox"].section-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; flex: 1; }
 .section-row {
   display: flex; align-items: center; gap: var(--spacing-2);
@@ -152,6 +152,35 @@ a.btn-link, a.source-link { color: var(--fall-fg); }
 .section-row .fall-text { color: var(--fall-fg); }
 .skeleton-row { height: 28px; margin: 3px var(--spacing-4); border-radius: 4px; background: linear-gradient(90deg, var(--bg-raised) 25%, var(--bg-surface) 50%, var(--bg-raised) 75%); background-size: 200% 100%; animation: shimmer 1.2s infinite; }
 @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+/* 좁은 CSS 뷰포트/400% 확대에서는 기존 세로 아코디언 계약을 유지한다. */
+@media (max-width: 640px) {
+  html, body { min-width: 320px; }
+  .top-bar { flex-wrap: wrap; }
+  .top-bar .actions { width: 100%; margin-left: 0; flex-wrap: wrap; }
+  .viewer-main,
+  .viewer-main.list-collapsed {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(240px, 1fr) auto;
+  }
+  .viewer-main.full-width { grid-template-rows: minmax(0, 1fr); }
+  .canvas-column { grid-row: 1; }
+  .section-list-panel {
+    grid-row: 2; max-height: min(40vh, 320px); border-right: none; border-top: 1px solid var(--border);
+  }
+  .section-list-panel.collapsed .section-list-header {
+    flex: 0 0 auto; flex-direction: row; justify-content: space-between;
+    padding: var(--spacing-3) var(--spacing-4); border-bottom: none;
+  }
+  .section-list-panel.collapsed .section-list-header h2,
+  .section-list-panel.collapsed .section-list-header .count-badge { display: inline-flex; }
+  .section-list-panel.collapsed .toggle-section-list {
+    writing-mode: horizontal-tb; width: auto; padding: 2px 8px;
+  }
+  .viewer-main.full-width .section-list-panel { grid-row: 1; max-height: none; }
+  .section-row { flex-wrap: wrap; }
+  .section-row .label { white-space: normal; overflow: visible; }
+}
 
 /* ---------- Evidence Badge ---------- */
 .evidence-badge {
@@ -248,33 +277,6 @@ a.btn-link, a.source-link { color: var(--fall-fg); }
 
 /* ---------- WebGL fallback ---------- */
 .webgl-note { padding: var(--spacing-3) var(--spacing-4); font-size: 13px; color: var(--text-secondary); background: var(--info-bg); border-bottom: 1px solid var(--border); }
-
-/* 320 CSS px / 400% reflow: 데스크톱의 측면 레일을 세로 스택 아코디언으로 바꾼다. */
-@media (max-width: 640px) {
-  body { overflow-x: hidden; }
-  .top-bar { align-items: flex-start; flex-wrap: wrap; }
-  .top-bar .actions { width: 100%; margin-left: 0; flex-wrap: wrap; }
-  .viewer-main, .viewer-main.list-collapsed {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(240px, 1fr) auto;
-  }
-  .canvas-column { grid-row: 1; min-width: 0; }
-  .section-list-panel { grid-row: 2; max-height: min(42vh, 360px); border-right: 0; border-top: 1px solid var(--border); }
-  .section-list-panel.collapsed .section-list-header {
-    flex-direction: row; align-items: center; justify-content: space-between;
-    padding: var(--spacing-2) var(--spacing-3); border-bottom: 0;
-  }
-  .section-list-panel.collapsed .section-list-header h2,
-  .section-list-panel.collapsed .section-list-toggle { writing-mode: horizontal-tb; }
-  .section-list-panel.collapsed .count-badge { display: inline-flex; }
-  .section-list-panel.collapsed .section-list-toggle { padding: 2px 8px; }
-  .section-row { flex-wrap: wrap; white-space: normal; }
-  .section-row .label { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
-  .canvas-fidelity-note, .orbit-hint { max-width: calc(100% - (var(--spacing-3) * 2)); }
-  .control-cluster { max-width: calc(100% - (var(--spacing-3) * 2)); flex-wrap: wrap; }
-  .totals-bar { flex-wrap: wrap; }
-  .dev-state-panel { max-width: calc(100% - 16px); }
-}
 
 /* ---------- 로딩 ---------- */
 .loading-shell { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--spacing-4); }

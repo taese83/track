@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "runId": "RUN-CHG-20260829-003-apply-1c39eb83-6a2d-46b9-a343-e82023367540",
+  "status": "READY",
+  "baseDigest": "5dbecfad9a8892467364e603a652baaf881fae9fdb77c6dbf9026c955ae5b4ed",
+  "candidateDigest": "55ceb448fe249323530ccb568f135efe65179d41c3617257a874b3109962b7e6",
+  "baseFileCount": 74,
+  "baseBytes": 577614,
+  "changedFiles": [
+    {
+      "path": "_workspace/01_plan/feature-plan/specs-surfaces.md",
+      "kind": "modified",
+      "beforeDigest": "d767ab3e89b377f8e450fb8889cac894f1783b8a3ac766762bf27aa743be467e",
+      "afterDigest": "cd4f5aecb67e5cd779c88d42272ebbb14c6478d1e018f432ec7c3db9d50ddbd1",
+      "size": 8118,
+      "mode": 420
+    },
+    {
+      "path": "_workspace/02_design/component-spec/widgets.md",
+      "kind": "modified",
+      "beforeDigest": "0c0ec70e475a9782e70543ea6e4fc72e748059116e60b19bdca2cbd8cb5422cd",
+      "afterDigest": "33bc38264966006be8e0db06ea7183bc256da2450007ddd0a597a31f40887812",
+      "size": 11213,
+      "mode": 420
+    },
+    {
+      "path": "_workspace/02_design/layout-spec/a11y-responsive.md",
+      "kind": "modified",
+      "beforeDigest": "6143849505290f62e29b6e9a9481eebd413e2c7e7c2823ca5fc5eec7c7e67235",
+      "afterDigest": "50d990e71325cfb24224adb2cf3ac6d673fcaa12ffdfb1c92fe48e47dcb0c961",
+      "size": 4909,
+      "mode": 420
+    },
+    {
+      "path": "_workspace/02_design/preview/app.css",
+      "kind": "modified",
+      "beforeDigest": "3cf882b3abc3b38f657a1af2230cc99c8df4fc813d9fcefce50b5b4c79ab9fcd",
+      "afterDigest": "b2e134f7b58ce8ca9098f48dd4b3ee0e8c3d9c8db41ae63aff89eb8073846b59",
+      "size": 20397,
+      "mode": 420
+    },
+    {
+      "path": "_workspace/02_design/preview/app.js",
+      "kind": "modified",
+      "beforeDigest": "caeb5c7bc452449b4cff9f75a4ce466796ff3c5f964c2f68d79121f460e3fcc2",
+      "afterDigest": "857d892f577fdcc18d8f49255351002ca5c80bfdfc239515c96cc3ace443286e",
+      "size": 51417,
+      "mode": 420
+    },
+    {
+      "path": "_workspace/02_design/preview/behaviors.md",
+      "kind": "modified",
+      "beforeDigest": "9a2b9e7b1c11330f1178ec60f232c40bf5663eba7aafb44839f857950ec97381",
+      "afterDigest": "cbb8c7c4adca30481664c5198813cd54b87e69b1d46d49d2f4607ceb51d20a6b",
+      "size": 19666,
+      "mode": 420
+    },
+    {
+      "path": "_workspace/02_design/preview/traceability.json",
+      "kind": "modified",
+      "beforeDigest": "0747a00d5e462dbe0de1b573375ec234c8f1a18763200b4576aef47d6f574e6a",
+      "afterDigest": "e6b715090161263cb9eaa092da25e39ef26e98df8cd3273461a8e7e5f4fff174",
+      "size": 38909,
+      "mode": 420
+    }
+  ]
+}

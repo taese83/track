@@ -102,14 +102,16 @@ function enterLoadedState(result, code) {
   S.focusedIndex = 0
   mountCursor(result.segments)
   const webglOk = S.runtimeFailureSim ? (S.runtimeFailureSim = false, false) : effectiveWebgl()
-  S.listExpanded = webglOk ? !window.matchMedia('(max-width: 640px)').matches : true
   if (!webglOk) {
     S.view = { kind: 'webgl-unsupported' }
+    S.listExpanded = true
     navigate({ state: 'webgl', code, i: 0 })
   } else if (result.truncatedAt !== null || !result.isZClosed) {
+    S.listExpanded = !window.matchMedia('(max-width: 640px)').matches
     S.view = { kind: 'partial-failure' }
     navigate({ state: 'partial', code, i: 0 })
   } else {
+    S.listExpanded = !window.matchMedia('(max-width: 640px)').matches
     S.view = { kind: '3d' }
     navigate({ state: '3d', code, i: 0 })
   }
@@ -203,6 +205,7 @@ function renderRationale() {
 // 화면: 입력 대기
 // ---------------------------------------------------------------------------
 function renderInputScreen() {
+  const codes = store.FIXTURE_CODES.filter(c => !['MALFORMED', 'EMPTY'].includes(c))
   const card = h('div', { class: 'center-card' }, [
     h('h1', { text: '미니4WD 트랙 3D 뷰어' }),
     h('p', { class: 'hint', text: '공유 링크(view/XXXXXX 형식)를 붙여넣으면 트랙을 조회합니다.' }),
@@ -228,6 +231,17 @@ function renderInputScreen() {
       })
       return form
     })(),
+    h('div', { class: 'example-codes' }, [
+      '예시 코드: ',
+      ...codes.flatMap(c => [h('code', { text: `view/${c}`, tabindex: '0', role: 'button', onClick: () => { S.inputValue = `view/${c}`; render(); document.getElementById('url-input')?.focus() } }), ' ']),
+      h('br'),
+      '오류 데모: ',
+      h('code', { text: 'view/NETERR', tabindex: '0', role: 'button', onClick: () => { S.inputValue = 'view/NETERR'; render() } }), ' ',
+      h('code', { text: 'view/TIMEOUT', tabindex: '0', role: 'button', onClick: () => { S.inputValue = 'view/TIMEOUT'; render() } }), ' ',
+      h('code', { text: 'view/PARSEER', tabindex: '0', role: 'button', onClick: () => { S.inputValue = 'view/PARSEER'; render() } }), ' ',
+      h('code', { text: 'view/ZZZZZZ', tabindex: '0', role: 'button', onClick: () => { S.inputValue = 'view/ZZZZZZ'; render() } }),
+      h('span', { class: 'sr-only', text: '(미등록 코드 — 트랙을 찾을 수 없습니다)' }),
+    ]),
   ])
   return h('div', { class: 'center-card-shell' }, [card])
 }
@@ -310,33 +324,27 @@ function appHeader() {
 // ---------------------------------------------------------------------------
 function renderSectionList() {
   const segs = S.track.segments
-  const canCollapse = S.view.kind !== 'webgl-unsupported'
-  const panel = h('section', {
-    class: `section-list-panel${canCollapse && !S.listExpanded ? ' collapsed' : ''}`,
-    id: 'main-content', 'aria-labelledby': 'section-list-heading',
-    'data-wh-anchor': 'wh-feat-section-list', 'data-wh-feature': 'FEAT-013',
-    'data-wh-tests': 'TC-013-1,TC-013-2,TC-013-3,TC-013-4,TC-013-5',
+  const panel = h('div', {
+    class: `section-list-panel${S.listExpanded ? '' : ' collapsed'}`,
+    id: 'main-content', tabindex: '-1',
   })
   panel.append(h('div', { class: 'section-list-header' }, [
     h('h2', { id: 'section-list-heading', text: '텍스트 구간 목록' }),
     h('span', { class: 'count-badge', text: `${segs.length}개 구간` }),
-    canCollapse ? h('button', {
-      class: 'btn section-list-toggle', type: 'button', 'aria-controls': 'section-list-items',
-      'aria-expanded': String(S.listExpanded), 'aria-label': S.listExpanded ? '텍스트 구간 목록 접기' : '텍스트 구간 목록 펼치기',
+    S.view.kind !== 'webgl-unsupported' ? h('button', {
+      class: 'btn toggle-section-list', type: 'button',
+      'aria-controls': 'section-list-items', 'aria-expanded': String(S.listExpanded),
+      'aria-label': S.listExpanded ? '텍스트 구간 목록 접기' : '텍스트 구간 목록 펼치기',
       text: S.listExpanded ? '접기' : '펼치기',
       onClick: () => { S.listExpanded = !S.listExpanded; renderViewerBody() },
     }) : null,
   ]))
-  if (!S.listExpanded) {
-    panel.append(h('div', { id: 'section-list-items', hidden: true }))
-    return panel
-  }
-
   const list = h('ul', {
     // `section-list`가 스크롤 규칙(app.css `[role="listbox"].section-list`)을 받는 클래스다.
     // 종전에는 앵커 클래스만 붙어 규칙이 한 번도 걸리지 않았고, 132행이 그대로 펼쳐져
     // 목록이 4536px가 됐다(사용자 지적: "뷰어와 같은 높이로 하고 스크롤 추가해줘").
-    class: 'wh-feat-section-list section-list', role: 'listbox', id: 'section-list-items', tabindex: '-1', 'aria-label': '텍스트 구간 목록',
+    class: 'wh-feat-section-list section-list', role: 'listbox', id: 'section-list-items', tabindex: '-1', hidden: !S.listExpanded, 'aria-labelledby': 'section-list-heading',
+    'data-wh-anchor': 'wh-feat-section-list', 'data-wh-feature': 'FEAT-013', 'data-wh-tests': 'TC-013-1,TC-013-2,TC-013-3,TC-013-4,TC-013-5',
   })
   list.addEventListener('keydown', e => {
     if (e.key === 'ArrowDown') { e.preventDefault(); S.focusedIndex = Math.min(segs.length - 1, S.focusedIndex + 1); renderViewerBody() }
@@ -830,15 +838,15 @@ function renderViewerBody() {
   // 떨어지지 않게 한다(키보드 조작 연속성 보장).
   const active = document.activeElement
   const wasListRow = active?.classList?.contains('section-row')
-  const wasListToggle = active?.classList?.contains('section-list-toggle')
+  const wasListToggle = active?.classList?.contains('toggle-section-list')
   const wasStrip = active?.classList?.contains('wh-feat-profile-strip-svg')
   const wasCanvas = active?.classList?.contains('track-plan-svg')
 
   const root = S.view.kind === 'webgl-unsupported' ? renderWebglFallback() : renderViewerShellScreen()
   appEl.replaceChildren(root)
 
-  if (wasListRow) appEl.querySelector(`.section-row[data-index="${S.focusedIndex}"]`)?.focus()
-  else if (wasListToggle) appEl.querySelector('.section-list-toggle')?.focus()
+  if (wasListToggle) appEl.querySelector('.toggle-section-list')?.focus()
+  else if (wasListRow) appEl.querySelector(`.section-row[data-index="${S.focusedIndex}"]`)?.focus()
   else if (wasStrip) appEl.querySelector('.profile-strip-svg')?.focus()
   else if (wasCanvas) appEl.querySelector('.track-plan-svg')?.focus()
   window.__whOverlay?.refresh()
