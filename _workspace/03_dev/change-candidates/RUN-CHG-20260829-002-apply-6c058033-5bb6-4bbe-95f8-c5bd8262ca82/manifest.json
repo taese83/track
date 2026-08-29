@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "runId": "RUN-CHG-20260829-002-apply-6c058033-5bb6-4bbe-95f8-c5bd8262ca82",
+  "status": "READY",
+  "baseDigest": "caca68ebfe2707925cbff5ced93952503ed35f4ed3179b2e338bbb71623adf9d",
+  "candidateDigest": "a7128627993dc03968c7713942361cc1934da45678c599597cc95e829a5aa600",
+  "baseFileCount": 74,
+  "baseBytes": 578295,
+  "changedFiles": [
+    {
+      "path": "_workspace/02_design/preview/app.css",
+      "kind": "modified",
+      "beforeDigest": "7f0c9763f7d326d51c3472ea0a6218be5aabf4ac0449be119d554fb2165f9a2d",
+      "afterDigest": "3cf882b3abc3b38f657a1af2230cc99c8df4fc813d9fcefce50b5b4c79ab9fcd",
+      "size": 18272,
+      "mode": 420
+    },
+    {
+      "path": "_workspace/02_design/preview/app.js",
+      "kind": "modified",
+      "beforeDigest": "60867f90ffded00541836b1d98747dcafe2164134088355c950b312acc0aa82d",
+      "afterDigest": "61f3cd57fc5bb3b3dc1245f07b77d76b73765acbd4f5cda44a02db5791ab861c",
+      "size": 51860,
+      "mode": 420
+    }
+  ]
+}

@@ -958,7 +958,7 @@
   ],
   "sourceSnapshot": {
     "algorithm": "sha256",
-    "digest": "f9ebaca0719f77220fffc4c0af83d85a43ac040eaba93730f662c7bf6e4fac68",
+    "digest": "879bc64ef2d1a2bdc5ddfcca6d600e83b6ef0f0c20bc3a624d0b71a3263804d3",
     "files": [
       {
         "path": "_workspace/01_plan/feature-plan/data-model.md",
@@ -974,7 +974,7 @@
       },
       {
         "path": "_workspace/01_plan/feature-plan/specs-pipeline.md",
-        "sha256": "b992db46bc222538356f27899597f6aa40e9fc45d8f0c0f511bf75d5cea80133"
+        "sha256": "55dffdadaacf01dfe62d95d09f2f28bbc370256972b0ac839d3f76dae5abd259"
       },
       {
         "path": "_workspace/01_plan/feature-plan/specs-scene.md",

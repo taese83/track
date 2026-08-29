@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "runId": "RUN-CHG-20260829-001-apply-3269ff50-d732-41b6-8f7b-bdfd32ddeffa",
+  "status": "READY",
+  "baseDigest": "cbf015b2222244dda4e99e2ff7292bd1da4771095fd91a71cc679fc873d690f0",
+  "candidateDigest": "caca68ebfe2707925cbff5ced93952503ed35f4ed3179b2e338bbb71623adf9d",
+  "baseFileCount": 74,
+  "baseBytes": 576311,
+  "changedFiles": [
+    {
+      "path": "_workspace/01_plan/feature-plan/specs-surfaces.md",
+      "kind": "modified",
+      "beforeDigest": "d0a6dea794997382ffb8ed06e20f820a257de2b7ce4e8dac6b7bdf08e8abc9c9",
+      "afterDigest": "d767ab3e89b377f8e450fb8889cac894f1783b8a3ac766762bf27aa743be467e",
+      "size": 7664,
+      "mode": 420
+    },
+    {
+      "path": "_workspace/02_design/component-spec/shared.md",
+      "kind": "modified",
+      "beforeDigest": "d4ed1f875fce49605b2defda88c7f73e6a91c309db469a7136d60228d7259887",
+      "afterDigest": "3d1d07b28ae8d2bb5771a8dd1666a389e61eb76448cc65e7f353e2c6f748e83e",
+      "size": 8298,
+      "mode": 420
+    },
+    {
+      "path": "_workspace/02_design/layout-spec/a11y-responsive.md",
+      "kind": "modified",
+      "beforeDigest": "e33d1685fb4c90ebc94915dfe9bcbb4c439b764f7fbaf964cc08761058871731",
+      "afterDigest": "6143849505290f62e29b6e9a9481eebd413e2c7e7c2823ca5fc5eec7c7e67235",
+      "size": 4514,
+      "mode": 420
+    }
+  ]
+}
