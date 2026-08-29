@@ -334,7 +334,10 @@ function renderSectionList() {
   if (!S.listExpanded) { panel.style.flex = '0 0 auto'; return panel }
 
   const list = h('ul', {
-    class: 'wh-feat-section-list', role: 'listbox', id: 'main-content', tabindex: '-1', 'aria-label': '텍스트 구간 목록',
+    // `section-list`가 스크롤 규칙(app.css `[role="listbox"].section-list`)을 받는 클래스다.
+    // 종전에는 앵커 클래스만 붙어 규칙이 한 번도 걸리지 않았고, 132행이 그대로 펼쳐져
+    // 목록이 4536px가 됐다(사용자 지적: "뷰어와 같은 높이로 하고 스크롤 추가해줘").
+    class: 'wh-feat-section-list section-list', role: 'listbox', id: 'main-content', tabindex: '-1', 'aria-label': '텍스트 구간 목록',
     'data-wh-anchor': 'wh-feat-section-list', 'data-wh-feature': 'FEAT-013', 'data-wh-tests': 'TC-013-1,TC-013-2,TC-013-3,TC-013-4,TC-013-5',
   })
   list.addEventListener('keydown', e => {
@@ -423,15 +426,16 @@ function renderCanvasColumn() {
 
   // 깊이 정렬 — 뒤쪽부터 그려야 겹침이 자연스럽다.
   const drawables = []
-  for (const { seg, lanes, bands } of built) {
+  for (const { seg, lanes, bands, rim } of built) {
     const projected = lanes.map(L => L.map(P3))
     const projBands = bands.map(([lo, hi]) => [lo.map(P3), hi.map(P3)])
+    const projRim = rim.map(E => E.map(P3))
     const depth = projected[1].reduce((a, p) => a + p[2], 0) / projected[1].length
-    drawables.push({ seg, projected, projBands, depth })
+    drawables.push({ seg, projected, projBands, projRim, depth })
   }
   drawables.sort((a, b) => b.depth - a.depth)
 
-  for (const { seg, projBands } of drawables) {
+  for (const { seg, projBands, projRim } of drawables) {
     // 면에는 옛 선 렌더용 seg-path를 붙이지 않는다 — stroke-width/dasharray가 딸려 와
     // 가장자리에 얇은 선을 남긴다(D-036).
     const cls = [segColorClass(seg), seg.segmentKind === 'bank' ? 'bank' : '', seg.failed ? 'seg-order-unknown' : ''].filter(Boolean).join(' ')
@@ -443,12 +447,19 @@ function renderCanvasColumn() {
       g.append(svg('polygon', { class: `track-face lane-band lane-${li} ` + cls, points: pts }))
     })
     // 레인 경계선 — 면의 가장자리를 따라 그어 레인 구분을 드러낸다.
-    const edges = [projBands[0][0], ...projBands.map(b => b[1])]
-    edges.forEach((E, ei) => {
-      const d = E.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' ')
-      const outer = ei === 0 || ei === edges.length - 1
-      g.append(svg('path', { class: 'lane-line' + (outer ? ' lane-edge' : ''), d }))
-    })
+    //
+    // 종전에는 `[레인0의 왼쪽 가장자리, 각 레인의 오른쪽 가장자리]` 4줄을 그었다.
+    // **레인 번호 순서 = 좌우 순서**라는 가정인데 레인체인지에서 깨진다 — 레인2가
+    // 오른쪽 끝에서 왼쪽 끝으로 건너가므로, 피스 끝에서 그리는 위치가
+    // [6, −6, −18, 6]이 되어 **바깥 경계 +18이 빠지고 선 하나가 트랙을 대각선으로
+    // 가로질렀다**(사용자 지적). 바깥 경계는 geom3d가 가로 위치로 뽑아 주는 rim을 쓰고,
+    // 자리바꿈이 있는 피스는 레인마다 **자기 윤곽**을 그린다.
+    const reorders = seg.segmentKind === 'lane-change' || (seg.pieceType || '').startsWith('Lan')
+    const inner = reorders ? projBands.flatMap(([lo, hi]) => [lo, hi])
+                           : [projBands[0][1], projBands[1][1]]
+    const pathOf = E => E.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' ')
+    inner.forEach(E => g.append(svg('path', { class: 'lane-line', d: pathOf(E) })))
+    projRim.forEach(E => g.append(svg('path', { class: 'lane-line lane-edge', d: pathOf(E) })))
   }
 
   // 순서 복원이 끊긴 지점 표시(투영 좌표)

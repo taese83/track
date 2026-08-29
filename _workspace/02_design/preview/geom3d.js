@@ -92,15 +92,20 @@ export function endTangents(seg) {
 // z(고도)는 진행 순서를 따라 누적한다. 노면은 좌우로 평평하다(롤 없음 — D-024 철회).
 export function buildLanes(segments, opts = {}) {
   const steps = opts.steps ?? 6
-  // 슬로프 현 각도. 40°(D-022) → 25°(D-025, 사용자 육안 판단으로 두 차례 하향).
-  const slopeDeg = opts.slopeDeg ?? 22
+  // 슬로프 현 각도. 40°(D-022) → 25°(D-025, 육안 판단으로 두 차례 하향) → 22°(기록 없음)
+  // → **20°(사용자 "조금만 낮춰줘")**. 피스당 낙차 = 54cm × sin(각도): 20.23 → 18.47cm.
+  // 실물 실측이 아니라 사용자 지정 렌더 규칙(`confirmed`)이므로 육안 조정이 정당하다.
+  const slopeDeg = opts.slopeDeg ?? 20
   // 이 렌더의 규약: **z가 음수일 때 화면에서 위로** 보인다. 뱅크(bankUp=false)와
   // 육교(changerHill 음수)를 그렇게 맞췄는데 슬로프만 색에서 온 부호를 그대로 써서
   // 혼자 반대였다(사용자 지적: "22번 슬로프 업이 반대"). 같은 규약으로 맞춘다(D-037).
   const slopeSign = opts.slopeSign ?? 1
   // 뱅크 기울기. **뱅크 피스와 그 사이 구간(뱅크 위의 트랙)에 함께 적용된다.**
-  // 20°(D-024) → 14°(완만하게) → 18°(다시 올림).
-  const bankDeg = opts.bankDeg ?? 18
+  // 20°(D-024) → 14°(완만하게) → 18°(다시 올림) → **20°(복귀, 사용자 지시)**.
+  // 20°는 타미야 공식 "バンク角20度"에서 온 `measured` 값이고 문서 전체가 이 값을 쓴다
+  // (piece-dimensions.md · specs-pipeline.md FEAT-005 · TC-005-2/6 · piece-shapes.md §4).
+  // 18°로 내려가 있던 동안 코드와 문서가 어긋나 있었다 — 복귀로 해소된다.
+  const bankDeg = opts.bankDeg ?? 20
   // 웨이브 돌출량 5cm — 픽셀 측정값과 일치한다(piece-shapes.md §3).
   const waveAmp = opts.waveAmp ?? 5
   // 레인체인지에서 폭을 가로지르는 레인(3→1)이 나머지 둘 위로 넘어가는 높이(육교).
@@ -125,9 +130,17 @@ export function buildLanes(segments, opts = {}) {
   //               ╰──── 일정 각도의 직선
   //
   //   평지 → 둥근 전이 → 일정 각도의 직선.
-  //   전이의 시작은 평지와, 끝은 직선과 **접한다**. 그래서 양쪽 모두 꺾이지 않는다.
-  //   접선 조건 r(0)=0, r′(0)=0, r(1)=1, r′(1)=0 을 만족하는 3차 곡선은 하나뿐이다.
-  const bankRamp = e => e * e * (3 - 2 * e)
+  //   도면대로 되려면 전이의 **기울기가 0에서 판 기울기까지 단조 증가**해야 한다.
+  //
+  //   종전 구현은 3차 곡선 r(e)=e²(3−2e)를 판 높이에 곱했다. 판축 거리가 e에 비례하므로
+  //   높이는 h ∝ e³(3−2e)가 되고, h′=9e²−8e³의 최댓값은 e=0.75에서 **1.6875**다 —
+  //   전이 한가운데가 판보다 1.69배 가팔라졌다가 되내려온다. 도면에 없는 **혹**이다
+  //   (bankDeg=18°일 때 실측: 판 18.9°인데 전이 중간이 28.7°까지 솟았다가 19.9°로 복귀).
+  //
+  //   기울기를 판축 거리에 비례시키면(g′(d) = d/dEnd) 단조가 되고 끝에서 판과 접한다.
+  //   대신 전이가 올리는 높이는 판을 연장한 높이의 절반뿐이므로 **판을 그만큼 내려놓아야**
+  //   이음새가 붙는다(아래 pl.lift). 이 대가는 단조 조건에서 피할 수 없다 —
+  //   기울기가 0에서 시작해 판 기울기까지만 커지면 평균 기울기는 판보다 작을 수밖에 없다.
   // ── 뱅크 쌍 구간 = 하나의 기울어진 평면 ────────────────────────────────
   // "20도 올라가는 것을 평면으로 생각하고 그려봐"(D-029).
   //
@@ -144,7 +157,19 @@ export function buildLanes(segments, opts = {}) {
   // 색(c=2/c=3)은 편집기 팔레트이고 우리 진행 방향이 실제 주행 방향과 반대일 수 있다.
   // "뱅크는 위로 올라가는 형태"(D-029)를 기준으로 전체 부호를 한 번 정규화한다.
   const list = segments.filter(sg => sg.p1 && sg.p2)
-  const sampled = list.map(sg => samplePiece(sg, steps))
+  // 표본 수는 **피스 길이에 비례**한다. 모든 피스에 똑같이 주면 긴 피스가 거칠어진다 —
+  // 레인체인지(Lan1)는 162cm로 다른 피스의 3배인데 같은 6표본을 받았고, 육교 sin² 곡면이
+  // 가운데 45% 구간에 3점만 찍혀 **볼록한 언덕이 아니라 뾰족한 텐트**로 그려졌다
+  // (사용자 지적: "각지지 않고 곡면 언덕이야 / 볼록하게 솟아있어").
+  // 육교가 든 피스는 자리바꿈 구간 안에 최소 CHANGER_SPAN_SAMPLES 표본을 보장한다.
+  const SAMPLE_UNIT = 54          // cm. 기준 직선 피스 길이 — 이 길이에 steps 표본을 준다.
+  const CHANGER_SPAN_SAMPLES = 48 // 자리바꿈 구간(changerSpan) 안에 들어갈 최소 표본 수.
+  const stepsFor = sg => {
+    const prop = Math.max(steps, Math.round(steps * len2(sub(sg.p2, sg.p1)) / SAMPLE_UNIT))
+    const changer = sg.segmentKind === 'lane-change' || (sg.pieceType || '').startsWith('Lan')
+    return changer ? Math.max(prop, Math.ceil(CHANGER_SPAN_SAMPLES / changerSpan)) : prop
+  }
+  const sampled = list.map(sg => samplePiece(sg, stepsFor(sg)))
 
   const planes = [] // {from, to, origin:[x,y], up:[ux,uy], slope, level}
   const bankAt = list.map((sg, i) => (sg.segmentKind === 'bank' ? i : -1)).filter(i => i >= 0)
@@ -179,12 +204,25 @@ export function buildLanes(segments, opts = {}) {
     pl.up = up
     pl.slope = sign * Math.tan(Math.abs(pl.level) * RAD)
 
-    // 판을 얼마나 내려놓을지(lift). 뱅크가 e² 아크로 올리면 판을 그대로 연장했을 때의
-    // 절반 높이까지만 오르므로, 그 차이만큼 판을 내려야 뱅크 끝과 이어진다.
-    const bp = sampled[pl.from]
+    // 판을 얼마나 내려놓을지(lift). 전이가 판 연장선보다 낮게 끝나므로 그 차이를 판
+    // 전체에서 빼야 뱅크 끝과 붙는다.
+    //
+    // g′(d) = (d/dEnd)^k 로 두면 g(dEnd) = dEnd/(k+1), 즉 lift = dEnd·k/(k+1)이다.
+    // 진입 뱅크와 진출 뱅크의 판축 거리(dIn·dOut)는 다를 수 있는데 판은 하나뿐이라
+    // lift도 하나여야 한다 — **짧은 쪽을 k=1(포물선)로 두고 lift를 정한 뒤, 긴 쪽의 k를
+    // 그 lift에 맞춰 역산한다.** 좌우가 대칭이면 양쪽 모두 k=1이다.
     const dOf = q => (q[0] - pl.origin[0]) * pl.up[0] + (q[1] - pl.origin[1]) * pl.up[1]
-    const dIn = dOf(bp[bp.length - 1])
-    pl.lift = pl.slope * dIn / 2
+    const bpIn = sampled[pl.from], bpOut = sampled[pl.to]
+    const dIn = dOf(bpIn[bpIn.length - 1])
+    const dOut = dOf(bpOut[0])
+    // 진입·진출이 판축 반대편에 있거나 한쪽이 0이면 전이를 만들 수 없다 —
+    // 판만 쓰고 꺾임을 남긴다(종전 동작). 다단 뱅크(BLOCKER-002)도 여기로 떨어진다.
+    const usable = Math.abs(dIn) > 1e-9 && Math.abs(dOut) > 1e-9 && Math.sign(dIn) === Math.sign(dOut)
+    pl.dIn = dIn
+    pl.dOut = dOut
+    pl.lift = usable ? Math.sign(dIn) * Math.min(Math.abs(dIn), Math.abs(dOut)) / 2 : 0
+    pl.kIn = usable ? pl.lift / (dIn - pl.lift) : 0
+    pl.kOut = usable ? pl.lift / (dOut - pl.lift) : 0
   }
   const planeOf = i => planes.find(pl => i >= pl.from && i <= pl.to) || null
 
@@ -221,12 +259,17 @@ export function buildLanes(segments, opts = {}) {
     // 종전에는 레인0~레인2 중심선만 이어 면을 만들어 실제보다 12cm 좁았다
     // (36cm여야 하는데 24cm로 그려졌다 — 양쪽 바깥 반 레인 누락, D-034).
     const bands = Array.from({ length: LANE_COUNT }, () => [[], []])
+    // 트랙 바깥 경계(rim). **레인 번호가 아니라 가로 위치로** 정한다 — 레인체인지에서는
+    // 레인2가 오른쪽 끝에서 왼쪽 끝으로 건너가 번호 순서와 좌우 순서가 어긋난다.
+    // 점 배열을 bands와 공유하므로 weldSeams가 이음새를 고치면 rim도 함께 따라온다.
+    const rim = [[], []]
     for (let i = 0; i < pts.length; i++) {
       const [x, y, t] = pts[i]
       // 접선 → 법선. 레인은 법선 방향으로 등간격 배치한다.
       const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)]
       const tan = unit2([b[0] - a[0], b[1] - a[1]])
       const n = [-tan[1], tan[0]]
+      let rimLo = null, rimHi = null, rimLoPt = null, rimHiPt = null
       for (let L = 0; L < LANE_COUNT; L++) {
         // 부드러운 곡면 범프 — sin²는 양 끝 기울기가 0이라 직선 구간과 매끄럽게 잇고
         // 마루도 각지지 않는다. 삼각형(각진 형태)에서 바꿨다(D-032 개정).
@@ -254,17 +297,21 @@ export function buildLanes(segments, opts = {}) {
             // 사이 구간의 판은 **평평한 채로** 들리고, 휘는 것은 **뱅크 피스뿐**이다.
             //
             // 뱅크의 기울기는 0에서 판의 기울기까지 단조롭게 커진다(C자, S자 아님).
-            // 기울기가 e에 비례하면 h(e) ∝ e² 이고 h′(1)이 판의 기울기와 같아져
-            // 안쪽 끝에서도 꺾이지 않는다. 대신 뱅크가 올린 높이는 판을 그대로
-            // 연장했을 때의 절반이므로, 판을 그만큼(lift) 내려놓아야 이어진다.
+            // 기울기가 판축 거리에 비례하면 높이는 그 적분이라 끝에서 판과 접한다.
+            // 대신 뱅크가 올린 높이는 판을 연장했을 때에 못 미치므로, 판을 그만큼
+            // (lift) 내려놓아야 이어진다.
             const d = (px - plane.origin[0]) * plane.up[0] + (py - plane.origin[1]) * plane.up[1]
-            if (seg.segmentKind === 'bank') {
+            const isEntry = idx === plane.from, isExit = idx === plane.to
+            if ((isEntry || isExit) && plane.lift !== 0) {
               // 전이 구간 — 평지와 직선(판) 양쪽에 접한다.
-              const e = idx === plane.from ? t : (idx === plane.to ? 1 - t : 1)
-              zi = plane.baseZ + d * plane.slope * bankRamp(e)
+              //   g(d) = dEnd/(k+1) · (d/dEnd)^(k+1),  g′(0)=0,  g′(dEnd)=1
+              const dEnd = isEntry ? plane.dIn : plane.dOut
+              const k = isEntry ? plane.kIn : plane.kOut
+              const u = Math.max(0, Math.min(1, d / dEnd))
+              zi = plane.baseZ + plane.slope * (dEnd / (k + 1)) * Math.pow(u, k + 1)
             } else {
               // 전이가 끝난 뒤로는 일정 각도의 직선(평판)이다.
-              zi = plane.baseZ + d * plane.slope
+              zi = plane.baseZ + plane.slope * (d - plane.lift)
             }
           } else {
             zi = z0 + total * prof(t)   // 웨이브는 total=0이라 평평하다
@@ -272,13 +319,19 @@ export function buildLanes(segments, opts = {}) {
           return [px, py, zi]
         }
         const lift = q => { q[2] += hill; return q }
+        const eLo = off - LANE_PITCH / 2, eHi = off + LANE_PITCH / 2
+        const pLo = lift(at(eLo)), pHi = lift(at(eHi))
         lanes[L].push(lift(at(off)))
-        bands[L][0].push(lift(at(off - LANE_PITCH / 2)))
-        bands[L][1].push(lift(at(off + LANE_PITCH / 2)))
+        bands[L][0].push(pLo)
+        bands[L][1].push(pHi)
+        if (rimLo === null || eLo < rimLo) { rimLo = eLo; rimLoPt = pLo }
+        if (rimHi === null || eHi > rimHi) { rimHi = eHi; rimHiPt = pHi }
       }
+      rim[0].push(rimLoPt)
+      rim[1].push(rimHiPt)
     }
     z = plane ? z0 : (isWave ? z0 : z0 + total)
-    pieces.push({ seg, lanes, bands, onPlane: !!plane })
+    pieces.push({ seg, lanes, bands, rim, onPlane: !!plane })
   })
 
   weldSeams(pieces)
