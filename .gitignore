@@ -1,3 +1,9 @@
 node_modules/
+dist/
+.vercel/
+coverage/
+playwright-report/
+test-results/
+*.local
 .DS_Store
 *.log

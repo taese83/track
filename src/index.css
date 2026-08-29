@@ -1,0 +1,144 @@
+@import 'tailwindcss';
+
+/*
+ * 디자인 토큰 정본은 _workspace/02_design/design-system/tokens.md.
+ * 다크가 기본(:root), 라이트는 .light에서 neutral 반전 + rise/fall은 원본 실측색 그대로.
+ */
+:root {
+  --color-bg-canvas: #101214;
+  --color-bg-surface: #1a1d21;
+  --color-bg-raised: #24282d;
+  --color-border: #3a4048;
+
+  --color-text-primary: #e7e9ec;
+  --color-text-secondary: #a8aeb8;
+  --color-text-disabled: #6a7078;
+
+  --color-primary: #a78bfa;
+  --color-primary-hover: #b9a3fc;
+  --color-on-primary: #15171a;
+
+  /* 원본 편집기 실측색 — 3D 표면·스트립 채움 전용, 텍스트에는 -fg를 쓴다 */
+  --color-rise: #ad0a09;
+  --color-rise-fg: #ff8d85;
+  --color-fall: #004e8f;
+  --color-fall-fg: #7cb9ef;
+  --color-fail-segment: #5c636c;
+
+  --color-error: #f87171;
+  --color-error-subtle: rgb(248 113 113 / 0.12);
+  --color-warning: #fbbf24;
+  --color-warning-subtle: rgb(251 191 36 / 0.1);
+  --color-success: #4ade80;
+  --color-success-subtle: rgb(74 222 128 / 0.1);
+  --color-info: #60a5fa;
+  --color-info-subtle: rgb(96 165 250 / 0.1);
+
+  --font-ui: system-ui, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+
+  --radius-base: 6px;
+  --radius-badge: 4px;
+
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+
+  --header-height: 56px;
+  --alert-slot-height: 40px;
+
+  color-scheme: dark;
+}
+
+.light {
+  --color-bg-canvas: #f7f8fa;
+  --color-bg-surface: #ffffff;
+  --color-bg-raised: #ffffff;
+  --color-border: #d3d7de;
+
+  --color-text-primary: #15171a;
+  --color-text-secondary: #4c525b;
+  --color-text-disabled: #8b919a;
+
+  --color-primary: #6d3fe0;
+  --color-primary-hover: #5b2fd0;
+  --color-on-primary: #ffffff;
+
+  --color-rise-fg: var(--color-rise);
+  --color-fall-fg: var(--color-fall);
+
+  --color-error: #dc2626;
+  --color-error-subtle: rgb(220 38 38 / 0.08);
+  --color-warning: #d97706;
+  --color-warning-subtle: rgb(217 119 6 / 0.08);
+  --color-success: #16a34a;
+  --color-success-subtle: rgb(22 163 74 / 0.08);
+  --color-info: #2563eb;
+  --color-info-subtle: rgb(37 99 235 / 0.08);
+
+  color-scheme: light;
+}
+
+/* 모션 토큰은 선언 목적이 고정돼 있다: fast=인터랙션 전환, base=패널 개폐/배너 등장 */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-base: 0ms;
+  }
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg-canvas);
+  color: var(--color-text-primary);
+  font-family: var(--font-ui);
+  font-size: 16px;
+  line-height: 1.5;
+  /* 한글 letter-spacing 0 — 양수 금지(tokens.md §3) */
+  letter-spacing: 0;
+}
+
+/* 숫자는 자릿수 비교가 전제 */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 접근성 하한: 모든 인터랙티브 요소에 2px solid primary + 2px offset */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* skip-link는 포커스를 받을 때만 보인다(a11y-responsive §포커스 순서 1번) */
+.skip-link {
+  position: absolute;
+  left: 8px;
+  top: -100px;
+  z-index: 100;
+  padding: 8px 12px;
+  border-radius: var(--radius-base);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-weight: 600;
+  transition: top var(--duration-fast) ease;
+}
+
+.skip-link:focus-visible {
+  top: 8px;
+}
