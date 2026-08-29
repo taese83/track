@@ -1,0 +1,8 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "api/track.ts": {
+      "runtime": "nodejs22.x"
+    }
+  }
+}

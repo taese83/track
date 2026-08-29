@@ -1,0 +1,8 @@
+# 이 저장소는 하네스 체크아웃(web-harness/) 아래에 놓여 있어, 이 파일이 없으면 pnpm이 상위
+# 워크스페이스 루트를 잡아 이 프로젝트의 의존성을 설치하지 않는다. 단일 패키지 저장소임을 못박는다.
+packages: []
+allowBuilds:
+  esbuild: true
+minimumReleaseAgeExclude:
+  - '@vercel/build-utils@14.7.0'
+  - '@vercel/node@10.0.0'
