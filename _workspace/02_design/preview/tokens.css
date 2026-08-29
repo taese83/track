@@ -1,0 +1,94 @@
+/* tokens.css — design-system/tokens.md 파생. 값 재정의 금지, 여기서만 변경. */
+:root {
+  color-scheme: dark;
+  /* neutral (계측기 톤, hue 250 chroma .008) */
+  --bg-canvas: #101214;
+  --bg-surface: #1A1D21;
+  --bg-raised: #24282D;
+  --border: #3A4048;
+  --text-primary: #E7E9EC;
+  --text-secondary: #A8AEB8;
+  --text-disabled: #6A7078;
+
+  --primary: #A78BFA;
+  --primary-hover: #B9A3FC;
+  --on-primary: #15171A;
+
+  --rise: #AD0A09;
+  --rise-fg: #FF8D85;
+  --fall: #004E8F;
+  --fall-fg: #7CB9EF;
+  --fail-segment: #5C636C;
+
+  --error: #F87171;
+  --error-bg: rgba(248,113,113,.12);
+  --warning: #FBBF24;
+  --warning-bg: rgba(251,191,36,.10);
+  --success: #4ADE80;
+  --success-bg: rgba(74,222,128,.10);
+  --info: #60A5FA;
+  --info-bg: rgba(96,165,250,.10);
+
+  /* 근거 등급 배지 */
+  --badge-measured: #7EE2A8;
+  --badge-confirmed: #C9CED6;
+  --badge-inferred: #F5C15C;
+  --badge-unknown: #9AA1AA;
+
+  --font-ui: system-ui, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+
+  --spacing-1: .25rem;  /* 4px */
+  --spacing-2: .5rem;   /* 8px */
+  --spacing-3: .75rem;  /* 12px */
+  --spacing-4: 1rem;    /* 16px */
+  --spacing-6: 1.5rem;  /* 24px */
+  --spacing-8: 2rem;    /* 32px */
+
+  --radius: 6px;
+  --radius-badge: 4px;
+  --radius-pill: 9999px;
+
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+
+  --evidence-badge-min-width: 56px;
+}
+
+.light {
+  color-scheme: light;
+  --bg-canvas: #F4F5F7;
+  --bg-surface: #FFFFFF;
+  --bg-raised: #FFFFFF;
+  --border: #D6D9DE;
+  --text-primary: #16181B;
+  --text-secondary: #4B515A;
+  --text-disabled: #9AA1AA;
+
+  --rise: #AD0A09;
+  --fall: #004E8F;
+  --rise-fg: #AD0A09;
+  --fall-fg: #004E8F;
+  --fail-segment: #9AA1AA;
+
+  --error: #DC2626;
+  --warning: #D97706;
+  --success: #16A34A;
+  --info: #2563EB;
+  --error-bg: rgba(220,38,38,.08);
+  --warning-bg: rgba(217,119,6,.08);
+  --success-bg: rgba(22,163,74,.08);
+  --info-bg: rgba(37,99,235,.08);
+
+  --badge-measured: #16A34A;
+  --badge-confirmed: #4B515A;
+  --badge-inferred: #B45309;
+  --badge-unknown: #6B7280;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --duration-fast: 0ms; --duration-base: 0ms; }
+}
+
+@media (forced-colors: active) {
+  :root { --border: CanvasText; }
+}

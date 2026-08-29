@@ -1,0 +1,138 @@
+# Component Spec — widgets 레이어
+
+목록·캔버스·스트립·컨트롤은 cross-cutting 주입 슬롯이 아니라 단일 페이지 내 대형 FEAT 조합 단위라 표준 `widgets/` 계층 그대로 둔다(layout-spec 결정 승계). 셋 모두 `shared/lib/track-cursor`의 `useTrackCursor()`를 구독·발행한다 — 소유권·순환방지 계약은 `shared.md` §공유 커서 계약을 따른다(재정의 금지).
+
+## widgets Components
+
+| Component | Slice | Props | State |
+|---|---|---|---|
+| AppHeader | `widgets/app-header` | `AppHeaderProps` | 상태 없음(정적 액션) |
+| SectionList | `widgets/section-list` | `SectionListProps` | loading(skeleton) / populated / part-failure / webgl-fallback |
+| ProfileStrip | `widgets/profile-strip` | `ProfileStripProps` | loading(skeleton) / populated / part-failure / collapsed |
+| TrackCanvas | `widgets/track-canvas` | `TrackCanvasProps` | populated / part-failure / unsupported-piece(개별 세그먼트 단위) |
+| ControlCluster | `widgets/view-controls` | `ControlClusterProps` | default / disabled(WebGL 미지원 시 전체 미마운트) |
+
+## Component Detail Specs
+
+### AppHeader — FEAT-001, layout-spec §Global shell
+
+```ts
+interface AppHeaderProps {
+  onSwitchTrack: () => void   // "다른 트랙 보기" — 입력 대기 화면으로 되돌아감
+  sourceUrl: string           // "원본 편집기 ↗" — TC-014-4: WebGL 미지원에서도 동일 노출
+}
+```
+
+- `shared/ui/top-bar`의 `TopBar`를 `actions={<>...</>}`로 조립: `<button>다른 트랙 보기</button>` + `<a href={sourceUrl} target="_blank" rel="noopener">원본 편집기 ↗</a>`.
+- 정적 액션(로그인/알림처럼 feature 상태에 의존 안 함) — cross-cutting 슬롯 불필요(layout-spec 결정).
+
+### SectionList — FEAT-013/014, 1차 정보원
+
+```ts
+type SegmentKind = 'straight' | 'corner' | 'slope' | 'bank' | 'lane-change' | 'marker' | 'unsupported'
+
+interface SectionListItem {
+  id: string                    // 원본 피스 안정 ID — canonical key, index 아님
+  index: number                 // RestoredPath 순서 표시용 (1-based 라벨: "12/132")
+  pieceType: string
+  segmentKind: SegmentKind
+  evidenceGrade?: EvidenceGrade  // 해당 값이 있는 행만
+  unsupportedLabel?: string      // "미지원: {타입명}" (FEAT-009)
+  failed?: boolean                // 부분 실패 지점 이후 — 회색 배경 + 비활성
+}
+
+interface SectionListProps {
+  items: SectionListItem[]
+  currentIndex: number            // useTrackCursor 구독
+  focusedIndex: number             // 키보드 roving 포커스 — currentIndex와 분리(아래 참고)
+  onFocusMove: (index: number) => void   // ↑↓ 이동, setCursor 호출 안 함
+  onSelect: (index: number) => void      // Enter/클릭 — 내부에서 setCursor(index,'list') 호출
+  expanded: boolean                // WebGL 미지원 시 true 강제(토글 불가)
+  onToggleExpanded?: () => void     // 그 외 상태에서만 제공(접이식)
+  variant: 'sidebar' | 'full-width'
+  loading?: boolean
+}
+```
+
+- **focusedIndex ≠ currentIndex**: a11y-responsive §포커스 순서에 따라 화살표는 목록 내부 roving tabindex만 이동시키고(TC-013-4 "순회"), Enter/클릭에서만 `onSelect`가 호출되어 공유 커서(`currentIndex`)가 갱신된다. 이 분리가 없으면 화살표 연타만으로 캔버스·스트립이 매 프레임 따라 움직여 §공유 커서 계약의 "쓰기는 명시적 사용자 확정 이벤트에서만" 원칙이 깨진다.
+- **시맨틱**: 목록 컨테이너 `role="listbox"`, 각 행 `role="option" aria-selected={index===currentIndex}`. 진입 시 단일 Tab stop, 내부는 방향키 roving(WAI-ARIA APG 컴포지트 패턴, a11y-responsive §포커스 순서 근거).
+- **실패 행**: `aria-disabled="true"`, `onSelect` 호출 자체를 막는다(1차 방어) + `useTrackCursor().isReachable()`이 2차 방어(shared.md). 시각: `--color-fail-segment` 배경 + 아이콘, 텍스트로도 "연결 실패로 접근 불가" sr-only 부기(색 단독 금지).
+- **미지원 행**: `unsupportedLabel`을 라벨 옆에 그대로 노출, 뭉뚱그리지 않음(TC-009-3).
+- **로딩**: 320px/100% 폭 그대로 shimmer 스켈레톤 행(개수는 이전 로드 시 알려진 총량 없으면 12행 고정 placeholder) — 셸 치수 불변(layout-spec §1 규칙 #2).
+- **WebGL 미지원**: `variant='full-width'`, `expanded=true` 고정, 토글 컨트롤 자체를 렌더하지 않는다 — **이것은 토글이 아니라 대체 화면**이므로 "접었다 펼 수 있는 옵션"으로 보이면 안 된다(제품 계약 §4, 협상 불가).
+- **모바일 reflow**: `variant='sidebar'`가 아코디언(기본 접힘 + "132개 구간" 배지 카운트)으로 전환(a11y-responsive §반응형).
+
+### ProfileStrip — FEAT-007/012 owner
+
+```ts
+interface ProfileStripPoint {
+  index: number
+  elevationRelative: number      // 상대 스케일, 절대 단위 금지
+  segmentKind: SegmentKind
+  failed?: boolean
+}
+
+interface ProfileStripProps {
+  points: ProfileStripPoint[]
+  currentIndex: number
+  onScrub: (index: number) => void       // 드래그/클릭/화살표 확정 — setCursor(index,'strip')
+  collapsed: boolean
+  onToggleCollapsed: () => void
+  zClosureGap?: { startElevationRelative: number; endElevationRelative: number }  // TC-012-5
+  loading?: boolean
+}
+```
+
+- **시맨틱**: 단일 Tab stop, `role="slider" aria-valuemin={0} aria-valuemax={total-1} aria-valuenow={currentIndex} aria-valuetext="{segmentKind 라벨}, {index+1}/{total}"`. `←/→`=인접 **도달 가능한** 인덱스로 이동(실패 구간은 건너뛰지 않고 그 경계에서 멈춤 — 실패 지점 너머로 화살키가 넘어가지 않는다), `Home/End`=처음/마지막 도달 가능 인덱스, Enter 불필요(이동 즉시 반영, a11y-responsive 명시).
+- **드래그 스크럽**: pointermove로 최근접 인덱스 계산 → 실패 구간(회색 점선) 위에서는 `onScrub` 호출 자체를 하지 않는다(TC-012-3, 1차 방어). 2차 방어는 `isReachable()`(shared.md).
+- **y축**: "상대 스케일(실측 아님)" 텍스트를 항상 렌더(FEAT-010, 조건부 숨김 금지). 축 눈금은 nice number 4~6개(data-viz 원칙).
+- **Z-closure gap**(TC-012-5): `zClosureGap`이 있으면 그래프 양 끝단 수직 불연속을 그대로 그린다 — 보정해서 이어붙이지 않는다("조용히 숨기지 않는다", 제품 계약 §5).
+- **collapse 계약**: `collapsed=true`여도 40px 헤더 바는 항상 마운트되어 텍스트 요약(예: "슬로프 상승 중, 12/132")을 `currentIndex` 변화에 반응해 갱신한다 — 완전 숨김 금지(layout-spec §Chart 리사이즈 계약, FEAT-007의 유일한 조작 표면이 사라지면 안 됨). 개폐 애니메이션은 `--duration-base`, transform만(height는 layout-spec 최소값 96px/40px 사이).
+- **비텍스트 대체(WCAG 1.1.1)**: 이 스트립은 정확 수치를 담지 않아(상대 스케일) 별도 data-table 대체를 두지 않는다 — 근거: 제품 계약 §3에 따라 `SectionList`가 이미 같은 구간별 종류·등급 정보를 텍스트로 1차 제공하므로 중복 표는 불필요. `aria-describedby`로 "상세 목록은 구간 목록 참고" sr-only 텍스트만 연결한다.
+- **최소 크기 폴백**: 320px/96px 미만이면 스트립 자체를 숨기고 "구간 목록에서 확인" 링크로 대체(완전 hidden 아님, layout-spec §Chart 리사이즈 계약).
+
+### TrackCanvas — FEAT-006/007/008/009/011
+
+```ts
+interface RenderableSegment {
+  id: string
+  index: number
+  geometryKind: SegmentKind | 'unsupported'
+  unsupportedLabel?: string
+}
+
+interface TrackCanvasProps {
+  segments: RenderableSegment[]        // 부분 실패 시 복원 구간까지만
+  currentIndex: number
+  onOrbitDepart: (index: number) => void   // pointerup/관성 종료 후 1회, ≥250ms debounce
+  followMode: boolean
+  legendOpen: boolean
+  truncated?: boolean                       // 부분 실패 — 렌더 끝단에 절단 마커
+}
+```
+
+- WebGL 지원 게이트는 이 컴포넌트 상위(`TrackViewerPage`, FEAT-014)에서 처리한다 — `TrackCanvas`는 지원 확인 이후에만 마운트되므로 자체 미지원 상태를 갖지 않는다.
+- **미지원 피스**(FEAT-009): 와이어프레임 박스 + `@react-three/drei` `Html` 오버레이로 "미지원: {타입명}" 라벨, 각 개별 세그먼트마다 독립 라벨(하나로 뭉뚱그리지 않음, TC-009-3).
+- **부분 실패**: `truncated`가 true면 복원 구간 끝에 시각적 절단 마커(예: 열린 프레임/점선 페이드)를 렌더 — 조용히 잘리지 않고 "여기서 끊겼다"를 드러낸다(제품 계약 §5).
+- **오빗 힌트 오버레이**: 좌상단 1회성 회전/줌 힌트, 이후 접힘. absolute 배치라 셸 치수 불변.
+- **오빗 발행 규칙**: `onOrbitDepart`는 `useFrame`/렌더 루프 안에서 매 프레임 호출 금지(shared.md §순환 갱신 방지책 1차 게이트 적용 대상). 카메라 이동 애니메이션 자체는 `--duration-*` 모션 토큰을 쓰지 않는다(design-system §4 — 카메라·자동재생은 3D 코드 소관, 인터랙션 전환 토큰의 목적 밖 소비 금지).
+- **키보드**: 컨테이너 `tabIndex=0`, 방향키=오빗 회전, `+`/`-`=줌(a11y-responsive §포커스 순서).
+- **reduced-motion**: 자동재생 자동 진입 금지 + 카메라 전환 즉시 컷(design-system §4 그대로 승계).
+
+### ControlCluster — 시점/재생/탐색 속도
+
+```ts
+interface ControlClusterProps {
+  followMode: boolean
+  onToggleFollow: () => void                              // switch, 즉시 적용
+  playbackSpeed: 'slow' | 'normal' | 'fast'
+  onSpeedChange: (v: 'slow' | 'normal' | 'fast') => void   // segmented, 최대 5개 규칙 이내
+  isPlaying: boolean
+  onPlayToggle: () => void
+}
+```
+
+- **컨트롤 선택 근거**(interaction-controls 매트릭스): "탐색 속도"는 3개 고정 프리셋 — 정확한 값 입력이 목적이 아니고 옵션이 2~5개이므로 slider 대신 **segmented control**(native `role="radiogroup"` + 각 옵션 native `<button role="radio">`, 원칙 12). slider였다면 대략값 목적에만 써야 한다는 규칙과 충돌했을 것.
+- **followMode 토글**: 즉시 효과이므로 `switch`(checkbox 아님) — interaction-controls "즉시 적용=switch" 규칙.
+- 캔버스 위 오버레이라 배경 불투명도 ≥0.88(design-system §4), hover 전환만 `--duration-fast`.
+- WebGL 미지원 상태에서는 이 위젯 자체가 마운트되지 않는다(3D 캔버스가 없으므로 조작 대상 없음) — disabled 렌더가 아니라 부재.

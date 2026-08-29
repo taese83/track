@@ -1,0 +1,1065 @@
+{
+  "schemaVersion": 1,
+  "features": [
+    {
+      "featureId": "FEAT-001",
+      "title": "URL 입력 및 서버사이드 fetch",
+      "scope": "keep",
+      "description": "공유 링크만으로 트랙을 조회할 수 있다.",
+      "testCaseIds": [
+        "TC-001-1",
+        "TC-001-2",
+        "TC-001-3",
+        "TC-001-4",
+        "TC-001-5",
+        "TC-001-6",
+        "TC-001-7",
+        "TC-001-8"
+      ],
+      "anchorIds": [
+        "wh-feat-url-input-form",
+        "wh-feat-error-retry-button",
+        "wh-feat-app-header-switch-track",
+        "wh-feat-app-header-source-link"
+      ]
+    },
+    {
+      "featureId": "FEAT-002",
+      "title": "트랙 문자열 파싱 → 피스 목록",
+      "scope": "keep",
+      "description": "원본 문자열을 신뢰 가능한 피스 목록으로 변환한다.",
+      "testCaseIds": [
+        "TC-002-1",
+        "TC-002-2",
+        "TC-002-3",
+        "TC-002-4",
+        "TC-002-5"
+      ],
+      "anchorIds": [],
+      "unmappedReason": "이 프로토타입에서 직접 조작할 DOM 표면이 없다(서버·파이프라인 단계 또는 성능 완화)."
+    },
+    {
+      "featureId": "FEAT-003",
+      "title": "진행 순서 복원 (끝점 매칭)",
+      "scope": "keep",
+      "description": "순서 없는 배치에서 결정적인 주행 순서를 되찾는다.",
+      "testCaseIds": [
+        "TC-003-1",
+        "TC-003-2",
+        "TC-003-3",
+        "TC-003-4",
+        "TC-003-5"
+      ],
+      "anchorIds": [],
+      "unmappedReason": "이 프로토타입에서 직접 조작할 DOM 표면이 없다(서버·파이프라인 단계 또는 성능 완화)."
+    },
+    {
+      "featureId": "FEAT-004",
+      "title": "폐곡선 검증 및 부분 실패 노출",
+      "scope": "keep",
+      "description": "데이터가 불완전해도 확인 가능한 만큼은 보여준다.",
+      "testCaseIds": [
+        "TC-004-1",
+        "TC-004-2",
+        "TC-004-3",
+        "TC-004-4",
+        "TC-004-5",
+        "TC-004-6"
+      ],
+      "anchorIds": [
+        "wh-feat-canvas-truncate-marker",
+        "wh-feat-strip-fail-segment",
+        "wh-feat-strip-zgap-marker",
+        "wh-feat-partial-failure-banner",
+        "wh-feat-zgap-banner",
+        "wh-feat-alert-slot"
+      ]
+    },
+    {
+      "featureId": "FEAT-005",
+      "title": "고도 프로파일 생성 (슬로프 S곡선·뱅크 로그곡선)",
+      "scope": "keep",
+      "description": "평면 배치를 실제 오르내림으로 재현한다.",
+      "testCaseIds": [
+        "TC-005-1",
+        "TC-005-2",
+        "TC-005-3",
+        "TC-005-4",
+        "TC-005-5",
+        "TC-005-6"
+      ],
+      "anchorIds": [
+        "wh-feat-elevation-curve-path"
+      ]
+    },
+    {
+      "featureId": "FEAT-006",
+      "title": "3D 씬 생성과 카메라 오빗 (형상 일치)",
+      "scope": "keep",
+      "description": "도면과 일치하는 형상을 자유롭게 둘러본다.",
+      "testCaseIds": [
+        "TC-006-1",
+        "TC-006-2",
+        "TC-006-3",
+        "TC-006-4",
+        "TC-006-5"
+      ],
+      "anchorIds": [
+        "wh-feat-canvas-3d-approx"
+      ]
+    },
+    {
+      "featureId": "FEAT-007",
+      "title": "트랙 추종 시점 (플라이스루)",
+      "scope": "keep",
+      "description": "코스를 따라가며 주행 감각으로 확인한다.",
+      "testCaseIds": [
+        "TC-007-1",
+        "TC-007-2",
+        "TC-007-3",
+        "TC-007-4",
+        "TC-007-5",
+        "TC-007-6"
+      ],
+      "anchorIds": [
+        "wh-feat-control-cluster"
+      ]
+    },
+    {
+      "featureId": "FEAT-008",
+      "title": "레인체인지 표현",
+      "scope": "keep",
+      "description": "좌우 차선 이동 구간을 시각적으로 구분한다.",
+      "testCaseIds": [
+        "TC-008-1",
+        "TC-008-2",
+        "TC-008-3"
+      ],
+      "anchorIds": [
+        "wh-feat-list-row-lane-change"
+      ]
+    },
+    {
+      "featureId": "FEAT-009",
+      "title": "미지원 피스 노출",
+      "scope": "keep",
+      "description": "모르는 부분을 조용히 숨기지 않고 알려준다.",
+      "testCaseIds": [
+        "TC-009-1",
+        "TC-009-2",
+        "TC-009-3"
+      ],
+      "anchorIds": [
+        "wh-feat-list-row-unsupported",
+        "wh-feat-canvas-unsupported-marker"
+      ]
+    },
+    {
+      "featureId": "FEAT-010",
+      "title": "근거 등급 표기 (정직성)",
+      "scope": "keep",
+      "description": "추정치와 실측치를 구분해 신뢰 범위를 알린다.",
+      "testCaseIds": [
+        "TC-010-1",
+        "TC-010-2",
+        "TC-010-3",
+        "TC-010-4",
+        "TC-010-5"
+      ],
+      "anchorIds": [
+        "wh-feat-list-row-evidence-badge",
+        "wh-feat-legend-toggle",
+        "wh-feat-totals-evidence-badges"
+      ]
+    },
+    {
+      "featureId": "FEAT-011",
+      "title": "대형 트랙 성능 완화",
+      "scope": "keep",
+      "description": "큰 트랙에서도 조작감을 유지한다.",
+      "testCaseIds": [
+        "TC-011-1",
+        "TC-011-2",
+        "TC-011-3",
+        "TC-011-4"
+      ],
+      "anchorIds": [
+        "wh-feat-large-track-banner"
+      ]
+    },
+    {
+      "featureId": "FEAT-012",
+      "title": "하단 프로파일 스트립 (표면)",
+      "scope": "keep",
+      "description": "고도 변화를 한눈에 보고 원하는 지점으로 바로 이동한다.",
+      "testCaseIds": [
+        "TC-012-1",
+        "TC-012-2",
+        "TC-012-3",
+        "TC-012-4",
+        "TC-012-5"
+      ],
+      "anchorIds": [
+        "wh-feat-profile-strip-svg"
+      ]
+    },
+    {
+      "featureId": "FEAT-013",
+      "title": "텍스트 구간 목록 (표면)",
+      "scope": "keep",
+      "description": "전체 구간을 목록으로 훑고 특정 지점으로 점프한다.",
+      "testCaseIds": [
+        "TC-013-1",
+        "TC-013-2",
+        "TC-013-3",
+        "TC-013-4",
+        "TC-013-5"
+      ],
+      "anchorIds": [
+        "wh-feat-section-list"
+      ]
+    },
+    {
+      "featureId": "FEAT-014",
+      "title": "WebGL 미지원 감지 및 2D 대체 표현",
+      "scope": "keep",
+      "description": "3D를 못 봐도 트랙 정보를 확인할 수 있다.",
+      "testCaseIds": [
+        "TC-014-1",
+        "TC-014-2",
+        "TC-014-3",
+        "TC-014-4"
+      ],
+      "anchorIds": [
+        "wh-feat-webgl-fallback-screen"
+      ]
+    }
+  ],
+  "testCases": [
+    {
+      "testCaseId": "TC-001-1",
+      "given": "유효한 view/XXXXXX 형식 링크",
+      "when": "사용자가 제출하면",
+      "then": "fetch에 성공하고 원본 응답이 파싱 단계로 전달된다."
+    },
+    {
+      "testCaseId": "TC-001-2",
+      "given": "형식이 view/XXXXXX와 다른 잘못된 URL",
+      "when": "제출하면",
+      "then": "\"유효하지 않은 링크입니다\" 메시지가 표시되고 재입력이 유도된다."
+    },
+    {
+      "testCaseId": "TC-001-3",
+      "given": "형식은 맞지만 존재하지 않는 트랙 코드",
+      "when": "조회하면",
+      "then": "\"트랙을 찾을 수 없습니다\" 메시지가 표시된다."
+    },
+    {
+      "testCaseId": "TC-001-4",
+      "given": "편집기 응답이 임계값(잠정)을 넘겨 지연되는 상태",
+      "when": "조회가 진행 중이면",
+      "then": "loading 인디케이터에 \"시간이 걸리고 있어요\" 안내가 추가된다."
+    },
+    {
+      "testCaseId": "TC-001-5",
+      "given": "편집기 서버가 5xx/timeout/network 오류를 반환",
+      "when": "조회를 시도하면",
+      "then": "원인이 구분된 에러 메시지와 재시도 버튼이 표시된다."
+    },
+    {
+      "testCaseId": "TC-001-6",
+      "given": "같은 탭에서 이미 한 번 불러온 트랙 코드",
+      "when": "같은 코드를 다시 제출하면",
+      "then": "클라이언트 세션 캐시에서 즉시 복원되고 네트워크 요청이 0건이다."
+    },
+    {
+      "testCaseId": "TC-001-7",
+      "given": "3D 표시 화면이 로드된 상태",
+      "when": "화면을 확인하면",
+      "then": "원본 편집기로의 출처 링크가 상시 노출된다."
+    },
+    {
+      "testCaseId": "TC-001-8",
+      "given": "동일 트랙 코드를 캐시 TTL 내에 다른 탭에서 조회",
+      "when": "제출하면",
+      "then": "x-vercel-cache 헤더가 HIT 또는 STALE이다."
+    },
+    {
+      "testCaseId": "TC-002-1",
+      "given": "정상 문법의 참조 트랙 원본 문자열",
+      "when": "파싱을 수행하면",
+      "then": "피스 객체(class, x, y, angle, color) 배열이 산출된다."
+    },
+    {
+      "testCaseId": "TC-002-2",
+      "given": "정의 문법과 어긋난 손상 문자열",
+      "when": "파싱을 시도하면",
+      "then": "파싱 실패 메시지가 표시되고 원본 응답 일부가 접이식 디버그 영역에 노출된다."
+    },
+    {
+      "testCaseId": "TC-002-3",
+      "given": "피스가 0개이거나 빈 문자열인 응답",
+      "when": "파싱을 시도하면",
+      "then": "파싱 실패로 처리되고 디버그 영역에 원본이 노출된다."
+    },
+    {
+      "testCaseId": "TC-002-4",
+      "given": "compat=false인 참조 트랙 응답",
+      "when": "파싱하면",
+      "then": "compat 플래그가 false로 기록되고 보정 메타데이터가 부여되지 않는다."
+    },
+    {
+      "testCaseId": "TC-002-5",
+      "given": "compat=true fixture(WS67Y2로는 검증 불가)",
+      "when": "파싱하면",
+      "then": "45/135/225/315° Cor1에 보정 메타데이터가 부여된다(skip 관리)."
+    },
+    {
+      "testCaseId": "TC-003-1",
+      "given": "파싱된 참조 트랙 피스 전체",
+      "when": "끝점 매칭을 수행하면",
+      "then": "Str2에서 시작하는 순서 배열이 산출된다."
+    },
+    {
+      "testCaseId": "TC-003-2",
+      "given": "동일 트랙 코드로 3회 반복 조회",
+      "when": "매번 순서 복원을 수행하면",
+      "then": "3회 모두 동일한 순서 배열이 산출된다."
+    },
+    {
+      "testCaseId": "TC-003-3",
+      "given": "여러 피스의 끝점 후보가 근접해 모호한 경우",
+      "when": "매칭을 수행하면",
+      "then": "위치·각도 오차가 최소인 후보를 결정적 규칙으로 선택한다."
+    },
+    {
+      "testCaseId": "TC-003-4",
+      "given": "Str2(START)가 0개인 피스 배열",
+      "when": "순서 복원을 시도하면",
+      "then": "\"시작 지점(START)을 찾을 수 없습니다\" 메시지와 디버그 노출, 3D 렌더는 시도하지 않는다."
+    },
+    {
+      "testCaseId": "TC-003-5",
+      "given": "Str2가 2개 이상 존재",
+      "when": "순서 복원을 시도하면",
+      "then": "최초 등장 피스를 시작점으로 선택하고 근거를 기록하며 나머지는 마커 직선으로 처리한다."
+    },
+    {
+      "testCaseId": "TC-004-1",
+      "given": "정상 폐곡선을 이루는 참조 트랙",
+      "when": "폐곡선 검증을 수행하면",
+      "then": "통과로 판정되고 경고 배너는 노출되지 않는다."
+    },
+    {
+      "testCaseId": "TC-004-2",
+      "given": "끝점이 어긋난 비폐곡선 데이터",
+      "when": "파싱·순서복원이 완료되면",
+      "then": "연결 가능한 구간은 정상 렌더, 끊긴 지점은 경고 배너와 함께 회색 표시되며 렌더링은 중단되지 않는다."
+    },
+    {
+      "testCaseId": "TC-004-3",
+      "given": "부분 실패 상태로 렌더된 화면",
+      "when": "3D 뷰를 회전·확대하면",
+      "then": "실패 구간은 회색·점선을 유지하고 정상 구간의 조작은 그대로 동작한다."
+    },
+    {
+      "testCaseId": "TC-004-4",
+      "given": "상승/하강 누적 고도가 START에서 상쇄되는 트랙",
+      "when": "Z 폐합 검증을 수행하면",
+      "then": "오차가 허용오차 이내로 판정되고 별도 경고가 노출되지 않는다."
+    },
+    {
+      "testCaseId": "TC-004-5",
+      "given": "XY는 폐곡선이지만 고도가 불균형한 데이터",
+      "when": "Z 폐합 검증을 수행하면",
+      "then": "수직 불연속 경고와 \"고도가 시작 지점과 어긋납니다\" 배너가 노출되고 강제 보정 없이 표시된다."
+    },
+    {
+      "testCaseId": "TC-004-6",
+      "given": "고도 폐합 실패 상태",
+      "when": "프로파일 스트립을 표시하면",
+      "then": "START/END 절대 고도 차이가 그래프 양 끝단의 수직 불연속으로 드러난다."
+    },
+    {
+      "testCaseId": "TC-005-1",
+      "given": "Bri1(slope) 피스와 앞뒤 평지",
+      "when": "고도 프로파일을 생성하면",
+      "then": "총 상승량이 px×tan40°와 일치하고 S곡선이 양 끝 접선 0으로 매끄럽게 이어진다."
+    },
+    {
+      "testCaseId": "TC-005-2",
+      "given": "Ban1(bank) 피스",
+      "when": "고도 프로파일을 생성하면",
+      "then": "마루 없는 단조 로그 곡선이 생성되고 접선 연속을 이룬다."
+    },
+    {
+      "testCaseId": "TC-005-3",
+      "given": "상승색·하강색이 짝지어진 슬로프 쌍",
+      "when": "프로파일을 생성하면",
+      "then": "마루에서 두 곡선의 기울기가 0으로 만나 꺾임 없는 언덕 하나가 형성된다."
+    },
+    {
+      "testCaseId": "TC-005-4",
+      "given": "추정 근거가 적용된 수치",
+      "when": "프로파일을 계산하면",
+      "then": "근거 등급 메타데이터가 함께 태깅되어 FEAT-010이 소비할 수 있다."
+    },
+    {
+      "testCaseId": "TC-005-5",
+      "given": "Str1의 color=5(마커 직선) 피스",
+      "when": "고도 프로파일을 생성하면",
+      "then": "고도 변화 없이 평평한 flat 프로파일이 적용되고 상승/하강 판정에서 제외된다."
+    },
+    {
+      "testCaseId": "TC-005-6",
+      "given": "Ban1(bank) 피스",
+      "when": "고도 프로파일을 생성하면",
+      "then": "총 상승량이 px×tan20°와 일치하고 단조 증가 로그 곡선이며 접선 연속이다."
+    },
+    {
+      "testCaseId": "TC-006-1",
+      "given": "고도 프로파일이 적용된 세그먼트 전체",
+      "when": "정규화 상대좌표로 원본과 비교하면",
+      "then": "오차 ±0.5% 이내, 접선각 오차 ±1° 이내다."
+    },
+    {
+      "testCaseId": "TC-006-2",
+      "given": "3D 뷰가 표시된 상태",
+      "when": "캔버스를 드래그하면",
+      "then": "카메라가 궤도 회전하며 다음 프레임 내에 반영된다."
+    },
+    {
+      "testCaseId": "TC-006-3",
+      "given": "3D 뷰가 표시된 상태",
+      "when": "휠을 돌리거나 핀치하면",
+      "then": "확대/축소가 즉시 반영된다."
+    },
+    {
+      "testCaseId": "TC-006-4",
+      "given": "참조 트랙을 로드",
+      "when": "초기 렌더가 완료되면",
+      "then": "3초 이내 렌더 완료, 이후 30fps 이상 유지."
+    },
+    {
+      "testCaseId": "TC-006-5",
+      "given": "3D 뷰에 키보드 포커스가 있는 상태",
+      "when": "방향키 또는 +/-를 누르면",
+      "then": "마우스 없이도 회전/줌이 대체 조작으로 동작한다."
+    },
+    {
+      "testCaseId": "TC-007-1",
+      "given": "순서가 결정적으로 복원된 참조 트랙",
+      "when": "'트랙 따라가기'를 켜면",
+      "then": "카메라가 Str2 지점에서 시작해 순서대로 이동하며 이탈 없이 통과한다."
+    },
+    {
+      "testCaseId": "TC-007-2",
+      "given": "추종 시점이 켜진 상태",
+      "when": "하단 프로파일 스트립을 드래그/클릭하면",
+      "then": "카메라가 즉시 컷 대신 easing으로 부드럽게 이동한다."
+    },
+    {
+      "testCaseId": "TC-007-3",
+      "given": "자동 재생 옵션이 켜진 상태",
+      "when": "재생 중 일시정지를 누르면",
+      "then": "카메라가 즉시 멈추고 현재 위치를 유지한다."
+    },
+    {
+      "testCaseId": "TC-007-4",
+      "given": "슬로프/뱅크 구간을 통과 중인 상태",
+      "when": "카메라가 이동하면",
+      "then": "카메라 피치가 고도 프로파일의 기울기에서 직접 파생된다."
+    },
+    {
+      "testCaseId": "TC-007-5",
+      "given": "부분 실패(비폐곡선) 트랙",
+      "when": "추종 시점을 켜면",
+      "then": "복원된 구간까지만 이동하고 끊긴 지점에서 정지하며 오류로 중단되지 않는다."
+    },
+    {
+      "testCaseId": "TC-007-6",
+      "given": "프로파일 스트립에 키보드 포커스가 있는 상태",
+      "when": "구간 포인트를 순회하고 확정하면",
+      "then": "해당 지점으로 카메라가 점프한다."
+    },
+    {
+      "testCaseId": "TC-008-1",
+      "given": "Lan1 피스를 포함한 참조 트랙",
+      "when": "3D 뷰를 표시하면",
+      "then": "레인체인지 구간의 수평 오프셋이 인접 직선 구간과 다르게 렌더된다."
+    },
+    {
+      "testCaseId": "TC-008-2",
+      "given": "추종 시점으로 레인체인지 구간에 진입",
+      "when": "카메라가 그 구간을 통과하면",
+      "then": "카메라 위치도 레인 오프셋을 반영해 함께 이동한다."
+    },
+    {
+      "testCaseId": "TC-008-3",
+      "given": "레인체인지 구간이 존재하는 트랙",
+      "when": "텍스트 구간 목록을 열면",
+      "then": "해당 세그먼트가 유형 \"레인체인지\"로 표에 나열된다."
+    },
+    {
+      "testCaseId": "TC-009-1",
+      "given": "미지원 타입을 주입한 테스트 데이터",
+      "when": "3D 뷰를 렌더하면",
+      "then": "와이어프레임 박스 플레이스홀더와 \"미지원: {타입명}\" 라벨이 노출된다."
+    },
+    {
+      "testCaseId": "TC-009-2",
+      "given": "참조 트랙의 Chi1(wave) 2개가 미구현으로 처리되는 경우",
+      "when": "렌더하면",
+      "then": "동일하게 라벨이 노출되고 진행 순서 복원 결과에는 영향을 주지 않는다."
+    },
+    {
+      "testCaseId": "TC-009-3",
+      "given": "미지원 피스가 다수 혼재된 트랙",
+      "when": "렌더하면",
+      "then": "각 미지원 피스마다 개별 라벨이 노출되어 하나로 뭉뚱그려지지 않는다."
+    },
+    {
+      "testCaseId": "TC-010-1",
+      "given": "슬로프 낙차(추정) 값이 적용된 구간",
+      "when": "3D 뷰 또는 범례를 표시하면",
+      "then": "\"추정\" 등급 배지가 값 옆에 노출된다."
+    },
+    {
+      "testCaseId": "TC-010-2",
+      "given": "뱅크 각도 20°(실측 확인) 값이 적용된 구간",
+      "when": "표시하면",
+      "then": "\"실측\" 등급 배지가 노출된다."
+    },
+    {
+      "testCaseId": "TC-010-3",
+      "given": "근거 등급이 태깅된 항목 전체 목록",
+      "when": "화면과 대조하면",
+      "then": "모든 항목이 화면 배지에 1:1로 대응하며 누락이 없다."
+    },
+    {
+      "testCaseId": "TC-010-4",
+      "given": "고저차 시각 과장이 적용된 경우",
+      "when": "프로파일 그래프를 표시하면",
+      "then": "축에 \"상대 스케일(실측 아님)\"이 명시된다."
+    },
+    {
+      "testCaseId": "TC-010-5",
+      "given": "참조 트랙 데이터",
+      "when": "총 길이/총 피스 수를 표시하면",
+      "then": "피스 수는 \"확인\" 등급, 총 길이는 절대 단위 없이 \"미확인\" 등급으로 표기된다."
+    },
+    {
+      "testCaseId": "TC-011-1",
+      "given": "300피스를 초과하는 대형 데이터",
+      "when": "3D 뷰를 렌더하면",
+      "then": "완화 상태로 전환되고 \"대형 트랙: 일부 최적화 적용\" 배지가 노출된다."
+    },
+    {
+      "testCaseId": "TC-011-2",
+      "given": "완화 상태가 적용된 300피스 초과 트랙",
+      "when": "완화 비적용 대조군과 fps를 비교하면",
+      "then": "완화 적용 시 fps가 개선된다."
+    },
+    {
+      "testCaseId": "TC-011-3",
+      "given": "참조 트랙 규모(경계 구간 미만)",
+      "when": "렌더하면",
+      "then": "완화 상태 배지가 노출되지 않는다."
+    },
+    {
+      "testCaseId": "TC-011-4",
+      "given": "경계 구간(132~300피스) 내 트랙",
+      "when": "렌더하면",
+      "then": "완화 적용 여부는 구현체 재량이며 결함으로 간주하지 않는다."
+    },
+    {
+      "testCaseId": "TC-012-1",
+      "given": "고도 프로파일이 계산된 참조 트랙",
+      "when": "화면 하단 프로파일 스트립을 표시하면",
+      "then": "누적 고도 곡선이 좌→우로 렌더되고 세그먼트 경계에 구분선이 표시된다."
+    },
+    {
+      "testCaseId": "TC-012-2",
+      "given": "추종 시점이 활성화된 상태",
+      "when": "카메라가 이동하면",
+      "then": "스트립 위 현재 위치 인디케이터가 실시간으로 함께 이동한다."
+    },
+    {
+      "testCaseId": "TC-012-3",
+      "given": "부분 실패(비폐곡선) 트랙",
+      "when": "스트립을 표시하면",
+      "then": "끊긴 지점 이후 구간은 회색으로 표시되고 클릭해도 카메라가 이동하지 않는다."
+    },
+    {
+      "testCaseId": "TC-012-4",
+      "given": "B-001(스케일 미확정)이 열린 상태",
+      "when": "y축을 표시하면",
+      "then": "\"상대 스케일(실측 아님)\" 표기가 함께 노출된다."
+    },
+    {
+      "testCaseId": "TC-012-5",
+      "given": "고도 폐합(Z closure) 실패 상태",
+      "when": "스트립을 표시하면",
+      "then": "START/END 절대 고도 차이가 그래프 양 끝단의 수직 불연속으로 드러난다."
+    },
+    {
+      "testCaseId": "TC-013-1",
+      "given": "복원된 경로 전체",
+      "when": "텍스트 구간 목록 패널을 열면",
+      "then": "세그먼트가 순서대로 나열되고 각 행에 피스 타입·구간 유형이 표시된다."
+    },
+    {
+      "testCaseId": "TC-013-2",
+      "given": "텍스트 구간 목록이 열린 상태",
+      "when": "특정 행을 클릭하면",
+      "then": "프로파일 스트립 인디케이터와 3D 카메라가 해당 지점으로 이동한다."
+    },
+    {
+      "testCaseId": "TC-013-3",
+      "given": "미지원 피스가 포함된 트랙",
+      "when": "목록을 표시하면",
+      "then": "해당 행에 \"미지원: {타입명}\" 라벨이 함께 표기된다."
+    },
+    {
+      "testCaseId": "TC-013-4",
+      "given": "목록에 키보드 포커스가 있는 상태",
+      "when": "화살표키로 행을 순회하고 Enter를 누르면",
+      "then": "해당 지점으로 카메라와 스트립 인디케이터가 함께 이동한다."
+    },
+    {
+      "testCaseId": "TC-013-5",
+      "given": "WebGL 미지원 상태",
+      "when": "3D 뷰 대신 대체 화면이 표시되면",
+      "then": "텍스트 구간 목록이 기본 펼침 상태로 대체 표현의 주 콘텐츠 역할을 한다."
+    },
+    {
+      "testCaseId": "TC-014-1",
+      "given": "WebGL을 지원하지 않는 브라우저/환경",
+      "when": "3D 뷰 페이지가 로드되면",
+      "then": "컨텍스트 생성을 시도하기 전에 감지되어 안내가 표시되고 3D 렌더 시도 자체가 발생하지 않는다."
+    },
+    {
+      "testCaseId": "TC-014-2",
+      "given": "WebGL 미지원 상태",
+      "when": "안내 화면을 표시하면",
+      "then": "파싱된 경로 데이터를 활용한 2D 요약 표현이 대체 표시된다."
+    },
+    {
+      "testCaseId": "TC-014-3",
+      "given": "WebGL 지원은 감지됐으나 컨텍스트 생성이 런타임에 실패하는 상태",
+      "when": "3D 렌더를 시도하면",
+      "then": "예외로 전체 화면이 깨지지 않고 동일한 대체 표현으로 graceful degrade 한다."
+    },
+    {
+      "testCaseId": "TC-014-4",
+      "given": "WebGL 미지원 상태에서 대체 표현이 표시된 화면",
+      "when": "사용자가 화면을 확인하면",
+      "then": "원본 출처 링크는 동일하게 노출된다."
+    }
+  ],
+  "anchors": [
+    {
+      "anchorId": "wh-feat-url-input-form",
+      "featureId": "FEAT-001",
+      "selector": "[data-wh-anchor=\"wh-feat-url-input-form\"]",
+      "testCaseIds": [
+        "TC-001-1",
+        "TC-001-2",
+        "TC-001-3",
+        "TC-001-4",
+        "TC-001-5",
+        "TC-001-6",
+        "TC-001-8"
+      ],
+      "behavior": "view/XXXXXX 형식 입력 후 제출 — 형식 오류·미등록 코드·지연·네트워크 오류·파싱 실패·START 부재/중복을 예시 코드 칩으로 전부 시연 가능.",
+      "label": "URL 입력 폼",
+      "route": "/"
+    },
+    {
+      "anchorId": "wh-feat-error-retry-button",
+      "featureId": "FEAT-001",
+      "selector": "[data-wh-anchor=\"wh-feat-error-retry-button\"]",
+      "testCaseIds": [
+        "TC-001-5"
+      ],
+      "behavior": "에러 화면의 \"다시 시도\" 버튼 — 입력값을 보존한 채 loading으로 복귀한다.",
+      "label": "오류 재시도 버튼",
+      "route": "/"
+    },
+    {
+      "anchorId": "wh-feat-app-header-switch-track",
+      "featureId": "FEAT-001",
+      "selector": "[data-wh-anchor=\"wh-feat-app-header-switch-track\"]",
+      "testCaseIds": [
+        "TC-001-1"
+      ],
+      "behavior": "\"다른 트랙 보기\" — 입력 화면으로 되돌아간다(component-spec/widgets.md AppHeader). 전용 TC는 없고 화면 전환 구조 요구사항이다.",
+      "label": "다른 트랙 보기",
+      "route": "/"
+    },
+    {
+      "anchorId": "wh-feat-app-header-source-link",
+      "featureId": "FEAT-001",
+      "selector": "[data-wh-anchor=\"wh-feat-app-header-source-link\"]",
+      "testCaseIds": [
+        "TC-001-7"
+      ],
+      "behavior": "원본 편집기 출처 링크 — 3D/부분실패/WebGL대체 모든 화면에서 상시 노출.",
+      "label": "원본 편집기 출처 링크",
+      "route": "/"
+    },
+    {
+      "anchorId": "wh-feat-section-list",
+      "featureId": "FEAT-013",
+      "selector": "[data-wh-anchor=\"wh-feat-section-list\"]",
+      "testCaseIds": [
+        "TC-013-1",
+        "TC-013-2",
+        "TC-013-3",
+        "TC-013-4",
+        "TC-013-5"
+      ],
+      "behavior": "행 클릭 또는 방향키+Enter로 해당 구간으로 공유 커서를 이동시킨다(캔버스·스트립 동기화).",
+      "label": "텍스트 구간 목록",
+      "route": "/"
+    },
+    {
+      "anchorId": "wh-feat-list-row-lane-change",
+      "featureId": "FEAT-008",
+      "selector": "[data-wh-anchor=\"wh-feat-list-row-lane-change\"]",
+      "testCaseIds": [
+        "TC-008-3"
+      ],
+      "behavior": "레인체인지(Lan1) 세그먼트 행 — \"레인체인지\" 유형 라벨.",
+      "label": "list row lane change",
+      "route": "/"
+    },
+    {
+      "anchorId": "wh-feat-list-row-unsupported",
+      "featureId": "FEAT-009",
+      "selector": "[data-wh-anchor=\"wh-feat-list-row-unsupported\"]",
+      "testCaseIds": [
+        "TC-009-1",
+        "TC-009-3"
+      ],
+      "behavior": "미지원(Chi1) 세그먼트 행 — \"미지원: Chi1(웨이브)\" 라벨. 동일 트랙에 2개 인스턴스가 있으며 각각 개별 라벨(대표 앵커 1개로 패턴 커버).",
+      "label": "list row unsupported",
+      "route": "/"
+    },
+    {
+      "anchorId": "wh-feat-list-row-evidence-badge",
+      "featureId": "FEAT-010",
+      "selector": "[data-wh-anchor=\"wh-feat-list-row-evidence-badge\"]",
+      "testCaseIds": [
+        "TC-010-1",
+        "TC-010-2",
+        "TC-010-3"
+      ],
+      "behavior": "근거 등급이 태깅된 첫 행의 배지(대표 인스턴스, 동일 컴포넌트가 슬로프/뱅크/레인체인지 행에 반복).",
+      "label": "list row evidence badge",
+      "route": "/"
+    },
+    {
+      "anchorId": "wh-feat-canvas-3d-approx",
+      "featureId": "FEAT-006",
+      "selector": "[data-wh-anchor=\"wh-feat-canvas-3d-approx\"]",
+      "testCaseIds": [
+        "TC-006-1",
+        "TC-006-2",
+        "TC-006-3",
+        "TC-006-4",
+        "TC-006-5"
+      ],
+      "behavior": "드래그=회전, 휠=확대/축소, 방향키/+-=키보드 대체 조작. 실렌더링은 SVG 2D 평면도 근사(three.js 아님).",
+      "label": "canvas 3d approx",
+      "route": "/"
+    },
+    {
+      "anchorId": "wh-feat-canvas-truncate-marker",
+      "featureId": "FEAT-004",
+      "selector": "[data-wh-anchor=\"wh-feat-canvas-truncate-marker\"]",
+      "testCaseIds": [
+        "TC-004-2",
+        "TC-004-3"
+      ],
+      "behavior": "부분 실패 트랙에서 복원 구간 끝단에 표시되는 절단 마커.",
+      "label": "canvas truncate marker",
+      "route": "/"
+    },
+    {
+      "anchorId": "wh-feat-canvas-unsupported-marker",
+      "featureId": "FEAT-009",
+      "selector": "[data-wh-anchor=\"wh-feat-canvas-unsupported-marker\"]",
+      "testCaseIds": [
+        "TC-009-1",
+        "TC-009-3"
+      ],
+      "behavior": "3D 뷰(2D 근사) 쪽 미지원 피스 와이어프레임 플레이스홀더 — 목록 라벨과는 별도 렌더 경로.",
+      "label": "canvas unsupported marker",
+      "route": "/"
+    },
+    {
+      "anchorId": "wh-feat-legend-toggle",
+      "featureId": "FEAT-010",
+      "selector": "[data-wh-anchor=\"wh-feat-legend-toggle\"]",
+      "testCaseIds": [
+        "TC-010-1",
+        "TC-010-2",
+        "TC-010-4"
+      ],
+      "behavior": "범례 토글 — rise/fall 색상 + 4등급 배지 범례를 접이식으로 노출(기본 접힘).",
+      "label": "legend toggle",
+      "route": "/"
+    },
+    {
+      "anchorId": "wh-feat-control-cluster",
+      "featureId": "FEAT-007",
+      "selector": "[data-wh-anchor=\"wh-feat-control-cluster\"]",
+      "testCaseIds": [
+        "TC-007-1",
+        "TC-007-2",
+        "TC-007-3",
+        "TC-007-4",
+        "TC-007-5",
+        "TC-007-6"
+      ],
+      "behavior": "트랙 따라가기 스위치 + 탐색 속도(느리게/보통/빠르게) + 재생/일시정지 — 켜면 Str2부터 자동 순회, 실패 구간에서 자동 정지.",
+      "label": "control cluster",
+      "route": "/"
+    },
+    {
+      "anchorId": "wh-feat-profile-strip-svg",
+      "featureId": "FEAT-012",
+      "selector": "[data-wh-anchor=\"wh-feat-profile-strip-svg\"]",
+      "testCaseIds": [
+        "TC-012-1",
+        "TC-012-2",
+        "TC-012-3",
+        "TC-012-4",
+        "TC-012-5"
+      ],
+      "behavior": "드래그/클릭/방향키(Home/End)로 스크럽 — 회색(실패) 구간은 무시된다.",
+      "label": "profile strip svg",
+      "route": "/"
+    },
+    {
+      "anchorId": "wh-feat-elevation-curve-path",
+      "featureId": "FEAT-005",
+      "selector": "[data-wh-anchor=\"wh-feat-elevation-curve-path\"]",
+      "testCaseIds": [
+        "TC-005-1",
+        "TC-005-2",
+        "TC-005-3",
+        "TC-005-4",
+        "TC-005-5",
+        "TC-005-6"
+      ],
+      "behavior": "누적 고도 곡선(스무딩) — 상승/하강 쌍이 하나의 매끄러운 언덕으로 보이는지 확인.",
+      "label": "elevation curve path",
+      "route": "/"
+    },
+    {
+      "anchorId": "wh-feat-strip-fail-segment",
+      "featureId": "FEAT-004",
+      "selector": "[data-wh-anchor=\"wh-feat-strip-fail-segment\"]",
+      "testCaseIds": [
+        "TC-004-1"
+      ],
+      "behavior": "부분 실패 구간의 회색 점선 곡선 — 클릭/드래그해도 onScrub이 호출되지 않는다.",
+      "label": "strip fail segment",
+      "route": "/"
+    },
+    {
+      "anchorId": "wh-feat-strip-zgap-marker",
+      "featureId": "FEAT-004",
+      "selector": "[data-wh-anchor=\"wh-feat-strip-zgap-marker\"]",
+      "testCaseIds": [
+        "TC-004-6"
+      ],
+      "behavior": "Z 폐합 실패 시 그래프 양 끝단의 수직 불연속 표시.",
+      "label": "strip zgap marker",
+      "route": "/"
+    },
+    {
+      "anchorId": "wh-feat-totals-evidence-badges",
+      "featureId": "FEAT-010",
+      "selector": "[data-wh-anchor=\"wh-feat-totals-evidence-badges\"]",
+      "testCaseIds": [
+        "TC-010-5"
+      ],
+      "behavior": "총 피스 수(확인 등급) / 총 길이(편집기 l 단위, 미확인 등급) — 절대 단위(m/cm) 미표기.",
+      "label": "totals evidence badges",
+      "route": "/"
+    },
+    {
+      "anchorId": "wh-feat-partial-failure-banner",
+      "featureId": "FEAT-004",
+      "selector": "[data-wh-anchor=\"wh-feat-partial-failure-banner\"]",
+      "testCaseIds": [
+        "TC-004-2",
+        "TC-004-3"
+      ],
+      "behavior": "비폐곡선(XY) 부분 실패 상시 경고 배너.",
+      "label": "partial failure banner",
+      "route": "/"
+    },
+    {
+      "anchorId": "wh-feat-zgap-banner",
+      "featureId": "FEAT-004",
+      "selector": "[data-wh-anchor=\"wh-feat-zgap-banner\"]",
+      "testCaseIds": [
+        "TC-004-5",
+        "TC-004-6"
+      ],
+      "behavior": "XY는 닫혔지만 Z(고도)가 불균형할 때의 경고 배너.",
+      "label": "zgap banner",
+      "route": "/"
+    },
+    {
+      "anchorId": "wh-feat-large-track-banner",
+      "featureId": "FEAT-011",
+      "selector": "[data-wh-anchor=\"wh-feat-large-track-banner\"]",
+      "testCaseIds": [
+        "TC-011-1",
+        "TC-011-2",
+        "TC-011-3",
+        "TC-011-4"
+      ],
+      "behavior": "300피스 초과 시 노출되는 대형 트랙 완화 모드 안내.",
+      "label": "대형 트랙 완화 배너",
+      "route": "/"
+    },
+    {
+      "anchorId": "wh-feat-webgl-fallback-screen",
+      "featureId": "FEAT-014",
+      "selector": "[data-wh-anchor=\"wh-feat-webgl-fallback-screen\"]",
+      "testCaseIds": [
+        "TC-014-1",
+        "TC-014-2",
+        "TC-014-3",
+        "TC-014-4"
+      ],
+      "behavior": "WebGL 미지원(또는 런타임 실패) 감지 시 3D 대신 표시되는 전체 화면 — 텍스트 구간 목록이 주 콘텐츠.",
+      "label": "WebGL 미지원 대체 화면",
+      "route": "/"
+    },
+    {
+      "anchorId": "wh-feat-alert-slot",
+      "featureId": "FEAT-004",
+      "selector": "[data-wh-anchor=\"wh-feat-alert-slot\"]",
+      "testCaseIds": [
+        "TC-004-1",
+        "TC-004-4"
+      ],
+      "behavior": "상시 예약된 40px 배너 슬롯 — 정상 폐곡선/Z폐합 시에는 비어 있다(경고 없음이 곧 통과 상태).",
+      "label": "경고 슬롯",
+      "route": "/"
+    }
+  ],
+  "sourceSnapshot": {
+    "algorithm": "sha256",
+    "digest": "f9ebaca0719f77220fffc4c0af83d85a43ac040eaba93730f662c7bf6e4fac68",
+    "files": [
+      {
+        "path": "_workspace/01_plan/feature-plan/data-model.md",
+        "sha256": "0efaa669927b3cad43dc7dbe8a276c3a3190da0ab5c9ceb900f63dbf99cd02d6"
+      },
+      {
+        "path": "_workspace/01_plan/feature-plan/feature-list.md",
+        "sha256": "d9ee5ab0c4516146d27162d6b4f3aa6de07fd64163f1ccaac9fd6b8345e88c54"
+      },
+      {
+        "path": "_workspace/01_plan/feature-plan/INDEX.md",
+        "sha256": "9b4139812c94fb8abfbc5c8f37e84edeea17541a4687c07aef7d0fffe6de25d8"
+      },
+      {
+        "path": "_workspace/01_plan/feature-plan/specs-pipeline.md",
+        "sha256": "b992db46bc222538356f27899597f6aa40e9fc45d8f0c0f511bf75d5cea80133"
+      },
+      {
+        "path": "_workspace/01_plan/feature-plan/specs-scene.md",
+        "sha256": "74e365e97269efbe94d70d914e448e0bd20eb174b4b91c7edef57a1b78fed134"
+      },
+      {
+        "path": "_workspace/01_plan/feature-plan/specs-surfaces.md",
+        "sha256": "d0a6dea794997382ffb8ed06e20f820a257de2b7ce4e8dac6b7bdf08e8abc9c9"
+      },
+      {
+        "path": "_workspace/01_plan/feature-plan/traceability.md",
+        "sha256": "d45eab359a25a1b3c94f2b6a33e6c8e92407814dfa40db7cb58b49f99aa6393b"
+      },
+      {
+        "path": "_workspace/01_plan/ux-brief/decisions.md",
+        "sha256": "3e55f99ad1240e0e5187e14f5d4a046bf4f31fff15f89abc1343e7b80accc541"
+      },
+      {
+        "path": "_workspace/01_plan/ux-brief/direction.md",
+        "sha256": "1d19e4ed8c2e20fe1c06b8e522ca64cf7a22dfa2783633fe9de5b2699df861a3"
+      },
+      {
+        "path": "_workspace/01_plan/ux-brief/flow.md",
+        "sha256": "1e8b6631f93df043b936fd9c1adfca5725e959411b24858c9a215a048dd43d16"
+      },
+      {
+        "path": "_workspace/01_plan/ux-brief/INDEX.md",
+        "sha256": "e64b8f44c1404ae16df4423b86dfb1bac8624e5a5463d436cd75085dc4ef1b4e"
+      },
+      {
+        "path": "_workspace/01_plan/ux-brief/screens.md",
+        "sha256": "1dd22b1a494a4a7e744cbb37fb4ec73bcec055ce6c4d0a57d0d00a8f63ae57db"
+      },
+      {
+        "path": "_workspace/02_design/component-spec/features.md",
+        "sha256": "9ae1d8f2e55ee78b9a9f5a6085ca241ef9b36f3d7d934a50a6e9de0b5065b4f0"
+      },
+      {
+        "path": "_workspace/02_design/component-spec/INDEX.md",
+        "sha256": "bc37845e1ea17af6f8956ea62eed87fb26e29f5a6777d412181cfbee37ac95c2"
+      },
+      {
+        "path": "_workspace/02_design/component-spec/pages.md",
+        "sha256": "6d0451cfaaae889deeea9b7c5d147bf75fef58c4349ffb55f40fdee78207fd21"
+      },
+      {
+        "path": "_workspace/02_design/component-spec/shared.md",
+        "sha256": "d4ed1f875fce49605b2defda88c7f73e6a91c309db469a7136d60228d7259887"
+      },
+      {
+        "path": "_workspace/02_design/component-spec/widgets.md",
+        "sha256": "0c0ec70e475a9782e70543ea6e4fc72e748059116e60b19bdca2cbd8cb5422cd"
+      },
+      {
+        "path": "_workspace/02_design/design-system/accessibility.md",
+        "sha256": "5c4254b0ab2b46426bbc03dc28ecc3de7371eb46c815f3298d3dca434cee7eaa"
+      },
+      {
+        "path": "_workspace/02_design/design-system/INDEX.md",
+        "sha256": "f42c1de859f15dea88638b86af2155697781f7a62e6ac83d1eec43d38dbf7569"
+      },
+      {
+        "path": "_workspace/02_design/design-system/inventory.md",
+        "sha256": "a450c30edd5efd3cd0d76bd29c8a35d9805e2ee4ad09ee28a4f3d1dc1c9bdd1d"
+      },
+      {
+        "path": "_workspace/02_design/design-system/tokens.md",
+        "sha256": "72da509f915eb219e71cb6ab96703f25d2dc29fc2902010291368380f22a7423"
+      },
+      {
+        "path": "_workspace/02_design/layout-spec/a11y-responsive.md",
+        "sha256": "e33d1685fb4c90ebc94915dfe9bcbb4c439b764f7fbaf964cc08761058871731"
+      },
+      {
+        "path": "_workspace/02_design/layout-spec/global-shell.md",
+        "sha256": "2842f19ced6d879c3bf22e0871c347d860213cf10dc587f9dd0641d0a54ab083"
+      },
+      {
+        "path": "_workspace/02_design/layout-spec/INDEX.md",
+        "sha256": "b45b04db3ab75d4677548d0d4ffed9f1bab15266a012b8cd30b145720ac171a9"
+      },
+      {
+        "path": "_workspace/02_design/layout-spec/states.md",
+        "sha256": "9a252d7a54f8993aa96cae5582fc2fac04c1e08da10a929890dfe2f14af3dd74"
+      }
+    ]
+  }
+}

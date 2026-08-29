@@ -1,0 +1,195 @@
+{
+ "schemaVersion": 1,
+ "spawns": [
+  {
+   "run": "2026-08-28+fresh",
+   "phase": "P1",
+   "agent": "requirements-analyst",
+   "retry": false,
+   "tokens": 43122,
+   "toolUses": 6,
+   "durationMs": 232788,
+   "outcome": "complete"
+  },
+  {
+   "run": "2026-08-28+fresh",
+   "phase": "P1",
+   "agent": "ux-researcher",
+   "retry": false,
+   "tokens": 43234,
+   "toolUses": 10,
+   "durationMs": 206100,
+   "outcome": "complete"
+  },
+  {
+   "run": "2026-08-28+fresh",
+   "phase": "P1",
+   "agent": "feature-planner",
+   "retry": false,
+   "tokens": 53822,
+   "toolUses": 5,
+   "durationMs": 217333,
+   "outcome": "complete"
+  },
+  {
+   "run": "2026-08-28+fresh",
+   "phase": "P1",
+   "agent": "tech-advisor",
+   "retry": false,
+   "tokens": 69155,
+   "toolUses": 26,
+   "durationMs": 374476,
+   "outcome": "complete"
+  },
+  {
+   "run": "2026-08-28+fresh",
+   "phase": "P1",
+   "agent": "planning-synthesizer",
+   "retry": false,
+   "tokens": 63528,
+   "toolUses": 8,
+   "durationMs": 173859,
+   "outcome": "complete"
+  },
+  {
+   "run": "2026-08-28+fresh",
+   "phase": "P1",
+   "agent": "plan-reviewer",
+   "retry": false,
+   "tokens": 92752,
+   "toolUses": 12,
+   "durationMs": 344243,
+   "outcome": "complete"
+  },
+  {
+   "run": "2026-08-28+fresh",
+   "phase": "P1",
+   "agent": "tech-advisor",
+   "retry": true,
+   "tokens": 43504,
+   "toolUses": 5,
+   "durationMs": 186059,
+   "outcome": "complete"
+  },
+  {
+   "run": "2026-08-28+fresh",
+   "phase": "P1",
+   "agent": "ux-researcher",
+   "retry": true,
+   "tokens": 44542,
+   "toolUses": 11,
+   "durationMs": 171090,
+   "outcome": "complete"
+  },
+  {
+   "run": "2026-08-28+fresh",
+   "phase": "P1",
+   "agent": "requirements-analyst",
+   "retry": true,
+   "tokens": 47949,
+   "toolUses": 10,
+   "durationMs": 269532,
+   "outcome": "complete"
+  },
+  {
+   "run": "2026-08-28+fresh",
+   "phase": "P1",
+   "agent": "feature-planner",
+   "retry": true,
+   "tokens": 80381,
+   "toolUses": 3,
+   "durationMs": 539550,
+   "outcome": "complete"
+  },
+  {
+   "run": "2026-08-28+fresh",
+   "phase": "P1",
+   "agent": "planning-synthesizer",
+   "retry": true,
+   "tokens": 76876,
+   "toolUses": 6,
+   "durationMs": 189056,
+   "outcome": "complete"
+  },
+  {
+   "run": "2026-08-28+fresh",
+   "phase": "P1",
+   "agent": "plan-reviewer",
+   "retry": true,
+   "tokens": 114401,
+   "toolUses": 8,
+   "durationMs": 455323,
+   "outcome": "complete"
+  },
+  {
+   "run": "2026-08-28+fresh",
+   "phase": "P1",
+   "agent": "plan-reviewer",
+   "retry": true,
+   "tokens": 155276,
+   "toolUses": 19,
+   "durationMs": 656573,
+   "outcome": "complete"
+  },
+  {
+   "run": "2026-08-28+fresh",
+   "phase": "P2",
+   "agent": "design-system-architect",
+   "retry": false,
+   "tokens": 48357,
+   "toolUses": 8,
+   "durationMs": 242439,
+   "outcome": "complete"
+  },
+  {
+   "run": "2026-08-28+fresh",
+   "phase": "P2",
+   "agent": "layout-designer",
+   "retry": false,
+   "tokens": 63076,
+   "toolUses": 6,
+   "durationMs": 223922,
+   "outcome": "complete"
+  },
+  {
+   "run": "2026-08-28+fresh",
+   "phase": "P2",
+   "agent": "api-schema-designer",
+   "retry": false,
+   "tokens": 77181,
+   "toolUses": 5,
+   "durationMs": 305311,
+   "outcome": "complete"
+  },
+  {
+   "run": "2026-08-28+fresh",
+   "phase": "P2",
+   "agent": "performance-budget-designer",
+   "retry": false,
+   "tokens": 65475,
+   "toolUses": 7,
+   "durationMs": 187983,
+   "outcome": "complete"
+  },
+  {
+   "run": "2026-08-28+fresh",
+   "phase": "P2",
+   "agent": "component-designer",
+   "retry": false,
+   "tokens": 89600,
+   "toolUses": 27,
+   "durationMs": 393108,
+   "outcome": "complete"
+  },
+  {
+   "run": "2026-08-28+fresh",
+   "phase": "P2",
+   "agent": "design-preview-builder",
+   "retry": false,
+   "tokens": 270664,
+   "toolUses": 74,
+   "durationMs": 1775514,
+   "outcome": "complete"
+  }
+ ]
+}

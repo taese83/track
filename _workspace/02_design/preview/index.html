@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
+<title>미니4WD 트랙 3D 뷰어 — 프로토타입</title>
+<link rel="stylesheet" href="./tokens.css">
+<link rel="stylesheet" href="./app.css">
+</head>
+<body>
+<a class="skip-link" href="#main-content">본문(구간 목록)으로 건너뛰기</a>
+<div id="fidelity-banner" class="fidelity-banner" role="note">
+  이 프로토타입의 <strong>동작</strong>은 실제이며 메모리 state로 수행됩니다.
+  <strong>시각 렌더링</strong>은 토큰·레이아웃의 근사치이며 실제 UI 라이브러리와 다릅니다.
+  실제 DB·API·영속성·성능은 구현·QA 단계에서 검증됩니다.
+  <button id="rationale-toggle" type="button" aria-expanded="false" aria-controls="design-rationale">디자인 근거</button>
+</div>
+<div id="design-rationale" class="design-rationale" hidden></div>
+<div id="app">로딩 중…</div>
+<script type="module" src="./app.js"></script>
+</body>
+</html>
