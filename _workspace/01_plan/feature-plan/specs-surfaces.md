@@ -13,7 +13,7 @@
 
 ### FEAT-010 — 근거 등급 표기 (정직성)
 
-<!-- web-harness:unit feat=FEAT-010 dependsOn=FEAT-004,FEAT-005 paths=none -->
+<!-- web-harness:unit feat=FEAT-010 dependsOn=FEAT-004,FEAT-005 paths=src/shared/ui/EvidenceBadge,src/shared/ui/legend,src/pages/track-viewer,src/index.css -->
 
 **동작 명세**: 슬로프 낙차·뱅크 전이곡선·레인 폭·총 길이·총 피스 수 등 값 옆에 등급 배지(measured/confirmed/inferred/unknown)를 3D 뷰와 프로파일 그래프 양쪽에 상시 노출한다. R2(절대 단위 표기 금지, B-001 미해소)에 따라 총 길이·낙차 등은 절대 미터 단위로 표시하지 않는다. 범례는 접힘·펼침 상태 모두 3D 뷰의 동일한 중앙축에 정렬하며, 개폐로 패널 폭이 달라져도 트리거의 중심 X 좌표는 바뀌지 않는다.
 

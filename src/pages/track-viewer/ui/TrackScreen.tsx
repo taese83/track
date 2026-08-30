@@ -3,7 +3,8 @@
 // 각 화면 상태의 마운트는 그 상태를 만드는 FEAT가 소유한다(solution-design §7 —
 // FEAT-001이 input·error를 넣은 선례). FEAT-006이 3분할 셸의 치수를 예약했고 목록 자리는
 // 임시 요약이 지키고 있었다. 지금은 그 자리를 `SectionList`가 쓰고, 요약은 접이식으로
-// 남는다 — 스트립(FEAT-012)·근거 배지(FEAT-010)는 아직 자기 티켓을 기다린다.
+// 남는다. **FEAT-010이 근거 등급 오버레이를 캔버스 컬럼에 얹었다** — 스트립(FEAT-012)만
+// 아직 자기 티켓을 기다린다.
 //
 // 커서 Provider는 여기서 마운트한다(component-spec §소유권): 경로가 있는 화면 상태에서만
 // 커서가 성립하고, `입력 대기`/`로딩`/`완전 실패`에는 가리킬 구간 자체가 없다.
@@ -22,6 +23,8 @@ import {
 import type { SectionListItem } from '@/widgets/section-list'
 import { TrackCanvas } from '@/widgets/track-canvas'
 import type { SceneLayout } from '@/widgets/track-canvas'
+
+import { EvidenceOverlay } from './EvidenceOverlay'
 
 export interface TrackScreenProps {
   layout: SceneLayout
@@ -157,8 +160,15 @@ export function TrackScreen({
         */}
         <SectionColumn items={items} summary={pipelineSummary} />
 
-        <div className="min-w-0 flex-1">
+        {/*
+          근거 오버레이는 캔버스 **위에 겹친다**(FEAT-010). `TrackCanvas`에 prop으로
+          내리지 않는 이유: 그 위젯은 FEAT-008·009·011이 공유하는 충돌 표면이고,
+          "구현 없는 prop을 미리 뚫으면 죽은 표면이 된다"는 FEAT-006 결정을 스스로
+          주석에 남겨 뒀다. 겹치는 레이어는 캔버스 컬럼을 소유한 여기가 얹으면 된다.
+        */}
+        <div className="relative min-w-0 flex-1">
           <TrackCanvas layout={layout} elevated={elevated} />
+          <EvidenceOverlay elevated={elevated} totalPieceCount={totalPieceCount} />
         </div>
       </div>
 
