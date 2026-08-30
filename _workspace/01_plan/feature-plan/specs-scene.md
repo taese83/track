@@ -52,7 +52,7 @@
 
 ### FEAT-015 — 세그먼트 유형 3중 인코딩 (뱅크·웨이브·레인체인지 구분)
 
-<!-- web-harness:unit feat=FEAT-015 dependsOn=FEAT-006 paths=src/widgets/track-canvas -->
+<!-- web-harness:unit feat=FEAT-015 dependsOn=FEAT-006,FEAT-008 paths=src/widgets/track-canvas -->
 
 **동작 명세**: 3D 뷰에서 세그먼트 유형과 상승/하강을 **색·형태·텍스트 3중으로** 인코딩한다. `design-system/tokens.md`가 REQ-NFR-003을 **협상 불가**로 못박는다 — "상승/하강은 항상 색 + 형태(↑/↓ 화살표, 뱅크 기울인 사각형, 레인체인지 갈래) + 텍스트. **색 단독 사용은 design-reviewer 거부 사유다.**"
 
@@ -67,7 +67,7 @@
 
 ### FEAT-011 — 대형 트랙 성능 완화
 
-<!-- web-harness:unit feat=FEAT-011 dependsOn=FEAT-006 paths=src/widgets/track-canvas -->
+<!-- web-harness:unit feat=FEAT-011 dependsOn=FEAT-006,FEAT-008 paths=src/widgets/track-canvas -->
 
 **동작 명세**: 대형 트랙 임계값은 300피스로 통일한다(참조 트랙 132피스 대비 약 2.3배, 잠정·ASSUMPTION-006). 132~300피스 구간은 "경계 구간"으로 정의하며, 이 구간에서는 완화 적용 여부가 Must 요구가 아니고 구현체 재량이다. 300피스를 초과하면 완화 상태로 전환하고 "대형 트랙: 일부 최적화 적용" 안내를 표시한다.
 

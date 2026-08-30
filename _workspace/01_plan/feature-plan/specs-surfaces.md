@@ -2,7 +2,7 @@
 
 ### FEAT-009 — 미지원 피스 노출
 
-<!-- web-harness:unit feat=FEAT-009 dependsOn=FEAT-006 paths=src/widgets/track-canvas -->
+<!-- web-harness:unit feat=FEAT-009 dependsOn=FEAT-006,FEAT-008 paths=src/widgets/track-canvas -->
 
 **동작 명세**: 23종 정의 밖이거나 미구현 상태(예: 초기 구현 미확정인 Chi* 등)인 피스 타입을 만나면 조용히 생략하지 않고 와이어프레임 플레이스홀더와 "미지원: {타입명}" 라벨을 상시 노출한다. 동일한 표기는 FEAT-013(텍스트 구간 목록)에도 반영되며, 3D 뷰의 플레이스홀더 렌더와는 별도 표시 경로다.
 
