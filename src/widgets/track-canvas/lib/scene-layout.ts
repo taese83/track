@@ -13,6 +13,8 @@ import type { ParsedPiece } from '@/entities/track/model/types'
 
 import { compatCorrectionOf } from './compat-correction'
 import { isLaneChangeClass } from './lane-model'
+import { mitigationFor, readMitigationOverride } from './perf-mitigation'
+import type { MitigationProfile } from './perf-mitigation'
 import { directionOf, kindOf } from './segment-encoding'
 import { buildUnsupportedPlaceholders, placeholderEdges } from './unsupported-placeholder'
 import type { UnsupportedPlaceholder } from './unsupported-placeholder'
@@ -63,6 +65,8 @@ export interface SceneBounds {
 
 export interface SceneLayout {
   segments: SceneSegment[]
+  /** 대형 트랙 완화 판정(FEAT-011). 배지 노출과 표본 밀도의 근거다 */
+  mitigation: MitigationProfile
   bounds: SceneBounds
   /** 부분 실패로 복원 구간까지만 배치했는가(제품 계약 §5 — 조용히 자르지 않는다) */
   truncated: boolean
@@ -86,29 +90,46 @@ export interface SceneLayoutInput {
    * 2개가 3D에 한 개도 들어오지 않았다.
    */
   allPieces?: readonly ParsedPiece[]
+  /**
+   * 대형 트랙 완화의 대조군 측정용 강제 해제(FEAT-011 · TC-011-2). 기본은 false다 —
+   * 완화가 실제로 fps를 개선하는지 재려면 **같은 데이터**에서 완화만 끈 렌더가 필요하다.
+   */
+  mitigationDisabled?: boolean
 }
 
 /**
  * 표본 수. 직선·평지는 두 끝점이면 형상이 정확하고, 원호나 S곡선은 표본이 성기면
  * 이음매 접선각이 실제보다 나쁘게 측정된다(TC-006-1의 ±1°가 표본 밀도에 좌우되면 안 된다).
+ *
+ * 곡선 표본 수는 **완화 프로파일이 정한다**(FEAT-011) — 정점 수가 여기에 선형이라
+ * 대형 트랙의 부하가 대부분 이 값에서 나온다.
  */
-const CURVED_SAMPLES = 24
 const FLAT_SAMPLES = 2
 
 /** `buildPiecePath`가 실제로 원호로 만드는 클래스 — 표본 수는 그 모델을 따라간다 */
 const ARC_PIECE_PREFIX = 'Cor'
 
+/** 웨이브(`Chi*`)는 중심선이 직선이지만 경로가 옆으로 휜다(FEAT-016) */
+const WAVE_PIECE_PREFIX = 'Chi'
+
 /**
- * 레인체인지는 중심선이 직선이라 종전에는 2표본(양 끝)만 떴다. 그러면 **자리바꿈이 렌더에
- * 존재할 수 없다** — 가운데 45%에서 꺾이는 모양은 표본이 두 개뿐이면 직선으로 눌린다.
- * 형상이 굽는 것은 중심선이 아니라 레인 면이므로, 표본 밀도는 중심선의 곡률이 아니라
- * **레인 위치의 변화**를 따라야 한다(FEAT-008).
+ * **표본 밀도는 중심선의 곡률이 아니라 "화면에서 무엇이 굽는가"를 따른다.**
+ *
+ * 종전에는 중심선이 직선이면 2표본(양 끝)만 줬다. 그래서 두 번 같은 결함이 났다:
+ * 레인체인지는 자리바꿈이 직선으로 눌렸고(FEAT-008이 고쳤다), 웨이브는 경로가 옳게
+ * 휘는데 화면이 직선으로 그렸다(FEAT-016이 경로를 고쳤으나 표본은 이 파일 소관이라
+ * 그 PR에서 넘겨받았다 — 실측 `maxDeviation=0.000cm`).
  */
-function sampleCountOf(pieceClass: string, segment: ElevatedSegment | undefined): number {
-  if (pieceClass.startsWith(ARC_PIECE_PREFIX)) return CURVED_SAMPLES
-  if (isLaneChangeClass(pieceClass)) return CURVED_SAMPLES
+function sampleCountOf(
+  pieceClass: string,
+  segment: ElevatedSegment | undefined,
+  curvedSamples: number,
+): number {
+  if (pieceClass.startsWith(ARC_PIECE_PREFIX)) return curvedSamples
+  if (isLaneChangeClass(pieceClass)) return curvedSamples
+  if (pieceClass.startsWith(WAVE_PIECE_PREFIX)) return curvedSamples
   if (segment === undefined) return FLAT_SAMPLES
-  return segment.elevationProfile.kind === 'flat' ? FLAT_SAMPLES : CURVED_SAMPLES
+  return segment.elevationProfile.kind === 'flat' ? FLAT_SAMPLES : curvedSamples
 }
 
 /**
@@ -181,13 +202,18 @@ function boundsOf(
  */
 export function buildSceneLayout(input: SceneLayoutInput): SceneLayout {
   const elevatedByOrder = new Map(input.elevated.map((segment) => [segment.order, segment]))
+  // 판정 기준은 **배치되는 세그먼트 수**다 — 순서에 자리를 얻지 못한 피스는 렌더 부하가 없다
+  const mitigation = mitigationFor(
+    input.oriented.length,
+    input.mitigationDisabled ?? readMitigationOverride(),
+  )
 
   const segments = input.oriented.map((oriented, order): SceneSegment => {
     const { piece } = oriented
     const elevated = elevatedByOrder.get(order)
     const path = buildPiecePath(oriented)
     const correction = compatCorrectionOf(piece)
-    const count = sampleCountOf(piece.pieceClass, elevated)
+    const count = sampleCountOf(piece.pieceClass, elevated, mitigation.curvedSamples)
     const base = elevated?.absoluteElevationStart ?? 0
 
     const points: SceneSample[] = []
@@ -220,6 +246,7 @@ export function buildSceneLayout(input: SceneLayoutInput): SceneLayout {
 
   return {
     segments,
+    mitigation,
     bounds: boundsOf(segments, unsupportedPlaceholders),
     truncated: input.truncated,
     unsupportedPlaceholders,

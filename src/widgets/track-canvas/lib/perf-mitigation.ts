@@ -50,3 +50,25 @@ export function mitigationFor(pieceCount: number, disabled = false): MitigationP
     showSegmentLabels: !mitigated,
   }
 }
+
+/**
+ * 대조군 측정 스위치. TC-011-2는 **같은 데이터**에서 완화만 끈 렌더와 fps를 비교하라고
+ * 요구한다 — 데이터를 바꾸면 대조군이 성립하지 않으므로 런타임 스위치가 없으면 그 TC는
+ * 잴 수 없다.
+ *
+ * 위젯 안에서 읽는다. 페이지를 거쳐 내리면 화면 상태 소유자(`TrackViewerPage`)의 계약이
+ * 측정 도구 때문에 넓어진다 — 이 스위치는 캔버스의 관심사다.
+ *
+ * 기본은 **완화 켜짐**이다. 스위치가 없거나 값이 다르면 완화한다 — 잘못 적은 값이
+ * 조용히 최적화를 끄는 쪽으로 새지 않는다.
+ */
+export const MITIGATION_OVERRIDE_PARAM = 'mitigation'
+
+export function readMitigationOverride(search?: string): boolean {
+  const raw = search ?? (typeof window === 'undefined' ? '' : window.location.search)
+  try {
+    return new URLSearchParams(raw).get(MITIGATION_OVERRIDE_PARAM) === 'off'
+  } catch {
+    return false
+  }
+}

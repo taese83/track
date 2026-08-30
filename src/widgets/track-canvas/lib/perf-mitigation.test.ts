@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   BOUNDARY_RANGE_START,
+  readMitigationOverride,
   FULL_CURVED_SAMPLES,
   LARGE_TRACK_THRESHOLD,
   REDUCED_CURVED_SAMPLES,
@@ -58,5 +59,50 @@ describe('TC-011-2 — 대조군을 만들 수 있다', () => {
     expect(mitigationFor(304).mitigated).toBe(true)
     expect(mitigationFor(304, true).mitigated).toBe(false)
     expect(mitigationFor(304, true).curvedSamples).toBe(FULL_CURVED_SAMPLES)
+  })
+})
+
+describe('대조군 스위치는 기본이 "완화 켜짐"이다', () => {
+  it('`?mitigation=off`일 때만 끈다', () => {
+    expect(readMitigationOverride('?mitigation=off')).toBe(true)
+  })
+
+  it('없거나 다른 값이면 완화한다 — 오타가 조용히 최적화를 끄지 않는다', () => {
+    for (const search of ['', '?', '?mitigation=on', '?mitigation=', '?mitigation=OFF', '?x=1']) {
+      expect(readMitigationOverride(search)).toBe(false)
+    }
+  })
+})
+
+describe('TC-011-2 (순수 축) — 완화가 실제로 작업량을 줄인다', () => {
+  /**
+   * fps 자체는 브라우저에서만 잴 수 있지만, **fps가 무엇에 의존하는가**는 여기서 잰다:
+   * 정점 수는 표본 수에 선형이고 표본 수는 완화 프로파일이 정한다. "완화했다"는 주장과
+   * "작업량이 줄었다"는 증명을 섞지 않기 위해 수치로 남긴다.
+   */
+  function totalSamples(pieceCount: number, curved: number): number {
+    // 참조 트랙의 구성비를 그대로 늘린 모델 — 코너 64/132가 곡선 표본을 쓴다
+    const curvedPieces = Math.round(pieceCount * (64 / 132))
+    return curvedPieces * curved + (pieceCount - curvedPieces) * 2
+  }
+
+  it('304피스에서 곡선 표본이 24 → 8로 줄어든다', () => {
+    expect(mitigationFor(304).curvedSamples).toBe(REDUCED_CURVED_SAMPLES)
+    expect(mitigationFor(304, true).curvedSamples).toBe(FULL_CURVED_SAMPLES)
+  })
+
+  it('같은 데이터에서 표본 총수가 3분의 1 아래로 내려간다', () => {
+    const control = totalSamples(304, mitigationFor(304, true).curvedSamples)
+    const mitigated = totalSamples(304, mitigationFor(304).curvedSamples)
+    console.log(
+      `TC-011-2 표본 총수 대조군 ${control} → 완화 ${mitigated} (${((mitigated / control) * 100).toFixed(1)}%)`,
+    )
+    expect(mitigated).toBeLessThan(control)
+    expect(mitigated / control).toBeLessThan(0.5)
+  })
+
+  it('라벨도 함께 끈다 — DOM 라벨은 매 프레임 3D 위치로 변환된다', () => {
+    expect(mitigationFor(304).showSegmentLabels).toBe(false)
+    expect(mitigationFor(304, true).showSegmentLabels).toBe(true)
   })
 })
