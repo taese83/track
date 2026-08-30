@@ -201,6 +201,28 @@
       "durationMs": 147682,
       "outcome": "incomplete",
       "note": "ownership hook denied all 7 declared outputs (spec-lock layerMap absent); 0 files written"
+    },
+    {
+      "run": "2026-08-30T12:55+iterate",
+      "phase": "P3",
+      "agent": "developer",
+      "retry": false,
+      "tokens": 70182,
+      "toolUses": 23,
+      "durationMs": 382553,
+      "outcome": "complete",
+      "note": "feat-002-parse-domain (5 outputs); spawn had no shell tool so self-check was not run — orchestrator ran typecheck/test independently"
+    },
+    {
+      "run": "2026-08-30T12:55+iterate",
+      "phase": "P3",
+      "agent": "developer",
+      "retry": false,
+      "tokens": 61751,
+      "toolUses": 27,
+      "durationMs": 205688,
+      "outcome": "complete",
+      "note": "feat-002-parse-wiring (4 outputs); no shell tool in spawn — orchestrator ran typecheck/lint/test/build/e2e independently"
     }
   ]
 }

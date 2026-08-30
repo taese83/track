@@ -75,3 +75,120 @@
 
 1. **`ParsedPiece.vertex1/vertex2`와 `isSupported`는 FEAT-002 소유다.** `feature-plan/data-model.md`가 두 필드를 `ParsedPiece`(FEAT-002 출력)에 두고, 승인된 프리뷰의 `parseTrackString`(주석 "2. 파서 (FEAT-002)")이 실제로 `p1`/`p2`와 `unknownGeom`을 산출한다. FEAT-003 명세의 "vertex1/vertex2에 회전·이동을 적용해 매칭"은 그 산출물을 **소비**하는 서술이다. 끝점을 FEAT-003으로 미루면 `ParsedPiece` 타입이 정본과 어긋난다.
 2. **TC-002-5를 skip하지 않는다.** 티켓·feature-plan은 "별도 compat=true fixture가 확보되기 전까지 skip"이라 적었으나, FEAT-001이 `fixtures/track/COMPAT1.js.txt`를 이미 공급했고 실측 확인 결과 45/135/225/315° 각각에 `Cor1` 8개씩(합 32개)이 있어 **메타데이터 부여 경로가 실행 가능하다**. 통과율을 위해 게이트를 낮추지 않는 것과 같은 이유로, 실행 가능한 검증을 skip으로 남기지 않는다(I2). 다만 정직성 한계를 함께 남긴다 — `COMPAT1`은 원문의 저장 버전만 낮춘 **합성본**이라 이 TC가 증명하는 것은 *메타데이터 부여 판정*이고 *실제 구버전 트랙의 좌표*가 아니다. 좌표 재현은 FEAT-006이 실캡처를 확보할 때의 몫이다.
+
+---
+
+## 라운드 R1 — 구현 착수 (2026-08-30, Iterate mode / web-orchestrator 재진입)
+
+선행 게이트 실행 기록(주장 아닌 실행 결과):
+
+| 항목 | 명령 | 결과 |
+|---|---|---|
+| 디자인 프리뷰 | `validate-design-preview.mjs --project workspace/track --json` | `APPROVED` |
+| 프로필 resolver | `web-core/resolve-profile.mjs --requested auto` | exit 0 · `vite-serverless-hybrid` (detected) → `_workspace/01_plan/project-profile.json` (`outputLanguage: "ko"` 병합) |
+| 실행 DAG | `web-core/compile-execution-plan.mjs --profile-file …` | exit 0 · 12노드 → `_workspace/03_dev/web-execution-plan.json` |
+| integration overlay | 신설 `_workspace/02_design/integration-overlay.json` | 실측값만 기록(alias `@/*`, router react-router, queryLibrary·msw·openapi = null) |
+| UI lane | `validate-ui-lane.mjs --project .` | 일치 — `tailwind-shadcn`(overlay 실측 우선) |
+| base 최신화 | `git merge origin/feature/mini4wd-track-3d` | ort 머지 1건(ticket-close CI) |
+
+### 브리프 갱신 1 — 신규 fixture 1종 (CHANGE_BUDGET "신규 fixture 추가 시 브리프 갱신")
+
+`fixtures/track/EMPTY1.js.txt`를 추가한다. TC-002-3("피스가 0개이거나 빈 문자열인 응답")은 기존
+8종으로 **끝까지 재현되지 않는다** — 빈 `text`는 `extractUpstreamVars`가 `text-empty`로 잡아
+502 `UPSTREAM_RESPONSE_UNRECOGNIZED`가 되므로 파서에 닿지 못하고, 나머지 fixture는 전부 132피스
+이상이다. `text = '#'`(길이 1 → `isRawTrackResponse` 통과, 피스 0개)로 **파서 단계의 0피스**를
+브라우저 경로까지 재현한다. 신규 런타임 의존성은 여전히 0이다.
+
+### 브리프 갱신 2 — `src/features/parse-track/` 미사용 (ALLOWED_PATHS 축소가 아니라 미행사)
+
+ALLOWED_PATHS는 이 경로를 허용하지만 **쓰지 않는다.** `validate-spawn-plan.mjs`가
+`PLAN_OUTSIDE_MODULE_BOUNDARY`로 거부했다 — 확정 스팩의 `moduleBoundaries` 17종에 이 슬라이스가
+없다(있는 것은 `src/features/load-track`). 파싱은 `track` → `ParsedPiece[]`의 **동기 순수 파생**이라
+훅 상태가 필요 없으므로, 배선은 상태 기계 소유자인 `TrackViewerPage`의 `useMemo` 한 곳으로 간다.
+스팩이 정본이고 계획을 스팩에 맞춘다.
+
+### 스폰 계획 (`execution-budget-contract` 규칙 1·2 — 분해 + 발췌 주입)
+
+| task | 산출물 | fit 게이트 | 계획 스팩 |
+|---|---|---|---|
+| `feat-002-parse-domain` | 5개 (`entities/track/model/types.ts`, `entities/track/lib/parse/{piece-catalog,parse-track-string,parse-track-string.test,index}.ts`) | `FITS` 5/8 · read ≈1,271 tok | `093b99e79d88a3fc` |
+| `feat-002-parse-wiring` | 4개 (`fixtures/track/{EMPTY1.js.txt,README.md}`, `pages/track-viewer/ui/TrackViewerPage.tsx`, `e2e/track-parse.spec.ts`) | `FITS` 4/8 · read ≈2,829 tok | `303efa3c0482d167` |
+
+선행 매니페스트 `feat-002-parse.json`(2026-08-30T01:32 잠금)은 **스팩 확정(02:48) 이전**에 만들어져
+OD-001이 확정한 `entities/track/lib/parse/` 디렉터리 경계 대신 평면 경로를 담고 있다. 되돌려 고치면
+잠금 digest가 깨지므로 폐기하지 않고 그대로 두되, 이 라운드의 정본은 위 두 매니페스트다.
+
+### R1 실행 증거 (오케스트레이터가 직접 실행 — 두 빌더 스폰 모두 셸 도구가 없어 자체 확인을 못 했다)
+
+실행 위치 `workspace/track` · Node `v24.18.1`(`.nvmrc` pin 일치, 확인함).
+
+| 게이트 | 명령 | exit | 결과 |
+|---|---|---|---|
+| 스폰 완결성 (domain) | `verify-spawn-completion.mjs --paths src/entities/track --expect ×5` | 0 | 검사 12 · SUSPECT 0 · MISSING 0 |
+| 스폰 완결성 (wiring) | `verify-spawn-completion.mjs --paths src/pages e2e fixtures --expect ×4` | 0 | 검사 11 · SUSPECT 0 · MISSING 0 |
+| typecheck | `pnpm typecheck` (`tsc --noEmit`) | 0 | — |
+| lint (소유 범위) | `npx eslint src api e2e` | 0 | — |
+| unit | `pnpm test` (`vitest run`) | 0 | 4파일 **100 테스트** 통과(파서 35건) |
+| build | `pnpm build` | 0 | 97 모듈 · 298.71 kB(gzip 95.22 kB) |
+| e2e | `pnpm e2e` (playwright, `TRACK_UPSTREAM=fixtures`) | 0 | **20 통과** — FEAT-001 회귀 11 + FEAT-002 신규 9 |
+
+TC별 착지(전부 `LOCAL_VERIFIABLE`, 미검증 경로 없음):
+
+| TC | 유닛 | e2e | 관측값 |
+|---|---|---|---|
+| TC-002-1 | ✅ | ✅ | `piece-count` = 132 · 클래스 분포 고정 · `pieceId` 유일 |
+| TC-002-2 | ✅ | ✅ | `PARSEFAIL` → parse 문구 + `<summary>` 펼침 후 `error-raw-snippet` |
+| TC-002-3 | ✅ | ✅ | `EMPTY1`(신규) → 같은 실패 경로. 유닛은 `''`/`'#'`/`'##'`/공백 4종 |
+| TC-002-4 | ✅ | ✅ | `compat-flag` false · `compat-corrected-count` 0 |
+| TC-002-5 | ✅ | ✅ | `COMPAT1` → `compat-flag` true · `compat-corrected-count` **32** |
+
+`PUBLIC_CONTRACTS_TO_PRESERVE` 회귀 확인: FEAT-001 e2e 11건이 그대로 통과했다 — 세션 캐시 요청
+0건(TC-001-6)·출처 링크 상시 노출(TC-001-7) 포함. `useTrackFetch`·`ErrorScreen`·`api/`·
+`src/entities/track/model/schema.ts`는 **한 줄도 바뀌지 않았다**(diff로 확인). 신규 e2e에 "파싱이
+붙어도 요청당 `/api/track` 호출 1회" 회귀와 "START 부재는 파싱 실패가 아니다"(FEAT-003 경계) 회귀를
+추가했다.
+
+### 요청 외 변경 1건 (사전 승인 없이 수행 — 이 라운드가 만든 회귀의 즉시 정정)
+
+`TrackViewerPage`의 `data-view-state`가 파싱 실패 화면에서도 `success`를 노출했다. FEAT-002 이전에는
+`success`가 곧 성공 카드였으므로 **이 티켓이 만든 불일치**이지 기존 결함이 아니다(minimal-change §10의
+"기존 결함" 게이트 대상이 아니라 §Verification의 자기 회귀 정정). component-spec의 `ViewState`가 이
+경우를 `error`로 규정하므로 파생값 `viewState`로 교정했다. 소비자는 현재 0건(`grep` 확인)이지만
+FEAT-003이 같은 자리에 실패를 얹는다. 정정 후 전 게이트 재실행해 위 표의 수치를 얻었다.
+
+### 라운드 종료 게이트 3종
+
+| 게이트 | 상태 | 근거 |
+|---|---|---|
+| ① 승격 QA | **N/A** | `CAPABILITY_ESCALATION: none`. 실제 diff에도 서버 실행 경로·인증/DB/서버 SDK 의존성·신규 엔드포인트 fetch·외부 키가 없다(`api/` 무변경, 신규 런타임 의존성 0) |
+| ② Evidence 재발급 | **BLOCKED (하네스 결함)** | `_workspace/04_qa/evidence/`가 존재하지 않아 재발급 의무는 미발화. 그와 별개로 `run-quality-gates.mjs`가 이 프로젝트에서 **exit 2로 구조적 차단**된다 — 아래 참조 |
+| ③ 문서 동기화 | **완료** | `DOCS_TO_UPDATE: none`(충돌 개정 없음). 부수 정정 1건: `fixtures/track/README.md`의 "`BADJS`를 뺀 7종" → 8종(EMPTY1 추가로 실제와 어긋나게 됨) |
+
+### 미해소 — `run-quality-gates`가 이 프로젝트 형태에서 열리지 않는다
+
+```
+$ node .claude/scripts/run-quality-gates.mjs --project . --check quality.typecheck --allow-host-execution
+External ingestion markers require both _workspace/02_design/ingestion-contract.md and
+_workspace/02_design/runtime-data-contract.json.        (exit 2)
+```
+
+원인은 `web-core/ingestion-detection-lib.mjs`다 — 루트 `api/` 아래 파일이 `fetch(`를 포함하면
+`network-source` 마커가 서고(`inspectNetworkIngestionSources`의 `segments[0] === 'api'` 분기),
+`contractsComplete = CONTRACT_PATHS.every(exists)`가 두 파일 **모두**를 요구한다. 우회 capability
+경로는 이 코드 경로에 없다. `api/track.ts`가 정확히 그 형태다.
+
+이것은 이 프로젝트 고유 사정이 아니다 — **`vite-serverless-hybrid`의 감지 마커 자체가 루트 `api/`**이고
+(`web-profile-contract.md`), 그 프로파일의 정의된 용례가 "얇은 serverless functions"다. 즉 하네스
+built-in 프로파일 하나가 자기 대표 형태에서 quality runner를 열 수 없다. FEAT-001이 이를 만나지
+않은 이유는 `04_qa/evidence/`가 아예 없기 때문이다 — 러너를 한 번도 돌리지 않았다.
+
+**계약 문서 2종을 지어내 러너를 통과시키지 않았다**(I2 — 통과율을 위해 검증을 약화하지 않는다).
+위 표의 수치는 러너 receipt가 아니라 **진단 증거**이며, 배포 후보 승격 시 `qa-evidence-contract.md`의
+full runner로 승격해야 한다. 그때까지 이 라운드의 tier는 receipt 없는 `DIAGNOSTIC_VERIFIED` 미만이다.
+
+### 미해소 — base 브랜치가 들여온 lint 오류 8건 (FEAT-002 무관)
+
+`pnpm lint`(= `eslint .`)는 exit 1이다. 전부 `.github/scripts/close-merged-tickets.mjs`의
+`no-undef: process` 7건 + `no-useless-assignment` 1건이고, base 머지 커밋 `c405038`에서 들어왔다
+(`eslint.config.js`가 `.github/scripts/`에 node globals를 주지 않는 설정 공백). `.github/`는
+`ALLOWED_PATHS` 밖이라 **조용히 고치지 않았다**(minimal-change §10). 소유 범위 `src api e2e`는 exit 0이다.
