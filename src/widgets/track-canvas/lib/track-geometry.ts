@@ -14,6 +14,8 @@ import { boundaryLinesOf } from './lane-bands'
 import type { BandPoint, SegmentBands } from './lane-bands'
 import { MARKER_LIFT_CM, markerTriangles, placeMarkerPoint } from './marker-geometry'
 import type { MarkerPlacement } from './marker-geometry'
+import { placeholderEdges } from './unsupported-placeholder'
+import type { UnsupportedPlaceholder } from './unsupported-placeholder'
 
 export interface ColoredGeometry {
   color: string
@@ -149,3 +151,23 @@ export function buildDashedOutlineGeometry(
   return geometry
 }
 
+
+/**
+ * FEAT-009 — 미지원 피스의 와이어프레임. 전부를 선분 하나의 버퍼로 합친다.
+ *
+ * 면이 아니라 **선**인 것이 요구다(TC-009-1) — 채워 그리면 "여기 트랙이 있다"로 읽히고,
+ * 뚫린 상자는 "무언가 있는데 그릴 수 없다"를 말한다.
+ */
+export function buildPlaceholderGeometry(
+  placeholders: readonly UnsupportedPlaceholder[],
+): BufferGeometry {
+  const positions: number[] = []
+  for (const placeholder of placeholders) {
+    for (const [a, b] of placeholderEdges(placeholder)) {
+      positions.push(a.x, a.y, a.z, b.x, b.y, b.z)
+    }
+  }
+  const geometry = new BufferGeometry()
+  geometry.setAttribute('position', new BufferAttribute(new Float32Array(positions), 3))
+  return geometry
+}

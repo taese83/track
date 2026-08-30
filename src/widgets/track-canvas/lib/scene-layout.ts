@@ -9,10 +9,13 @@
 // 같은 방향으로 보인다. 여기서 y를 뒤집어 넣으면(z = -y) 도면의 거울상이 된다.
 import { buildPiecePath } from '@/entities/track/lib/elevation'
 import type { ElevatedSegment, OrientedPiece, PiecePath } from '@/entities/track/lib/elevation'
+import type { ParsedPiece } from '@/entities/track/model/types'
 
 import { compatCorrectionOf } from './compat-correction'
 import { isLaneChangeClass } from './lane-model'
 import { directionOf, kindOf } from './segment-encoding'
+import { buildUnsupportedPlaceholders, placeholderEdges } from './unsupported-placeholder'
+import type { UnsupportedPlaceholder } from './unsupported-placeholder'
 import type { SegmentDirection, SegmentKind } from './segment-encoding'
 
 export interface ScenePoint {
@@ -63,6 +66,11 @@ export interface SceneLayout {
   bounds: SceneBounds
   /** 부분 실패로 복원 구간까지만 배치했는가(제품 계약 §5 — 조용히 자르지 않는다) */
   truncated: boolean
+  /**
+   * 순서에 자리를 얻지 못한 미지원 피스(FEAT-009). 경로에 끼워 넣지 않고 **자기 선언
+   * 좌표**에 세운다 — 끝점을 모르는 피스를 이어 붙이면 있지도 않은 연결을 주장하게 된다.
+   */
+  unsupportedPlaceholders: UnsupportedPlaceholder[]
 }
 
 export interface SceneLayoutInput {
@@ -72,6 +80,12 @@ export interface SceneLayoutInput {
   elevated: readonly ElevatedSegment[]
   /** 순서가 전체 피스를 덮지 못했는가(FEAT-004 판정에서 온다) */
   truncated: boolean
+  /**
+   * 파싱된 피스 전체(FEAT-009). `oriented`는 순서에 자리를 얻은 것만 담으므로 미지원
+   * 피스가 여기 없으면 씬이 **그 존재 자체를 모른다** — 실측에서 `UNSUPP` 134피스 중
+   * 2개가 3D에 한 개도 들어오지 않았다.
+   */
+  allPieces?: readonly ParsedPiece[]
 }
 
 /**
@@ -119,7 +133,10 @@ const EMPTY_BOUNDS: SceneBounds = {
   diagonal: 0,
 }
 
-function boundsOf(segments: readonly SceneSegment[]): SceneBounds {
+function boundsOf(
+  segments: readonly SceneSegment[],
+  placeholders: readonly UnsupportedPlaceholder[] = [],
+): SceneBounds {
   let minX = Number.POSITIVE_INFINITY
   let minY = Number.POSITIVE_INFINITY
   let minZ = Number.POSITIVE_INFINITY
@@ -127,7 +144,14 @@ function boundsOf(segments: readonly SceneSegment[]): SceneBounds {
   let maxY = Number.NEGATIVE_INFINITY
   let maxZ = Number.NEGATIVE_INFINITY
 
-  for (const segment of segments) {
+  // 플레이스홀더도 바운딩박스에 넣는다 — 빼면 카메라 프레이밍 밖으로 나가 "상시 노출"이
+  // 성립하지 않는다(트랙 밖에 선언된 미지원 피스가 화면에서 사라진다).
+  const points = [
+    ...segments.flatMap((segment) => segment.points as readonly ScenePoint[]),
+    ...placeholders.flatMap((placeholder) => placeholderEdges(placeholder).flat()),
+  ]
+
+  for (const segment of [{ points }]) {
     for (const point of segment.points) {
       minX = Math.min(minX, point.x)
       minY = Math.min(minY, point.y)
@@ -192,5 +216,12 @@ export function buildSceneLayout(input: SceneLayoutInput): SceneLayout {
     }
   })
 
-  return { segments, bounds: boundsOf(segments), truncated: input.truncated }
+  const unsupportedPlaceholders = buildUnsupportedPlaceholders(input.allPieces ?? [])
+
+  return {
+    segments,
+    bounds: boundsOf(segments, unsupportedPlaceholders),
+    truncated: input.truncated,
+    unsupportedPlaceholders,
+  }
 }
