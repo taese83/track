@@ -103,17 +103,21 @@ export function buildPiecePath(oriented: OrientedPiece): PiecePath {
     const isWave = piece.pieceClass.startsWith(WAVE_PIECE_PREFIX)
 
     /**
-     * 돌출 방향은 **진행 방향 기준 왼쪽**이다(D-032 개정 — 사용자 재지정 `confirmed`).
-     * 진행 방향이 곧 기준이므로 `flipped`면 기준축도 뒤집어야 한다 — vertex1→vertex2
-     * 방향으로 고정하면 역방향 통과에서 돌출이 오른쪽으로 나온다(TC-016-3).
+     * 돌출 방향은 **편집기 2D 좌표에서 `n = [−tan.y, tan.x]`의 양의 방향**이다.
      *
-     * 편집기 y는 화면 아래로 증가한다. 진행 방향 `(dx, dy)`의 왼손 쪽은 `(dy, −dx)`다 —
-     * +x로 갈 때 왼쪽은 화면 위(−y)다.
+     * 종전 구현은 `(tan.y, −tan.x)`를 써서 **부호가 반대**였다 — 프리뷰와 나란히 놓으면
+     * 웨이브가 서로 반대편으로 튀어나왔고, 사용자가 프리뷰 쪽이 맞다고 확정했다
+     * (2026-08-31). 원인은 "왼쪽/오른쪽"이라는 낱말이다: 편집기 좌표에서 재는 것과
+     * 투영된 화면에서 보는 것이 달라, D-032 개정의 "왼쪽"을 편집기 좌표로 읽으면 부호가
+     * 뒤집힌다. 그래서 정본이 낱말 대신 **이 벡터**로 방향을 정한다.
+     *
+     * 진행 방향이 기준이므로 `flipped`면 기준축도 뒤집는다 — vertex1→vertex2로 고정하면
+     * 역방향 통과에서 돌출이 반대편으로 나온다(TC-016-3).
      */
     const travelX = flipped ? from.x - to.x : to.x - from.x
     const travelY = flipped ? from.y - to.y : to.y - from.y
-    const leftX = chord === 0 ? 0 : travelY / chord
-    const leftY = chord === 0 ? 0 : -travelX / chord
+    const bowX = chord === 0 ? 0 : -travelY / chord
+    const bowY = chord === 0 ? 0 : travelX / chord
 
     return {
       // 곡면 돌출로 실제 경로는 현보다 길지만, 웨이브는 고도 변화가 0이라(D-032)
@@ -128,7 +132,7 @@ export function buildPiecePath(oriented: OrientedPiece): PiecePath {
         }
         if (!isWave) return base
         const bow = waveBow(t)
-        return { x: base.x + leftX * bow, y: base.y + leftY * bow }
+        return { x: base.x + bowX * bow, y: base.y + bowY * bow }
       },
     }
   }
