@@ -26,7 +26,7 @@
 
 ### FEAT-012 — 하단 프로파일 스트립 (표면)
 
-<!-- web-harness:unit feat=FEAT-012 dependsOn=FEAT-006,FEAT-008,FEAT-010,FEAT-013 paths=src/widgets/profile-strip -->
+<!-- web-harness:unit feat=FEAT-012 dependsOn=FEAT-006,FEAT-008,FEAT-010,FEAT-013,FEAT-014 paths=src/widgets/profile-strip,src/pages/track-viewer -->
 
 **동작 명세**: 경로 전체의 고도 프로파일(`ElevatedSegment.elevationProfile`과 누적 절대 고도)을 화면 하단에 가로 스트립 그래프로 렌더하고, 현재 카메라 위치를 인디케이터로 표시하며 클릭/드래그/키보드 조작을 이벤트로 FEAT-007에 전달하는 owner다. 그래프 형상·구간 경계 표시·스케일 축 표기는 FEAT-007(카메라 이동)과 분리된 이 표면 고유의 책임이다.
 
