@@ -110,4 +110,36 @@ describe('초기 카메라 배치', () => {
     expect(large.distance / small.distance).toBeCloseTo(10, 12)
     expect(orbitLimitsFor(5000).maxDistance / orbitLimitsFor(500).maxDistance).toBeCloseTo(10, 12)
   })
+
+  it('TC-006-6: 극각이 수평을 넘어 아래에서 올려다볼 수 있다', () => {
+    const limits = orbitLimitsFor(DIAGONAL)
+    // 종전 상한은 π/2 − 0.05였다. 육교·뱅크·입체교차는 자기 위를 지나가는 형상이라
+    // 아래에서 봐야 보이는 것이 있다(PC-010 ②, 사용자 확정).
+    expect(limits.maxPolarRad).toBeGreaterThan(Math.PI / 2)
+    expect(limits.maxPolarRad).toBeLessThan(Math.PI)
+    expect(limits.minPolarRad).toBeGreaterThan(0)
+  })
+
+  it('TC-006-6: 아래쪽으로 계속 눌러도 수평에서 멈추지 않는다', () => {
+    const limits = orbitLimitsFor(DIAGONAL)
+    let state = { azimuthRad: 0, polarRad: Math.PI / 2 - 0.1, distance: 100 }
+    for (let step = 0; step < 20; step += 1) {
+      const next = applyOrbitKey(state, 'ArrowDown', limits)
+      expect(next).not.toBeNull()
+      state = next as typeof state
+    }
+    expect(state.polarRad).toBeGreaterThan(Math.PI / 2)
+  })
+
+  it('TC-006-6: 방위각은 한 바퀴를 돌아도 잠기지 않는다', () => {
+    const limits = orbitLimitsFor(DIAGONAL)
+    let state = { azimuthRad: 0, polarRad: 1, distance: 100 }
+    const seen = new Set<number>()
+    for (let step = 0; step < 80; step += 1) {
+      state = applyOrbitKey(state, 'ArrowRight', limits) as typeof state
+      seen.add(Math.round(state.azimuthRad * 1000))
+    }
+    expect(seen.size).toBe(80)
+    expect(Math.abs(state.azimuthRad)).toBeGreaterThan(2 * Math.PI)
+  })
 })
