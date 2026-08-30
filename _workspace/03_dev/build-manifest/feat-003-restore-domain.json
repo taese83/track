@@ -1,0 +1,19 @@
+{
+  "task": "feat-003-restore-domain",
+  "readMode": "injected",
+  "reads": [
+    "_workspace/02_design/piece-geometry.md"
+  ],
+  "outputs": [
+    "src/entities/track/model/types.ts",
+    "src/entities/track/lib/restore/restore-order.ts",
+    "src/entities/track/lib/restore/restore-order.test.ts",
+    "src/entities/track/lib/restore/index.ts",
+    "fixtures/track/MULTISTART.js.txt"
+  ],
+  "planLock": {
+    "digest": "b1a340d4fba7b419",
+    "at": "2026-08-30T04:25:18.058Z",
+    "specDigest": "586ceddb8d34945c55149fb900f3ac5b28e5881e8538c1353032dfcca399c0d3"
+  }
+}

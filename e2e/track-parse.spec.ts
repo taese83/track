@@ -73,12 +73,25 @@ test('미지원 클래스는 파싱 실패가 아니라 개수로 드러난다',
   await expect(page.getByTestId('unsupported-count')).toHaveText('2')
 })
 
-test('회귀 · START 부재는 파싱 실패가 아니다(판정은 FEAT-003)', async ({ page }) => {
+/**
+ * FEAT-002 시점에는 이 자리표가 `fetch-success` 132…131을 기다렸다 — 순서 복원이 없어
+ * 파싱만 끝나면 성공 카드가 떴기 때문이다. FEAT-003이 그 판정을 붙이면서 NOSTART는
+ * **복원** 실패 화면으로 간다. 지켜야 할 회귀는 화면 종류가 아니라 **두 실패가 구분된다**는
+ * 것이다 — data-model.md가 "두 실패를 하나의 에러 타입으로 합치면 REQ-F-007 검증 자체가
+ * 불가능해진다"고 못 박은 경계다.
+ */
+test('회귀 · START 부재는 파싱 실패가 아니다 — 복원 실패로 구분된다', async ({ page }) => {
   await submit(page, 'NOSTART')
 
-  await expect(page.getByTestId('fetch-success')).toBeVisible()
-  await expect(page.getByTestId('piece-count')).toHaveText('131')
-  await expect(page.getByRole('alert')).toHaveCount(0)
+  const alert = page.getByRole('alert')
+  await expect(alert).toContainText('시작 지점(START)을 찾을 수 없습니다')
+  await expect(alert).not.toContainText('트랙 데이터를 해석하지 못했습니다')
+
+  // 대조군 — 진짜 파싱 실패는 여전히 파싱 문구다
+  await page.getByTestId('error-retry').click()
+  await page.goto('/')
+  await submit(page, 'PARSEFAIL')
+  await expect(page.getByRole('alert')).toContainText('트랙 데이터를 해석하지 못했습니다')
 })
 
 test('회귀 · 파싱이 붙어도 요청당 /api/track 호출은 1회다', async ({ page }) => {
