@@ -1,0 +1,509 @@
+{
+  "schemaVersion": 2,
+  "specTier": "verifiable",
+  "acceptanceSource": "feature-plan",
+  "acceptanceRefs": [
+    "FEAT-001",
+    "FEAT-002",
+    "FEAT-003",
+    "FEAT-004",
+    "FEAT-005",
+    "FEAT-006",
+    "FEAT-007",
+    "FEAT-008",
+    "FEAT-009",
+    "FEAT-010",
+    "FEAT-011",
+    "FEAT-012",
+    "FEAT-013",
+    "FEAT-014",
+    "TC-001-1",
+    "TC-001-2",
+    "TC-001-3",
+    "TC-001-4",
+    "TC-001-5",
+    "TC-001-6",
+    "TC-001-7",
+    "TC-001-8",
+    "TC-002-1",
+    "TC-002-2",
+    "TC-002-3",
+    "TC-002-4",
+    "TC-002-5",
+    "TC-003-1",
+    "TC-003-2",
+    "TC-003-3",
+    "TC-003-4",
+    "TC-003-5",
+    "TC-003-6",
+    "TC-004-1",
+    "TC-004-2",
+    "TC-004-3",
+    "TC-004-4",
+    "TC-004-5",
+    "TC-004-6",
+    "TC-005-1",
+    "TC-005-2",
+    "TC-005-3",
+    "TC-005-4",
+    "TC-005-5",
+    "TC-005-6",
+    "TC-006-1",
+    "TC-006-2",
+    "TC-006-3",
+    "TC-006-4",
+    "TC-006-5",
+    "TC-007-1",
+    "TC-007-2",
+    "TC-007-3",
+    "TC-007-4",
+    "TC-007-5",
+    "TC-007-6",
+    "TC-008-1",
+    "TC-008-2",
+    "TC-008-3",
+    "TC-009-1",
+    "TC-009-2",
+    "TC-009-3",
+    "TC-010-1",
+    "TC-010-2",
+    "TC-010-3",
+    "TC-010-4",
+    "TC-010-5",
+    "TC-011-1",
+    "TC-011-2",
+    "TC-011-3",
+    "TC-011-4",
+    "TC-012-1",
+    "TC-012-2",
+    "TC-012-3",
+    "TC-012-4",
+    "TC-012-5",
+    "TC-013-1",
+    "TC-013-2",
+    "TC-013-3",
+    "TC-013-4",
+    "TC-013-5",
+    "TC-014-1",
+    "TC-014-2",
+    "TC-014-3",
+    "TC-014-4"
+  ],
+  "constitution": {
+    "substrate": {
+      "packageManager": {
+        "value": "pnpm",
+        "source": "measured"
+      },
+      "language": {
+        "value": "typescript",
+        "source": "measured"
+      },
+      "bundler": {
+        "value": "vite",
+        "source": "measured"
+      },
+      "testRunner": {
+        "value": "vitest",
+        "source": "measured"
+      },
+      "e2e": {
+        "value": "playwright",
+        "source": "measured"
+      },
+      "lint": {
+        "value": "eslint",
+        "source": "default"
+      },
+      "formatter": {
+        "value": "prettier",
+        "source": "default"
+      }
+    }
+  },
+  "targetShapes": [
+    "web-app",
+    "serverless-functions"
+  ],
+  "architecture": {
+    "pattern": "fsd",
+    "rationale": "기존 트리를 실측한 결과 app/pages/widgets/features/entities/shared 6레이어와 ui·model·api·lib 세그먼트가 이미 성립해 있고 import는 tsconfig paths + vite alias의 '@/'를 쓴다. 브라운필드이므로 관례 실측이 제안을 이긴다(계약 §3). FSD 밖의 루트 api/(Vercel Node Serverless Function)와 fixtures/(녹화 업스트림)도 실측된 이 프로젝트의 관례이며, api/track.ts가 런타임 비의존 코어와 Vercel 엔트리를 분리해 vite.config.ts의 dev·preview 미들웨어와 같은 코어를 공유하는 구조를 유지한다. 다만 배럴(index.ts) 유무와 디렉터리 대소문자 관례는 실제로 일관되지 않으며 그 사실을 지어내 메우지 않는다."
+  },
+  "communication": [
+    "rest"
+  ],
+  "concurrency": [],
+  "layerMap": {
+    "appShell": "src/app",
+    "routes": "src/pages",
+    "composedUI": "src/widgets",
+    "featureLogic": "src/features",
+    "domainModel": "src/entities",
+    "sharedKernel": "src/shared",
+    "appEntry": "src/main.tsx",
+    "globalStyles": "src/index.css",
+    "htmlEntry": "index.html",
+    "serverlessApi": "api",
+    "upstreamFixtures": "fixtures"
+  },
+  "testLayers": {
+    "unit": "src",
+    "e2e": "e2e"
+  },
+  "libraries": {
+    "ui-variant": {
+      "choice": "class-variance-authority + clsx + tailwind-merge",
+      "alternatives": [
+        "shadcn/ui 전체(radix 포함)",
+        "순수 Tailwind + 수기 variant 함수"
+      ],
+      "source": "confirmed",
+      "rationale": "OD-002 확정. component-spec이 cva variant + className 병합을 계약으로 고정했는데 매니페스트에 없었다. radix는 필요한 프리미티브가 생길 때 별도 판단 — 이 뷰어는 다이얼로그·팝오버가 거의 없다"
+    },
+    "uiFramework": {
+      "choice": "react",
+      "alternatives": [
+        "vue",
+        "svelte"
+      ],
+      "source": "measured"
+    },
+    "routing": {
+      "choice": "react-router",
+      "alternatives": [
+        "@tanstack/react-router",
+        "wouter",
+        "none"
+      ],
+      "source": "measured"
+    },
+    "renderer3d": {
+      "choice": "three",
+      "alternatives": [
+        "babylonjs"
+      ],
+      "source": "measured"
+    },
+    "reactBinding3d": {
+      "choice": "@react-three/fiber",
+      "alternatives": [
+        "명령형 three.js 직접 제어"
+      ],
+      "source": "measured"
+    },
+    "helpers3d": {
+      "choice": "@react-three/drei",
+      "alternatives": [
+        "OrbitControls 수기 이식"
+      ],
+      "source": "measured"
+    },
+    "styling": {
+      "choice": "tailwindcss",
+      "alternatives": [
+        "@mui/material",
+        "css-modules"
+      ],
+      "source": "measured"
+    },
+    "accessibilityScan": {
+      "choice": "@axe-core/playwright",
+      "alternatives": [
+        "axe-core 직접 주입",
+        "none"
+      ],
+      "source": "measured"
+    },
+    "serverlessTypes": {
+      "choice": "@vercel/node",
+      "alternatives": [
+        "수기 최소 인터페이스"
+      ],
+      "source": "measured"
+    },
+    "serverState": {
+      "choice": "none",
+      "alternatives": [
+        "@tanstack/react-query",
+        "swr"
+      ],
+      "source": "measured-absent"
+    },
+    "globalState": {
+      "choice": "none",
+      "alternatives": [
+        "zustand",
+        "jotai",
+        "@reduxjs/toolkit"
+      ],
+      "source": "measured-absent"
+    },
+    "form": {
+      "choice": "none",
+      "alternatives": [
+        "react-hook-form"
+      ],
+      "source": "measured-absent"
+    },
+    "schemaValidation": {
+      "choice": "none",
+      "alternatives": [
+        "zod",
+        "valibot"
+      ],
+      "source": "measured-absent"
+    },
+    "httpClient": {
+      "choice": "none",
+      "alternatives": [
+        "axios",
+        "ky"
+      ],
+      "source": "measured-absent"
+    },
+    "apiMock": {
+      "choice": "none",
+      "alternatives": [
+        "msw"
+      ],
+      "source": "measured-absent"
+    },
+    "uiComponentKit": {
+      "choice": "none",
+      "alternatives": [
+        "shadcn/ui + radix + cva"
+      ],
+      "source": "measured-absent"
+    }
+  },
+  "moduleBoundaries": [
+    {
+      "scope": "api",
+      "rationale": "FEAT-001 서버 취득 계약. 파이프라인 이전 단계라 단독 완결 단위다(data-model 인접 상호작용)"
+    },
+    {
+      "scope": "fixtures",
+      "rationale": "녹화 업스트림. compat=true·고도 불균형 등 미확보 fixture 추가가 여기서만 일어난다"
+    },
+    {
+      "scope": "src/entities/track/model",
+      "rationale": "4단계 파이프라인 타입 정본"
+    },
+    {
+      "scope": "src/entities/track/lib/parse",
+      "rationale": "FEAT-002 파싱 — OD-001 확정으로 하위 디렉터리가 병렬 경계가 된다"
+    },
+    {
+      "scope": "src/entities/track/lib/restore",
+      "rationale": "FEAT-003 순서 복원"
+    },
+    {
+      "scope": "src/entities/track/lib/closure",
+      "rationale": "FEAT-004 폐곡선 검증"
+    },
+    {
+      "scope": "src/entities/track/lib/elevation",
+      "rationale": "FEAT-005 고도 프로파일"
+    },
+    {
+      "scope": "src/features/load-track",
+      "rationale": "FEAT-001 클라이언트 슬라이스(실존)"
+    },
+    {
+      "scope": "src/shared/lib/track-cursor",
+      "rationale": "공유 커서 단일 owner. component-spec이 경로까지 고정했다"
+    },
+    {
+      "scope": "src/shared/ui",
+      "rationale": "EvidenceBadge·AlertSlot·Legend·TopBar 공용 프리미티브"
+    },
+    {
+      "scope": "src/widgets/track-canvas",
+      "rationale": "FEAT-006/007/008/009/011이 공유하는 3D 표면 — 이 다섯은 경계로 갈라지지 않으므로 순차화가 필요하다"
+    },
+    {
+      "scope": "src/widgets/profile-strip",
+      "rationale": "FEAT-012 owner. FEAT-007은 이벤트 구독자일 뿐이다"
+    },
+    {
+      "scope": "src/widgets/section-list",
+      "rationale": "FEAT-013 owner이자 FEAT-014 대체 표현의 주 콘텐츠"
+    },
+    {
+      "scope": "src/widgets/view-controls",
+      "rationale": "ControlCluster — 시점·재생·탐색 속도"
+    },
+    {
+      "scope": "src/widgets/app-header",
+      "rationale": "FEAT-001 출처 링크 상시 노출(PAGE-000 전역 책임)"
+    },
+    {
+      "scope": "src/pages/track-viewer",
+      "rationale": "6화면 상태 머신과 FEAT-014 WebGL 게이트"
+    },
+    {
+      "scope": "e2e",
+      "rationale": "Playwright 시나리오. testDir './e2e' 실측"
+    }
+  ],
+  "nonGoals": [
+    "저장소·DB·계정 없음(no-persistence·no-auth) — 영속 캐시(Vercel KV/Upstash)는 D-016에서 폐기됐다",
+    "SSR·RSC·Edge Runtime 미사용 — Vercel Node Serverless Function만 쓴다",
+    "headless 브라우저 렌더 경로 없음 — D-013 실측으로 불필요해졌다",
+    "트랙 편집·저장·공유 링크 생성 없음(읽기 전용 뷰어)",
+    "3D 캔버스 픽셀 스크린샷 diff로 CI를 게이팅하지 않는다",
+    "절대 단위(m·cm) 표기 없음(B-001 미해소)",
+    "다단(연속) 뱅크 기하 미구현(D-030)",
+    "axios·@tanstack/react-query·zustand·react-hook-form·zod 미채택(tech-stack 확정)"
+  ],
+  "decisions": [
+    {
+      "id": "OD-001",
+      "question": "FEAT-002~005의 파이프라인 순수 함수(파싱·순서복원·폐곡선검증·고도프로파일)를 어느 레이어에 두는가? 실측된 선례가 둘로 갈린다 — entities/track/model/schema.ts(도메인 순수 함수)와 shared/lib/track/extract-upstream-vars.ts(포맷 파서). 이 답이 병렬 쓰기 경계를 바꾼다.",
+      "status": "confirmed",
+      "options": [
+        "src/entities/track/lib/{parse,restore,closure,elevation}/ — 도메인 레이어에 lib 세그먼트를 신설하고 4개 티켓이 하위 디렉터리로 독립 경계를 갖는다",
+        "src/features/{parse-track,restore-path,elevation-profile}/ — feature 슬라이스로 분리해 경계가 슬라이스 단위로 떨어진다",
+        "src/shared/lib/track/ 아래에 모은다 — extract-upstream-vars.ts 선례를 그대로 따른다"
+      ],
+      "recommended": "src/entities/track/lib/{parse,restore,closure,elevation}/ — 이들은 사용자 시나리오가 아니라 도메인 지식이고 UI 상태가 없다. 하위 디렉터리가 그대로 병렬 경계가 되어 4개 티켓이 서로 침범하지 않는다."
+    },
+    {
+      "id": "OD-002",
+      "question": "UI_LANE이 tailwind-shadcn이고 component-spec이 'cva variant + className 병합'을 계약으로 고정했는데, class-variance-authority·clsx·tailwind-merge·radix가 package.json에 전혀 없다(실측). 킷을 도입할 것인가?",
+      "status": "confirmed",
+      "options": [
+        "cva + clsx + tailwind-merge를 도입한다(radix는 필요한 프리미티브가 생길 때 별도 판단)",
+        "shadcn/ui 전체(radix 포함)를 도입한다",
+        "도입하지 않고 순수 Tailwind 유틸리티 + 수기 variant 함수로 간다 — 그 경우 component-spec의 cva 계약 문구를 정정해야 한다"
+      ],
+      "recommended": "cva + clsx + tailwind-merge만 도입한다 — 모든 UI 티켓이 이 답에 의존하고 나중에 바꾸면 이미 쓴 컴포넌트를 전부 손대야 한다. tech-stack.md가 이 세 패키지를 미채택으로 고정한 적은 없으므로 신설이지 번복이 아니다. 이 뷰어는 다이얼로그·팝오버가 거의 없어 radix 전체는 아직 근거가 없다."
+    },
+    {
+      "id": "OD-003",
+      "question": "eslint·prettier가 설정 파일과 의존성 선언 양쪽에서 부재함을 확인했다(measured-absent). substrate의 source 열거값에는 '확인된 부재'가 없어 설계자가 닫을 수 없다. 형태 카탈로그의 common 검사에는 quality.lint가 있어 이 부재는 릴리스 경로에 닿는다. 도입할 것인가?",
+      "status": "confirmed",
+      "options": [
+        "하네스 기본값대로 eslint + prettier를 도입한다(substrate source: default 유지)",
+        "eslint만 도입하고 formatter는 두지 않는다",
+        "둘 다 두지 않는다 — substrate에 lint·formatter를 value 'none' + declared로 명시하고 quality.lint receipt를 만들 수 없음을 감수한다"
+      ],
+      "recommended": "eslint + prettier를 도입한다 — FEAT 단위 티켓 14건이 병행될수록 형식 다툼 비용이 커지고, quality.lint receipt를 만들 유일한 경로다. 결정 전까지 substrate의 두 키는 하네스 기본값으로 채워지며 그것은 프로젝트 실측이 아니다."
+    }
+  ],
+  "sourceDigest": {
+    "inputs": [
+      {
+        "path": "_workspace/01_plan/feature-plan.md",
+        "present": true,
+        "kind": "sharded",
+        "shards": [
+          {
+            "path": "_workspace/01_plan/feature-plan/INDEX.md",
+            "sha256": "9b4139812c94fb8abfbc5c8f37e84edeea17541a4687c07aef7d0fffe6de25d8"
+          },
+          {
+            "path": "_workspace/01_plan/feature-plan/data-model.md",
+            "sha256": "0efaa669927b3cad43dc7dbe8a276c3a3190da0ab5c9ceb900f63dbf99cd02d6"
+          },
+          {
+            "path": "_workspace/01_plan/feature-plan/feature-list.md",
+            "sha256": "d9ee5ab0c4516146d27162d6b4f3aa6de07fd64163f1ccaac9fd6b8345e88c54"
+          },
+          {
+            "path": "_workspace/01_plan/feature-plan/specs-pipeline.md",
+            "sha256": "55dffdadaacf01dfe62d95d09f2f28bbc370256972b0ac839d3f76dae5abd259"
+          },
+          {
+            "path": "_workspace/01_plan/feature-plan/specs-scene.md",
+            "sha256": "74e365e97269efbe94d70d914e448e0bd20eb174b4b91c7edef57a1b78fed134"
+          },
+          {
+            "path": "_workspace/01_plan/feature-plan/specs-surfaces.md",
+            "sha256": "cd4f5aecb67e5cd779c88d42272ebbb14c6478d1e018f432ec7c3db9d50ddbd1"
+          },
+          {
+            "path": "_workspace/01_plan/feature-plan/traceability.md",
+            "sha256": "d45eab359a25a1b3c94f2b6a33e6c8e92407814dfa40db7cb58b49f99aa6393b"
+          }
+        ],
+        "sha256": "78bccb3b10166ca19e24a0d72ce442e63085796e0e60c349e82e52238960ea0c"
+      },
+      {
+        "path": "_workspace/01_plan/tech-stack.md",
+        "present": true,
+        "sha256": "30293a8b8a04b6e8d682d3bb3dccb5d8989798e7b007ae827735736f68f28222"
+      },
+      {
+        "path": "_workspace/01_plan/project-profile.json",
+        "present": false
+      },
+      {
+        "path": "_workspace/02_design/api-schema.md",
+        "present": true,
+        "kind": "sharded",
+        "shards": [
+          {
+            "path": "_workspace/02_design/api-schema/INDEX.md",
+            "sha256": "abea5c27239d8a707dce7ed642606ae92f78ea48a2cc56582b2228fff9ad7846"
+          },
+          {
+            "path": "_workspace/02_design/api-schema/common-envelope.md",
+            "sha256": "471b638a9a72b90a81df9d3fbc902ddc22919f35f246e76bfb264150135c1e3b"
+          },
+          {
+            "path": "_workspace/02_design/api-schema/fixtures.md",
+            "sha256": "93b2e3a2a74398c5640fcba6869d7581e112dbc084f5a03a4b97fa08d5ee9538"
+          },
+          {
+            "path": "_workspace/02_design/api-schema/track-endpoint.md",
+            "sha256": "5e0e14129a8e2257503ac05af2b769036c2281ddd4bec87a24bce91330ce7779"
+          }
+        ],
+        "sha256": "67bb42239fcf3ec4b8bcb8e5a93ad276ca68b6885dd790985c31c5691965fe9b"
+      },
+      {
+        "path": "_workspace/02_design/component-spec.md",
+        "present": true,
+        "kind": "sharded",
+        "shards": [
+          {
+            "path": "_workspace/02_design/component-spec/INDEX.md",
+            "sha256": "bc37845e1ea17af6f8956ea62eed87fb26e29f5a6777d412181cfbee37ac95c2"
+          },
+          {
+            "path": "_workspace/02_design/component-spec/features.md",
+            "sha256": "9ae1d8f2e55ee78b9a9f5a6085ca241ef9b36f3d7d934a50a6e9de0b5065b4f0"
+          },
+          {
+            "path": "_workspace/02_design/component-spec/pages.md",
+            "sha256": "6d0451cfaaae889deeea9b7c5d147bf75fef58c4349ffb55f40fdee78207fd21"
+          },
+          {
+            "path": "_workspace/02_design/component-spec/shared.md",
+            "sha256": "3d1d07b28ae8d2bb5771a8dd1666a389e61eb76448cc65e7f353e2c6f748e83e"
+          },
+          {
+            "path": "_workspace/02_design/component-spec/widgets.md",
+            "sha256": "33bc38264966006be8e0db06ea7183bc256da2450007ddd0a597a31f40887812"
+          }
+        ],
+        "sha256": "98133c1fa96d4eccc952b6dc1a25c741370375d6ce7f77803190b979b717172a"
+      },
+      {
+        "path": "_workspace/02_design/state-contract.md",
+        "present": false
+      },
+      {
+        "path": "_workspace/02_design/integration-overlay.json",
+        "present": false
+      },
+      {
+        "path": "_workspace/02_design/solution-design.md",
+        "present": true,
+        "sha256": "5febe6d6571094a7c55bada1b9fb1a977e4224bf1d387cff45efa32f2a0d7e6a"
+      }
+    ],
+    "combined": "d42d6d810d50119fc352ab7ce2b7bfb682c9b45260964767f5bbd47e6e10aa45"
+  }
+}
