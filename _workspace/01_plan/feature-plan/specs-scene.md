@@ -29,7 +29,7 @@
 
 ### FEAT-008 — 레인체인지 표현
 
-<!-- web-harness:unit feat=FEAT-008 dependsOn=FEAT-004,FEAT-005 paths=src/widgets/track-canvas -->
+<!-- web-harness:unit feat=FEAT-008 dependsOn=FEAT-004,FEAT-005,FEAT-006 paths=src/widgets/track-canvas -->
 
 **동작 명세**: Lan* 피스 구간에서 레인 좌우 이동을 3D 뷰와 플라이스루 양쪽에서 시각적으로 구분해 표현한다. 텍스트 구간 목록(TC-008-3)에서의 표기는 FEAT-013이 소유한 표면 위에 레인체인지를 한 세그먼트 유형으로 얹는 것이며, 목록 자체의 렌더·조작 책임은 FEAT-013에 있다.
 
