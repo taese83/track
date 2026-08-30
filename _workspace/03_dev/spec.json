@@ -311,7 +311,7 @@
     },
     {
       "scope": "src/shared/lib/track-cursor",
-      "rationale": "공유 커서 단일 owner. component-spec이 경로까지 고정했다"
+      "rationale": "공유 커서. component-spec이 경로까지 고정했고 목록·캔버스·스트립·컨트롤이 모두 구독한다 — FEAT-013이 만들고 나머지는 소비만 한다"
     },
     {
       "scope": "src/shared/ui",
@@ -339,7 +339,7 @@
     },
     {
       "scope": "src/pages/track-viewer",
-      "rationale": "6화면 상태 머신 — 각 화면 상태의 마운트는 그 상태를 만드는 FEAT가 소유한다(FEAT-001이 input·error를 넣은 선례). FEAT-006이 3d 상태를, FEAT-014가 WebGL 게이트를 소유한다"
+      "rationale": "6화면 상태 머신. 각 화면 상태의 마운트는 그 상태를 만드는 FEAT가 소유한다 — FEAT-001 input·error, FEAT-006 3d 씬, FEAT-013 3분할 셸과 목록 페인, FEAT-014 WebGL 게이트. FEAT-006은 위젯만 내고 머지돼(PR #21) 셸 배선이 FEAT-013으로 넘어왔다"
     },
     {
       "scope": "e2e",
@@ -416,7 +416,7 @@
           },
           {
             "path": "_workspace/01_plan/feature-plan/specs-scene.md",
-            "sha256": "74e365e97269efbe94d70d914e448e0bd20eb174b4b91c7edef57a1b78fed134"
+            "sha256": "e4bff5c0006bcd318650c6caf77c838f75b2fe06e9225cf56a4d94249d7d42d3"
           },
           {
             "path": "_workspace/01_plan/feature-plan/specs-surfaces.md",
@@ -427,12 +427,12 @@
             "sha256": "d45eab359a25a1b3c94f2b6a33e6c8e92407814dfa40db7cb58b49f99aa6393b"
           }
         ],
-        "sha256": "78bccb3b10166ca19e24a0d72ce442e63085796e0e60c349e82e52238960ea0c"
+        "sha256": "6f779a69c17e2d99d7e1807d7453174d60e6478d87efd0430cce32fe34ddc842"
       },
       {
         "path": "_workspace/01_plan/tech-stack.md",
         "present": true,
-        "sha256": "30293a8b8a04b6e8d682d3bb3dccb5d8989798e7b007ae827735736f68f28222"
+        "sha256": "b5c3096f1477cd6b371699bc9418a83d74a4c3735684936dd17f406b240e3792"
       },
       {
         "path": "_workspace/01_plan/project-profile.json",
@@ -446,22 +446,22 @@
         "shards": [
           {
             "path": "_workspace/02_design/api-schema/INDEX.md",
-            "sha256": "abea5c27239d8a707dce7ed642606ae92f78ea48a2cc56582b2228fff9ad7846"
+            "sha256": "156298e997ae483b61b731e0126a79480f0476185743ec9fa213df3475a369da"
           },
           {
             "path": "_workspace/02_design/api-schema/common-envelope.md",
-            "sha256": "471b638a9a72b90a81df9d3fbc902ddc22919f35f246e76bfb264150135c1e3b"
+            "sha256": "3579da037fc7126ee063310382aefd106efd9ac3db04055a936ed3fa1a8f4cf1"
           },
           {
             "path": "_workspace/02_design/api-schema/fixtures.md",
-            "sha256": "93b2e3a2a74398c5640fcba6869d7581e112dbc084f5a03a4b97fa08d5ee9538"
+            "sha256": "29950939c66942095b4c44e1d364ca7361ca07cd3f3afde60db4cd1a4439cbbe"
           },
           {
             "path": "_workspace/02_design/api-schema/track-endpoint.md",
             "sha256": "5e0e14129a8e2257503ac05af2b769036c2281ddd4bec87a24bce91330ce7779"
           }
         ],
-        "sha256": "67bb42239fcf3ec4b8bcb8e5a93ad276ca68b6885dd790985c31c5691965fe9b"
+        "sha256": "8cba1d15c338e4f15e6c3e8c8f7ad6186269e6315f1ffd61474bffcc11787044"
       },
       {
         "path": "_workspace/02_design/component-spec.md",
@@ -503,9 +503,9 @@
       {
         "path": "_workspace/02_design/solution-design.md",
         "present": true,
-        "sha256": "9a86063647b7eed6315734c4c2c3c2a640403028174644424c903a6be141c51d"
+        "sha256": "bd39a3d72644c877b524c6d34ca76414ffdb856be5aec532dcc614bec178bbce"
       }
     ],
-    "combined": "f056b94b9fb999ad63feaa499d35966d8c01572ee71c0b0c3bc5928702eef4fc"
+    "combined": "ecb52fe8f87b5222b9057bcb09b9ae12c0f6b1ddf080a76b11aec0eec3021d7a"
   }
 }

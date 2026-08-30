@@ -39,7 +39,7 @@
 
 ### FEAT-013 — 텍스트 구간 목록 (표면)
 
-<!-- web-harness:unit feat=FEAT-013 dependsOn=FEAT-004,FEAT-005 paths=src/widgets/section-list -->
+<!-- web-harness:unit feat=FEAT-013 dependsOn=FEAT-004,FEAT-005,FEAT-006 paths=src/widgets/section-list,src/shared/lib/track-cursor,src/pages/track-viewer -->
 
 **동작 명세**: `RestoredPath` 순서를 따라 전체 세그먼트를 표 형태로 나열하는 접이식 패널이다. 데스크톱/태블릿에서 접으면 목록은 위쪽으로 사라지지 않고 좌측 56px 측면 레일로 축소되어 확보한 폭을 3D 캔버스가 사용하며, 펼치면 기존 측면 폭과 전체 행을 복원한다. 각 행은 순서·피스 타입·구간 유형(직선/코너/슬로프/뱅크/레인체인지/마커/미지원 등)을 표시하고, 행 클릭 또는 키보드 조작 시 프로파일 스트립·3D 카메라가 해당 지점으로 이동한다(FEAT-007/FEAT-012와 연동).
 
