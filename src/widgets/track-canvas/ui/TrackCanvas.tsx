@@ -18,8 +18,9 @@ import type { ElevatedSegment } from '@/entities/track/lib/elevation'
 import { markFirstFrame, recordOrbitFrame, resetOrbitFps } from '../lib/perf-stats'
 import { applyOrbitKey, initialOrbitFor, orbitLimitsFor } from '../lib/orbit-camera'
 import type { OrbitState } from '../lib/orbit-camera'
-import { buildSegmentGeometry } from '../lib/segment-geometry'
-import { surfaceColorOf } from '../lib/segment-appearance'
+import { buildLaneBands } from '../lib/lane-bands'
+import { buildBoundaryGeometry, buildTrackGeometries } from '../lib/track-geometry'
+import { laneSurfaceColorOf, surfaceColorOf } from '../lib/segment-appearance'
 import type { SceneLayout } from '../lib/scene-layout'
 
 /** 수직 화각. 초기 거리 계산(`initialOrbitFor`)과 같은 값을 써야 프레이밍이 맞는다 */
@@ -60,6 +61,10 @@ function PerfProbe({ orbiting }: { orbiting: { current: boolean } }) {
   return null
 }
 
+/** design-system tokens §2 대비 — 레인 경계선은 표면 위에서 읽히되 트랙을 덮지 않는다 */
+const LANE_LINE_COLOR = '#E6E8EC'
+const LANE_LINE_OPACITY = 0.45
+
 function TrackMesh({ layout, elevated }: TrackCanvasProps) {
   const elevatedByOrder = useMemo(
     () => new Map(elevated.map((segment) => [segment.order, segment])),
@@ -67,27 +72,46 @@ function TrackMesh({ layout, elevated }: TrackCanvasProps) {
   )
 
   // 지오메트리 생성만 명령형이다(tech-stack Architecture Decisions §React 통합 방식).
-  // layout이 바뀔 때만 다시 만든다 — 매 프레임 만들면 132개 BufferGeometry가 프레임마다 쌓인다.
-  const meshes = useMemo(
-    () =>
-      layout.segments.map((segment) => ({
-        key: segment.pieceId,
-        geometry: buildSegmentGeometry(segment),
-        color: surfaceColorOf(segment.isSupported, elevatedByOrder.get(segment.order)),
-      })),
-    [layout, elevatedByOrder],
-  )
+  // layout이 바뀔 때만 다시 만든다 — 매 프레임 만들면 BufferGeometry가 프레임마다 쌓인다.
+  const scene = useMemo(() => {
+    const bands = buildLaneBands(layout.segments)
+    const surfaces = buildTrackGeometries(bands, (band, lane) =>
+      laneSurfaceColorOf(
+        surfaceColorOf(band.isSupported, elevatedByOrder.get(band.order)),
+        lane,
+      ),
+    )
+    return { surfaces, boundaries: buildBoundaryGeometry(bands) }
+  }, [layout, elevatedByOrder])
 
-  useEffect(() => () => meshes.forEach((mesh) => mesh.geometry.dispose()), [meshes])
+  useEffect(
+    () => () => {
+      scene.surfaces.forEach((surface) => surface.geometry.dispose())
+      scene.boundaries.dispose()
+    },
+    [scene],
+  )
 
   return (
     <group>
-      {meshes.map((mesh) => (
-        <mesh key={mesh.key} geometry={mesh.geometry}>
-          {/* 양면 렌더 — 리본은 두께가 없어 아래에서 보면 사라진다 */}
-          <meshStandardMaterial color={mesh.color} side={2} roughness={0.8} metalness={0} />
+      {scene.surfaces.map((surface) => (
+        <mesh key={surface.color} geometry={surface.geometry}>
+          {/* 양면 렌더 — 레인 면은 두께가 없어 아래에서 보면 사라진다 */}
+          <meshStandardMaterial color={surface.color} side={2} roughness={0.8} metalness={0} />
         </mesh>
       ))}
+      {/*
+        경계선은 색 단독 구분을 막는 **형태 축**이다(REQ-NFR-003). 면 위에 겹치므로
+        `depthWrite`를 끄지 않으면 같은 깊이에서 z-fighting이 인다.
+      */}
+      <lineSegments geometry={scene.boundaries}>
+        <lineBasicMaterial
+          color={LANE_LINE_COLOR}
+          transparent
+          opacity={LANE_LINE_OPACITY}
+          depthWrite={false}
+        />
+      </lineSegments>
     </group>
   )
 }

@@ -11,6 +11,7 @@ import { buildPiecePath } from '@/entities/track/lib/elevation'
 import type { ElevatedSegment, OrientedPiece, PiecePath } from '@/entities/track/lib/elevation'
 
 import { compatCorrectionOf } from './compat-correction'
+import { isLaneChangeClass } from './lane-model'
 
 export interface ScenePoint {
   x: number
@@ -19,13 +20,18 @@ export interface ScenePoint {
   z: number
 }
 
+/** 표본 하나. `t`는 피스 안 진행 비율이며 레인 자리바꿈(FEAT-008)이 이 값을 쓴다 */
+export interface SceneSample extends ScenePoint {
+  t: number
+}
+
 export interface SceneSegment {
   pieceId: string
   pieceClass: string
   /** 진행 순서상 위치, 0-based */
   order: number
   /** 렌더 곡선 표본. `points[0]`이 주행 진입점이다 */
-  points: ScenePoint[]
+  points: SceneSample[]
   /** 수평면 진입 접선(라디안, atan2(dz, dx)). 표본이 아니라 경로에서 잰다 */
   entryTangentRad: number
   /** 수평면 진출 접선(라디안) */
@@ -69,8 +75,15 @@ const FLAT_SAMPLES = 2
 /** `buildPiecePath`가 실제로 원호로 만드는 클래스 — 표본 수는 그 모델을 따라간다 */
 const ARC_PIECE_PREFIX = 'Cor'
 
+/**
+ * 레인체인지는 중심선이 직선이라 종전에는 2표본(양 끝)만 떴다. 그러면 **자리바꿈이 렌더에
+ * 존재할 수 없다** — 가운데 45%에서 꺾이는 모양은 표본이 두 개뿐이면 직선으로 눌린다.
+ * 형상이 굽는 것은 중심선이 아니라 레인 면이므로, 표본 밀도는 중심선의 곡률이 아니라
+ * **레인 위치의 변화**를 따라야 한다(FEAT-008).
+ */
 function sampleCountOf(pieceClass: string, segment: ElevatedSegment | undefined): number {
   if (pieceClass.startsWith(ARC_PIECE_PREFIX)) return CURVED_SAMPLES
+  if (isLaneChangeClass(pieceClass)) return CURVED_SAMPLES
   if (segment === undefined) return FLAT_SAMPLES
   return segment.elevationProfile.kind === 'flat' ? FLAT_SAMPLES : CURVED_SAMPLES
 }
@@ -144,11 +157,12 @@ export function buildSceneLayout(input: SceneLayoutInput): SceneLayout {
     const count = sampleCountOf(piece.pieceClass, elevated)
     const base = elevated?.absoluteElevationStart ?? 0
 
-    const points: ScenePoint[] = []
+    const points: SceneSample[] = []
     for (let index = 0; index < count; index += 1) {
       const t = count === 1 ? 0 : index / (count - 1)
       const flat = path.pointAt(t)
       points.push({
+        t,
         x: flat.x + correction.x,
         y: base + (elevated?.elevationProfile.heightAt(t) ?? 0),
         z: flat.y + correction.y,
