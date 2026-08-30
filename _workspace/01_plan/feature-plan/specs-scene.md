@@ -16,7 +16,7 @@
 
 ### FEAT-007 — 트랙 추종 시점 (플라이스루)
 
-<!-- web-harness:unit feat=FEAT-007 dependsOn=FEAT-012 paths=src/widgets/track-canvas -->
+<!-- web-harness:unit feat=FEAT-007 dependsOn=FEAT-012,FEAT-011 paths=src/widgets/track-canvas -->
 
 **동작 명세**: 결정적으로 복원된 순서를 따라 카메라가 START(Str2)부터 화살표 방향으로 이동한다. 기본은 하단 프로파일 스트립(FEAT-012 소유 표면) 스크럽(수동)이며 자동 재생은 옵션(탐색 속도 조절·즉시 일시정지)이다. 카메라 피치는 고도 프로파일의 미분에서 파생한다. FEAT-007 자신은 프로파일 스트립의 렌더링을 소유하지 않고 FEAT-012가 발생시키는 조작 이벤트를 구독할 뿐이다.
 
@@ -67,7 +67,7 @@
 
 ### FEAT-011 — 대형 트랙 성능 완화
 
-<!-- web-harness:unit feat=FEAT-011 dependsOn=FEAT-006,FEAT-008 paths=src/widgets/track-canvas -->
+<!-- web-harness:unit feat=FEAT-011 dependsOn=FEAT-006,FEAT-008,FEAT-009 paths=src/widgets/track-canvas -->
 
 **동작 명세**: 대형 트랙 임계값은 300피스로 통일한다(참조 트랙 132피스 대비 약 2.3배, 잠정·ASSUMPTION-006). 132~300피스 구간은 "경계 구간"으로 정의하며, 이 구간에서는 완화 적용 여부가 Must 요구가 아니고 구현체 재량이다. 300피스를 초과하면 완화 상태로 전환하고 "대형 트랙: 일부 최적화 적용" 안내를 표시한다.
 

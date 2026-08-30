@@ -261,6 +261,8 @@ describe('미지원 피스는 레인을 만들지 않는다', () => {
       exitTangentRad: 0,
       isSupported: false,
       compatCorrected: false,
+      kind: 'plain',
+      direction: 'none',
     }
     const [band] = buildLaneBands([collapsed])
     expect(band?.lanes).toEqual([])
