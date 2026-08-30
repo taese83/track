@@ -12,6 +12,9 @@ export interface ErrorScreenProps {
 const MESSAGE: Record<LoadErrorReason, string> = {
   'invalid-input': '유효하지 않은 링크입니다. view/XXXXXX 형식으로 다시 입력해 주세요.',
   'not-found': '트랙을 찾을 수 없습니다. 코드가 맞는지 확인해 주세요.',
+  // 여기서 "코드를 확인하라"고 말하지 않는다 — 코드는 맞을 수 있고, 서버는 확인하지 않았다
+  'fixture-not-recorded':
+    '이 트랙은 로컬 녹화본에 없어 조회하지 못했습니다. 개발 환경은 편집기를 호출하지 않습니다 — 실제 조회는 배포본에서 됩니다.',
   network: '편집기 서버에 연결하지 못했습니다.',
   timeout: '응답이 시간 초과되었습니다.',
   parse: '트랙 데이터를 해석하지 못했습니다.',

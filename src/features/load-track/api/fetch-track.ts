@@ -17,6 +17,7 @@ const REASON_BY_CODE: Record<TrackErrorCode, LoadErrorReason> = {
   UPSTREAM_FETCH_FAILED: 'network',
   UPSTREAM_TIMEOUT: 'timeout',
   UPSTREAM_RESPONSE_UNRECOGNIZED: 'parse',
+  FIXTURE_NOT_RECORDED: 'fixture-not-recorded',
   INTERNAL_ERROR: 'network',
 }
 
