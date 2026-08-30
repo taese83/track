@@ -4,13 +4,22 @@ import { BufferAttribute, BufferGeometry } from 'three'
 
 import type { SceneSegment } from './scene-layout'
 
+/** 레인 수와 레인 폭 — 픽셀 측정으로 확정됐다(D-034 · PC-008, B-001 닫힘) */
+export const LANE_COUNT = 3
+export const LANE_PITCH_CM = 12
+
 /**
- * 리본 반폭(편집기 px). **표현값이며 근거 등급 `unknown`이다** —
- * 실물 코스 폭 11.5cm는 measured지만 px↔cm 배율이 미해결이라(`00_source/piece-dimensions.md`
- * §스케일 미해결) 실측값으로 환산할 수 없다. 가장 짧은 피스(`Ban1`, 28px)에서도 형상이
- * 읽히는 크기로 골랐고, 배율이 확정되면 이 상수 하나만 바뀐다.
+ * 리본 반폭. **1 px = 1 cm이므로 편집기 px가 곧 cm다**(PC-008: 레인 폭 12px ·
+ * `l` = 레인수 × 레인길이가 직선 6종 전부 일치 · 타미야 실물 11.5cm와 4% 이내).
+ *
+ * 종전 값은 `6`(전폭 12cm)이었고 주석은 "px↔cm 배율이 미해결이라 환산할 수 없다"고 적고
+ * 있었다. **그 전제가 낡은 것이었다** — B-001은 이미 닫혔는데 그 정정이 정본에 도달하지
+ * 않아(`piece-geometry.md` §좌표 계약이 "미해결"이라 적은 채였다) 구현이 미해결을 그대로
+ * 인코딩했고, 트랙이 확정 폭의 **3분의 1**로 그려지고 있었다(2026-08-30 발견).
+ *
+ * 레인을 **면**으로 나눠 그리는 것은 FEAT-008이 소유한다 — 여기서는 전폭 리본만 만든다.
  */
-export const TRACK_HALF_WIDTH_PX = 6
+export const TRACK_HALF_WIDTH_PX = (LANE_COUNT * LANE_PITCH_CM) / 2
 
 /**
  * 뱅크의 **횡방향 기울기(roll)는 넣지 않는다.** `ElevatedSegment`는 진행축 높이만 담고
