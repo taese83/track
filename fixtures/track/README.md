@@ -17,13 +17,18 @@ api-schema §2 "사용자 요청 1회당 업스트림 fetch 정확히 1회, 크�
 | `UNSUPP.js.txt` | synthetic | 23종 밖 가상 클래스(`Xyz9`/`Wob2`) 삽입 | 200 (판정은 FEAT-009) |
 | `LARGE1.js.txt` | synthetic | 피스 반복 복제로 304피스 | 200 (완화는 FEAT-011) |
 | `PARSEFAIL.js.txt` | synthetic | 피스 문자열 중간 파괴 + 말미 절단 | 200 (파싱 실패 판정은 FEAT-002) |
+| `EMPTY1.js.txt` | synthetic | `text`가 `'#'` 한 글자, 피스 0개 | 200 (0피스 판정은 FEAT-002) |
 | `BADJS.js.txt` | synthetic | JS 래퍼 자체가 깨짐(`text` 변수 없음) | **502 `UPSTREAM_RESPONSE_UNRECOGNIZED`** |
 
 `COMPAT1`은 실제 compat=true 트랙 코드를 확보하지 못해 원문의 저장 버전만 바꾼 합성본이다 —
 compat 분기 로직은 검증하지만 "실제 구버전 트랙의 좌표"를 재현하지는 않는다(FEAT-002/006이
 실캡처를 확보하면 교체 대상).
 
-`BADJS`를 뺀 7종은 전부 API 계층에서 **200 성공**이다. 비폐곡선·START 부재·미지원 피스·손상
+`EMPTY1`의 `text`가 빈 문자열이 아니라 `'#'`인 것은 의도다 — 빈 문자열은 `extractUpstreamVars`가
+`text-empty`로 잡아 502가 되므로 파서에 닿지 못한다. `'#'`은 길이 1이라 API를 통과하고 파싱
+단계에서 0피스가 된다.
+
+`BADJS`를 뺀 8종은 전부 API 계층에서 **200 성공**이다. 비폐곡선·START 부재·미지원 피스·손상
 인코딩은 모두 `rawData` 문자열의 *내용* 차이일 뿐이고 서버는 그 내용을 검증하지 않는다
 (api-schema §3). 실패 판정은 클라이언트 파이프라인의 몫이다.
 

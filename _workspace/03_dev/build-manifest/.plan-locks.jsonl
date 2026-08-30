@@ -1,0 +1,4 @@
+{"task":"feat-002-parse","digest":"4096c0b50b2f67ef","at":"2026-08-30T01:32:12.937Z"}
+{"task":"feat-002-parse-domain","digest":"093b99e79d88a3fc","at":"2026-08-30T03:55:54.705Z","specDigest":"586ceddb8d34945c55149fb900f3ac5b28e5881e8538c1353032dfcca399c0d3"}
+{"task":"feat-002-parse-wiring","digest":"303efa3c0482d167","at":"2026-08-30T03:56:08.120Z","specDigest":"586ceddb8d34945c55149fb900f3ac5b28e5881e8538c1353032dfcca399c0d3"}
+{"task":"feat-002-parse-v2","digest":"31685a67c78455ab","at":"2026-08-30T04:01:17.713Z","specDigest":"586ceddb8d34945c55149fb900f3ac5b28e5881e8538c1353032dfcca399c0d3"}

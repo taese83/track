@@ -1,0 +1,93 @@
+{
+  "$schema": "https://web-harness.local/schemas/web-core/project-profile.schema.json",
+  "adapter": {
+    "id": "vite-serverless-hybrid",
+    "sha256": "d7f07589986958cf42ef6e0009dadb6875cf7d2d5c8316e645c36111c88aca37",
+    "supportLevel": "certified",
+    "trustTier": "builtin",
+    "version": "1.1.0"
+  },
+  "backend": {
+    "shape": "serverless-functions"
+  },
+  "capabilities": [
+    "client-routing",
+    "csr",
+    "serverless-functions",
+    "static-build"
+  ],
+  "deployment": {
+    "artifacts": [
+      {
+        "id": "vite-dist",
+        "kind": "static-directory",
+        "path": "dist"
+      }
+    ],
+    "availableProviders": [
+      "vercel"
+    ],
+    "availableTargets": [
+      "vercel-hybrid"
+    ],
+    "provider": "vercel",
+    "releaseTarget": "release.vercel-hybrid",
+    "target": "vercel-hybrid"
+  },
+  "frontend": {
+    "framework": "react",
+    "packageManager": "pnpm",
+    "rendering": [
+      "csr"
+    ],
+    "router": "react-router",
+    "variant": "vite-serverless-hybrid"
+  },
+  "ingestion": {
+    "contractsComplete": false,
+    "detected": true,
+    "evidence": [
+      "network-source:api/track.ts"
+    ],
+    "inspectionErrors": []
+  },
+  "outputLanguage": "ko",
+  "product": {
+    "kind": "hybrid-web"
+  },
+  "profileId": "vite-serverless-hybrid",
+  "resolution": {
+    "detected": "vite-serverless-hybrid",
+    "evidence": [
+      "network-source:api/track.ts",
+      "package:react@declared",
+      "package:vite@declared",
+      "path:api",
+      "path:src/main.tsx",
+      "path:vite.config.ts"
+    ],
+    "requested": null,
+    "source": "detected"
+  },
+  "risk": {
+    "level": "public"
+  },
+  "runtime": {
+    "primary": "browser",
+    "supported": [
+      "browser",
+      "node",
+      "node-build"
+    ]
+  },
+  "schemaVersion": 1,
+  "toolchain": {
+    "exactFrameworkVersions": true,
+    "nodeEngine": "^20.19.0 || >=22.12.0",
+    "packageDeclarations": {
+      "react": "19.2.8",
+      "vite": "8.2.2"
+    },
+    "packageManager": "pnpm@11.18.0"
+  }
+}
