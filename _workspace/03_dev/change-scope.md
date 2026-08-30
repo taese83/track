@@ -1,6 +1,10 @@
 # change-scope — FEAT-006
 
-티켓 6 픽업으로 발급. ALLOWED_PATHS는 확인 후 확정(needsConfirmation).
+티켓 6 픽업으로 발급. ALLOWED_PATHS 확정(2026-08-30, 개발자 확인).
+계획 선언 `paths=src/widgets/track-canvas,src/pages/track-viewer`가 정본이고, `e2e`는
+TC-006-2~5(드래그·휠·키보드)의 유일한 검증 경로다 — vitest는 `environment: node`라
+상호작용 축이 없다. `e2e`는 어느 FEAT의 선언 paths에도 없는 공용 검증 경계이며
+FEAT-001~003이 같은 방식으로 스펙을 더했다.
 스키마 정본: minimal-change-contract.md · 아래 JSON이 기계 정본(STALE 대조 입력).
 
 ```json change-scope
@@ -17,12 +21,14 @@
     "TC-006-5"
   ],
   "ALLOWED_PATHS": [
-    "src/widgets/track-canvas"
+    "src/widgets/track-canvas",
+    "src/pages/track-viewer",
+    "e2e"
   ],
   "PUBLIC_CONTRACTS_TO_PRESERVE": [],
   "NON_GOALS": [],
   "CHANGE_BUDGET": null,
   "sourceDigest": "10b412cb761cb3d134068008ed33ecd8b1192206fd3ab86c7fe4842f39e6db1e",
-  "needsConfirmation": true
+  "needsConfirmation": false
 }
 ```
