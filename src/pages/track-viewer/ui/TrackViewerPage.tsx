@@ -22,9 +22,13 @@ import type { SectionListItem } from '@/widgets/section-list'
 import { buildSceneLayout, markRenderStart } from '@/widgets/track-canvas'
 import type { SceneLayout } from '@/widgets/track-canvas'
 
+import { isCanvasBroken } from '../lib/canvas-failure-watch'
+import { detectWebglSupport } from '../lib/webgl-support'
+
 import { ErrorScreen } from './ErrorScreen'
 import { InputScreen } from './InputScreen'
 import { TrackScreen } from './TrackScreen'
+import { WebglFallbackScreen } from './WebglFallbackScreen'
 
 /** 디버그 영역에 흘릴 원문 발췌 상한 — 전문을 그대로 노출하지 않는다 */
 const SNIPPET_MAX_CHARS = 300
@@ -115,13 +119,28 @@ function buildScene(pieces: readonly ParsedPiece[], closure: ClosureValidation) 
  * 화면 상태 머신의 소유자.
  *
  * fetch 성공 뒤의 파싱·순서 복원은 `track`의 동기 순수 파생이라 별도 상태를 두지 않는다.
- * `3d`/`partial-failure`/`webgl-unsupported`와 그 3분할 셸은 FEAT-006/012/013 소관이라
- * 여기서는 아직 그리지 않는다 — 임시 셸을 그리면 그 표면에 소유자가 둘이 된다.
+ * `webgl-unsupported`는 **FEAT-014가 여기에 넣은 게이트**다 — component-spec §화면 상태
+ * 머신이 "3D 진입 이전 게이트"로 규정했고, 데이터 fetch와 독립적으로 마운트 즉시 판정된다.
  */
 export function TrackViewerPage() {
   const { state, track, submit, retry, reset } = useTrackFetch()
   const [value, setValue] = useState('')
   const [touched, setTouched] = useState(false)
+
+  /**
+   * FEAT-014 게이트. **마운트 시 한 번만** 판정한다(lazy initializer) — fetch·파싱과 독립이고,
+   * 렌더마다 다시 물으면 컨텍스트를 반복 생성해 오히려 소진의 원인이 된다. 미지원이면
+   * `TrackCanvas`가 애초에 마운트되지 않으므로 "3D 렌더 시도 자체가 발생하지 않는다"
+   * (TC-014-1)가 코드 구조로 성립한다 — 그린 뒤 숨기는 방식이 아니다.
+   */
+  const [webglSupported] = useState(detectWebglSupport)
+
+  /**
+   * 게이트를 통과했는데 렌더 도중 무너진 경우(TC-014-3). 게이트 판정과 **다른 축**이라
+   * 따로 둔다 — 합치면 "지원하지 않는다"와 "지원하는데 실패했다"가 구분되지 않는다.
+   */
+  const [canvasRuntimeFailed, setCanvasRuntimeFailed] = useState(false)
+  const canRender3d = webglSupported && !canvasRuntimeFailed
 
   const parsed = useMemo(
     () => (track === null ? null : parseTrackString(track.rawData, track.compat)),
@@ -188,7 +207,12 @@ export function TrackViewerPage() {
    * 파싱·복원 실패는 fetch 성공 뒤에 일어나므로 `state.status`만으로는 화면이 에러라는 사실이
    * 드러나지 않는다. component-spec의 ViewState는 이 경우를 `error`로 규정하므로 노출값을 맞춘다.
    */
-  const viewState = state.status === 'success' && outcome?.kind === 'failure' ? 'error' : state.status
+  const viewState =
+    state.status === 'success' && outcome?.kind === 'failure'
+      ? 'error'
+      : state.status === 'success' && outcome?.kind === 'restored' && !canRender3d
+        ? 'webgl-unsupported'
+        : state.status
 
   /**
    * performance-budget §1의 "초기 렌더 시간" 시작점은 **fetch 완료 시각**이다 —
@@ -199,10 +223,44 @@ export function TrackViewerPage() {
     if (track !== null) markRenderStart()
   }, [track])
 
+  /**
+   * TC-014-3 — 렌더러가 컨텍스트를 못 만들면 three가 예외를 **다시 던지고**, 그 던지기는
+   * R3F 초기화 경로라 React 렌더/커밋 밖이다. 어떤 채널로 나오는지는 추측하지 않고 쟀다
+   * (2026-08-30, `getContext` 소진 스텁):
+   *
+   * - `componentDidCatch` — **미포착**. 에러 경계를 두면 이 경로에 대해 죽은 코드가 된다.
+   * - window `error` — **미발화**. 리스너가 한 번도 불리지 않았다.
+   * - window `unhandledrejection` — **발화**. R3F가 초기화를 Promise 경로에서 하기 때문이다.
+   *
+   * 그래서 `unhandledrejection`을 정본 신호로 쓰고, `error`도 함께 듣는다(R3F 구현이 동기
+   * 경로로 바뀌어도 계약이 조용히 죽지 않게 — 두 채널 모두 아래 같은 확인을 거친다).
+   *
+   * 무관한 에러를 "WebGL 미지원"으로 표기하지 않도록 귀속은 메시지가 아니라 **캔버스가
+   * 실제로 컨텍스트를 갖고 있는지**로 가른다(`canvas-failure-watch`).
+   * 3D를 그리는 동안에만 건다 — 대체 화면으로 내려간 뒤에는 들을 이유가 없다.
+   */
+  useEffect(() => {
+    if (!canRender3d || outcome?.kind !== 'restored') return
+
+    const inspect = () => {
+      if (isCanvasBroken(document.querySelector('canvas'))) setCanvasRuntimeFailed(true)
+    }
+
+    window.addEventListener('unhandledrejection', inspect)
+    window.addEventListener('error', inspect)
+    return () => {
+      window.removeEventListener('unhandledrejection', inspect)
+      window.removeEventListener('error', inspect)
+    }
+  }, [canRender3d, outcome])
+
   const handleSwitchTrack = useCallback(() => {
     reset()
     setValue('')
     setTouched(false)
+    // 런타임 실패는 그 트랙의 씬에 딸린 사실이다 — 다른 트랙까지 3D를 막으면 일시적
+    // 컨텍스트 소진이 영구 강등이 된다. 게이트 판정(`webglSupported`)은 그대로 둔다.
+    setCanvasRuntimeFailed(false)
   }, [reset])
 
   const handleBlur = useCallback(() => setTouched(true), [])
@@ -228,6 +286,9 @@ export function TrackViewerPage() {
           />
         ) : state.status === 'success' && track !== null && outcome !== null ? (
           outcome.kind === 'restored' ? (
+            !canRender3d ? (
+              <WebglFallbackScreen items={outcome.items} />
+            ) : (
             <TrackScreen
               layout={outcome.layout}
               elevated={outcome.elevated}
@@ -273,6 +334,7 @@ export function TrackViewerPage() {
                 </div>
               }
             />
+            )
           ) : (
             <ErrorScreen reason={outcome.reason} rawSnippet={outcome.rawSnippet} onRetry={retry} />
           )
