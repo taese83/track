@@ -191,7 +191,7 @@ FEAT 단위 티켓 14건이 병행될 예정이라 이 경계가 실사용된다
 | `src/widgets/section-list` | FEAT-013/014 대체 표현 | component-spec |
 | `src/widgets/view-controls` | ControlCluster | component-spec |
 | `src/widgets/app-header` | FEAT-001 출처 링크 | 실존 슬라이스 |
-| `src/pages/track-viewer` | 6상태 머신 + FEAT-014 게이트 | 실존 슬라이스 |
+| `src/pages/track-viewer` | 6상태 머신 — **각 화면 상태의 마운트는 그 상태를 만드는 FEAT가 소유한다**(FEAT-001이 input·error를 넣은 선례). FEAT-006 3d · FEAT-014 WebGL 게이트 | 실존 슬라이스 |
 | `e2e` | e2e 시나리오 | 실존 |
 
 **FEAT-006/007/008/009/011이 `src/widgets/track-canvas` 하나를 공유한다** — 이 다섯은 같은 3D
@@ -343,7 +343,7 @@ substrate의 두 키는 **하네스 기본값**(eslint/prettier)으로 채워지
     {"scope": "src/widgets/section-list", "rationale": "FEAT-013 owner이자 FEAT-014 대체 표현의 주 콘텐츠"},
     {"scope": "src/widgets/view-controls", "rationale": "ControlCluster — 시점·재생·탐색 속도"},
     {"scope": "src/widgets/app-header", "rationale": "FEAT-001 출처 링크 상시 노출(PAGE-000 전역 책임)"},
-    {"scope": "src/pages/track-viewer", "rationale": "6화면 상태 머신과 FEAT-014 WebGL 게이트"},
+    {"scope": "src/pages/track-viewer", "rationale": "6화면 상태 머신 — 각 화면 상태의 마운트는 그 상태를 만드는 FEAT가 소유한다(FEAT-001이 input·error를 넣은 선례). FEAT-006이 3d 상태를, FEAT-014가 WebGL 게이트를 소유한다"},
     {"scope": "e2e", "rationale": "Playwright 시나리오. testDir './e2e' 실측"}
   ],
   "acceptanceSource": "feature-plan",

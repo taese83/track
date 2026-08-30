@@ -2,7 +2,7 @@
 
 ### FEAT-006 — 3D 씬 생성과 카메라 오빗 (형상 일치)
 
-<!-- web-harness:unit feat=FEAT-006 dependsOn=FEAT-004,FEAT-005 paths=src/widgets/track-canvas -->
+<!-- web-harness:unit feat=FEAT-006 dependsOn=FEAT-004,FEAT-005 paths=src/widgets/track-canvas,src/pages/track-viewer -->
 
 **동작 명세**: 고도 프로파일이 붙은 세그먼트들을 도면과 일치하는 절대 위치·방향으로 배치하고, 드래그 회전·휠/핀치 확대축소를 즉시 반영하는 오빗 카메라를 제공한다. compat=true 경로에서는 FEAT-002가 부여한 보정 메타데이터에 따라 Cor1의 45/135/225/315° 배치에 위치 보정을 적용한다.
 

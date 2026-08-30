@@ -21,7 +21,7 @@ CSR가 기본이다: 3D 렌더는 어차피 클라이언트 JS가 필요해 SSR�
 | TypeScript | 6.0.2 | TS7(7.0.2)은 Go 네이티브 신규 major, 생태계 fixture 미검증 | registry.npmjs.org + TS 6.0 공지 | TS6 고정, TS7 보류(CLAUDE.md 지침) |
 | Vite | 8.2.2 | engines `^20.19 \|\| >=22.12` | registry.npmjs.org | 채택 |
 | @vitejs/plugin-react | 6.1.1 | Vite 8 대응 | registry.npmjs.org | 채택 |
-| three | 0.185.1 | 자체 TS 타입 내장 — `@types/three` 불필요 | registry.npmjs.org + three.js 공지 | 채택 |
+| three | 0.185.1 | **정정(2026-08-30 FEAT-006 실측)**: 타입 미내장 — `node_modules/three`에 `.d.ts` 0개, `package.json`에 `types` 필드 없음. `@types/three@0.185.4`를 devDependency로 둔다(drei의 `maath`·`stats-gl`가 이미 같은 버전을 끌어와 추가 설치 없음) | registry.npmjs.org + 설치본 실측 | 채택 |
 | @react-three/fiber | 9.7.0 | peer `three>=0.156`, `react/react-dom >=19 <19.3` | registry.npmjs.org | 채택 |
 | @react-three/drei | 10.7.8 | peer `@react-three/fiber ^9.0.0`, `three>=0.159`, `react ^19` | registry.npmjs.org | 채택 (구버전의 v9 peer 미지원 이슈는 이 버전에서 해소 확인) |
 | Vitest | 4.1.11 | engines `^20 \|\| ^22 \|\| >=24` | registry.npmjs.org | 채택 |
@@ -56,6 +56,7 @@ CSR가 기본이다: 3D 렌더는 어차피 클라이언트 JS가 필요해 SSR�
 |---|---:|---|---|---|
 | react, react-dom | 19.2.8 | dependencies | 전체 | registry.npmjs.org |
 | three | 0.185.1 | dependencies | FEAT-005~008 | registry.npmjs.org |
+| @types/three | 0.185.4 | devDependencies | three 0.185.1의 타입(미내장 — 위 정정) | registry.npmjs.org |
 | @react-three/fiber | 9.7.0 | dependencies | FEAT-005~008 | registry.npmjs.org |
 | @react-three/drei | 10.7.8 | dependencies | FEAT-006(OrbitControls)/007 | registry.npmjs.org |
 | typescript | 6.0.2 | devDependencies | 전체 | registry.npmjs.org |

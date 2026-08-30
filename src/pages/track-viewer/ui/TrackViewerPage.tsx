@@ -1,5 +1,9 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
+import { validateClosure } from '@/entities/track/lib/closure'
+import type { ClosureValidation } from '@/entities/track/lib/closure'
+import { buildElevatedSegments, elevationDeltasOf, orientPath } from '@/entities/track/lib/elevation'
+import type { ElevatedSegment } from '@/entities/track/lib/elevation'
 import { parseTrackString } from '@/entities/track/lib/parse'
 import type { ParseTrackStringResult } from '@/entities/track/lib/parse'
 import { restoreOrder } from '@/entities/track/lib/restore'
@@ -11,10 +15,14 @@ import type {
 import { SOURCE_EDITOR_URL } from '@/entities/track/model/schema'
 import { useTrackFetch } from '@/features/load-track'
 import type { LoadErrorReason } from '@/features/load-track'
+import type { ParsedPiece } from '@/entities/track/model/types'
 import { AppHeader } from '@/widgets/app-header/ui/AppHeader'
+import { buildSceneLayout, markRenderStart } from '@/widgets/track-canvas'
+import type { SceneLayout } from '@/widgets/track-canvas'
 
 import { ErrorScreen } from './ErrorScreen'
 import { InputScreen } from './InputScreen'
+import { TrackScreen } from './TrackScreen'
 
 /** 디버그 영역에 흘릴 원문 발췌 상한 — 전문을 그대로 노출하지 않는다 */
 const SNIPPET_MAX_CHARS = 300
@@ -71,8 +79,34 @@ function describeStart(start: StartSelection): string {
 }
 
 type ViewOutcome =
-  | { kind: 'restored'; restored: RestoreOrderSuccess }
+  | {
+      kind: 'restored'
+      restored: RestoreOrderSuccess
+      closure: ClosureValidation
+      layout: SceneLayout
+      elevated: readonly ElevatedSegment[]
+      totalPieceCount: number
+    }
   | { kind: 'failure'; reason: LoadErrorReason; rawSnippet: string }
+
+/**
+ * FEAT-004가 확보한 **연결된 구간까지만** 배치한다. 끊긴 뒤의 피스를 이어 그리면 화면이
+ * 있지도 않은 연결을 주장한다(제품 계약 §5). `orderConfirmed=false`면 순서의 정본이
+ * 아니라 진단용 접두부이므로 그 사실이 `truncated`로 드러난다.
+ */
+function buildScene(pieces: readonly ParsedPiece[], closure: ClosureValidation) {
+  const byId = new Map(pieces.map((piece) => [piece.pieceId, piece]))
+  const connected: ParsedPiece[] = []
+  for (const pieceId of closure.connectedPieceIds) {
+    const found = byId.get(pieceId)
+    if (found !== undefined) connected.push(found)
+  }
+
+  const oriented = orientPath(connected)
+  const elevated = buildElevatedSegments(oriented).segments
+  const truncated = connected.length < pieces.length
+  return { layout: buildSceneLayout({ oriented, elevated, truncated }), elevated }
+}
 
 /**
  * 화면 상태 머신의 소유자.
@@ -115,7 +149,28 @@ export function TrackViewerPage() {
       }
     }
 
-    return { kind: 'restored', restored }
+    // 고도 프로파일을 폐합 판정에 주입한다 — FEAT-004가 열어 둔 구멍이고, 넣지 않으면
+    // 현 규칙 근사가 화면의 Z 폐합 판정을 대신한다.
+    const oriented = orientPath(
+      restored.orderedPieceIds
+        .map((pieceId) => parsed.pieces.find((piece) => piece.pieceId === pieceId))
+        .filter((piece): piece is ParsedPiece => piece !== undefined),
+    )
+    const closure = validateClosure({
+      pieces: parsed.pieces,
+      restored,
+      elevationDeltas: elevationDeltasOf(buildElevatedSegments(oriented)),
+    })
+    const scene = buildScene(parsed.pieces, closure)
+
+    return {
+      kind: 'restored',
+      restored,
+      closure,
+      layout: scene.layout,
+      elevated: scene.elevated,
+      totalPieceCount: parsed.pieces.length,
+    }
   }, [track, parsed])
 
   /**
@@ -123,6 +178,15 @@ export function TrackViewerPage() {
    * 드러나지 않는다. component-spec의 ViewState는 이 경우를 `error`로 규정하므로 노출값을 맞춘다.
    */
   const viewState = state.status === 'success' && outcome?.kind === 'failure' ? 'error' : state.status
+
+  /**
+   * performance-budget §1의 "초기 렌더 시간" 시작점은 **fetch 완료 시각**이다 —
+   * 씬 데이터가 준비된 시각이 아니다. 파싱·순서 복원·고도 산출도 사용자가 기다리는
+   * 시간이므로 그 앞에서 시작해야 3초 목표가 실제로 기다린 시간을 잰다.
+   */
+  useEffect(() => {
+    if (track !== null) markRenderStart()
+  }, [track])
 
   const handleSwitchTrack = useCallback(() => {
     reset()
@@ -148,49 +212,50 @@ export function TrackViewerPage() {
           />
         ) : state.status === 'success' && track !== null && outcome !== null ? (
           outcome.kind === 'restored' ? (
-            <div className="flex flex-1 items-center justify-center p-6">
-              <div
-                className="w-full max-w-[640px] rounded-[6px] border p-6"
-                style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg-surface)' }}
-                data-testid="fetch-success"
-              >
-                <h2 className="text-[20px] leading-[1.3] font-semibold">
-                  트랙 <span className="tabular">{track.trackCode}</span> 원문을 받았습니다
-                </h2>
-                <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-[14px]">
-                  <dt style={{ color: 'var(--color-text-secondary)' }}>원문 길이</dt>
-                  <dd className="tabular" data-testid="raw-length">
-                    {track.rawData.length}자
-                  </dd>
-                  <dt style={{ color: 'var(--color-text-secondary)' }}>조회 시각</dt>
-                  <dd className="tabular">{track.fetchedAt}</dd>
-                  <dt style={{ color: 'var(--color-text-secondary)' }}>compat</dt>
-                  <dd data-testid="compat-flag">{String(track.compat)}</dd>
-                  <dt style={{ color: 'var(--color-text-secondary)' }}>피스 수</dt>
-                  <dd className="tabular" data-testid="piece-count">
-                    {stats.total}
-                  </dd>
-                  <dt style={{ color: 'var(--color-text-secondary)' }}>미지원 피스</dt>
-                  <dd className="tabular" data-testid="unsupported-count">
-                    {stats.unsupported}
-                  </dd>
-                  <dt style={{ color: 'var(--color-text-secondary)' }}>compat 보정 대상</dt>
-                  <dd className="tabular" data-testid="compat-corrected-count">
-                    {stats.compatCorrected}
-                  </dd>
-                  <dt style={{ color: 'var(--color-text-secondary)' }}>복원된 순서</dt>
-                  <dd className="tabular" data-testid="ordered-count">
-                    {outcome.restored.orderedPieceIds.length}
-                  </dd>
-                  <dt style={{ color: 'var(--color-text-secondary)' }}>시작 피스</dt>
-                  <dd data-testid="start-selection">{describeStart(outcome.restored.start)}</dd>
-                </dl>
-                <p className="mt-4 text-[14px]" style={{ color: 'var(--color-text-secondary)' }}>
-                  피스 순서 복원까지 마쳤습니다. 폐곡선·Z 폐합 검증과 3D 표시는 아직 구현되지
-                  않았습니다(FEAT-004 이후).
-                </p>
-              </div>
-            </div>
+            <TrackScreen
+              layout={outcome.layout}
+              elevated={outcome.elevated}
+              closure={outcome.closure}
+              totalPieceCount={outcome.totalPieceCount}
+              pipelineSummary={
+                <div data-testid="fetch-success">
+                  <h2 className="text-[15px] leading-[1.3] font-semibold">
+                    트랙 <span className="tabular">{track.trackCode}</span>
+                  </h2>
+                  <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 text-[13px]">
+                    <dt style={{ color: 'var(--color-text-secondary)' }}>원문 길이</dt>
+                    <dd className="tabular" data-testid="raw-length">
+                      {track.rawData.length}자
+                    </dd>
+                    <dt style={{ color: 'var(--color-text-secondary)' }}>조회 시각</dt>
+                    <dd className="tabular">{track.fetchedAt}</dd>
+                    <dt style={{ color: 'var(--color-text-secondary)' }}>compat</dt>
+                    <dd data-testid="compat-flag">{String(track.compat)}</dd>
+                    <dt style={{ color: 'var(--color-text-secondary)' }}>피스 수</dt>
+                    <dd className="tabular" data-testid="piece-count">
+                      {stats.total}
+                    </dd>
+                    <dt style={{ color: 'var(--color-text-secondary)' }}>미지원 피스</dt>
+                    <dd className="tabular" data-testid="unsupported-count">
+                      {stats.unsupported}
+                    </dd>
+                    <dt style={{ color: 'var(--color-text-secondary)' }}>compat 보정 대상</dt>
+                    <dd className="tabular" data-testid="compat-corrected-count">
+                      {stats.compatCorrected}
+                    </dd>
+                    <dt style={{ color: 'var(--color-text-secondary)' }}>복원된 순서</dt>
+                    <dd className="tabular" data-testid="ordered-count">
+                      {outcome.restored.orderedPieceIds.length}
+                    </dd>
+                    <dt style={{ color: 'var(--color-text-secondary)' }}>시작 피스</dt>
+                    <dd data-testid="start-selection">{describeStart(outcome.restored.start)}</dd>
+                  </dl>
+                  <p className="mt-3 text-[12px]" style={{ color: 'var(--color-text-secondary)' }}>
+                    구간 목록(FEAT-013)과 근거 등급 배지(FEAT-010)가 들어오면 이 요약을 대신합니다.
+                  </p>
+                </div>
+              }
+            />
           ) : (
             <ErrorScreen reason={outcome.reason} rawSnippet={outcome.rawSnippet} onRetry={retry} />
           )

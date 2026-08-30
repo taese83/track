@@ -339,7 +339,7 @@
     },
     {
       "scope": "src/pages/track-viewer",
-      "rationale": "6화면 상태 머신과 FEAT-014 WebGL 게이트"
+      "rationale": "6화면 상태 머신 — 각 화면 상태의 마운트는 그 상태를 만드는 FEAT가 소유한다(FEAT-001이 input·error를 넣은 선례). FEAT-006이 3d 상태를, FEAT-014가 WebGL 게이트를 소유한다"
     },
     {
       "scope": "e2e",
@@ -436,7 +436,8 @@
       },
       {
         "path": "_workspace/01_plan/project-profile.json",
-        "present": false
+        "present": true,
+        "sha256": "a4615b667ef4ebf46df143cc3b6ae9c213464eb85c5d306a64a2a804e8fe9667"
       },
       {
         "path": "_workspace/02_design/api-schema.md",
@@ -496,14 +497,15 @@
       },
       {
         "path": "_workspace/02_design/integration-overlay.json",
-        "present": false
+        "present": true,
+        "sha256": "1f6aa4642bb24e648d5b0ad7e18b3ff9cd50f34906a904865e15deb484cd0944"
       },
       {
         "path": "_workspace/02_design/solution-design.md",
         "present": true,
-        "sha256": "5febe6d6571094a7c55bada1b9fb1a977e4224bf1d387cff45efa32f2a0d7e6a"
+        "sha256": "9a86063647b7eed6315734c4c2c3c2a640403028174644424c903a6be141c51d"
       }
     ],
-    "combined": "d42d6d810d50119fc352ab7ce2b7bfb682c9b45260964767f5bbd47e6e10aa45"
+    "combined": "f056b94b9fb999ad63feaa499d35966d8c01572ee71c0b0c3bc5928702eef4fc"
   }
 }
