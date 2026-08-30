@@ -19,6 +19,31 @@ const FLAT_SURFACE = '#A8AEB8'
 /** design-system tokens §2 `fail-segment` — 무채색으로 "트랙 아님"을 말한다 */
 const UNSUPPORTED_SURFACE = '#5C636C'
 
+/**
+ * 가운데 레인을 가르는 밝기 차(0~255). **`filter`를 쓰지 않는다** — SVG/CSS filter는 도형을
+ * 별도 래스터화해 가장자리에 얇은 검은 실선을 남긴다(D-036 ⑤). 프리뷰는 같은 규칙을
+ * 자기 팔레트의 고정 hex로 적었는데(`#3a4048`→`#454b55` 등) 이 구현의 표면색은 편집기
+ * 원본색이라 base가 다르다 — 그래서 hex가 아니라 **규칙**("아주 살짝 밝게")을 옮긴다.
+ */
+const MID_LANE_LIFT = 14
+
+/** 가운데 레인 인덱스. 레인 3개의 한가운데다 */
+const MID_LANE = 1
+
+function lift(hex: string, amount: number): string {
+  const value = Number.parseInt(hex.slice(1), 16)
+  const channels = [(value >> 16) & 255, (value >> 8) & 255, value & 255]
+  return `#${channels.map((c) => Math.min(c + amount, 255).toString(16).padStart(2, '0')).join('')}`
+}
+
+/**
+ * 레인별 표면색. 가운데 레인만 살짝 밝다 — 세 레인이 한 덩어리로 보이지 않게 하는 축이고,
+ * 형태 축(경계선)은 `buildBoundaryGeometry`가 따로 낸다.
+ */
+export function laneSurfaceColorOf(baseColor: string, lane: number): string {
+  return lane === MID_LANE ? lift(baseColor, MID_LANE_LIFT) : baseColor
+}
+
 /** 고도 변화로 보기에는 너무 작은 값(부동소수 잔차·이음새 미세 단차) */
 const ELEVATION_EPSILON = 1e-6
 

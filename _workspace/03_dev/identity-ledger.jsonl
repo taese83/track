@@ -30,3 +30,4 @@
 {"schemaVersion":1,"featureId":"FEAT-016","ticketKey":"27","contentHash":"8aee086f928e6153fd75c299ed5cccf1fe3b1ab92ebdfa599631c6f156a1c8f2","createdAt":"2026-08-30T13:03:21.476Z","branch":"feature/mini4wd-track-3d"}
 {"schemaVersion":1,"featureId":"FEAT-008","ticketKey":"28","contentHash":"b316f3ad99e7d0f6dd23b20c5716258400d42ea0405f83a679a34c6a343035da","createdAt":"2026-08-30T13:03:21.477Z","branch":"feature/mini4wd-track-3d"}
 {"schemaVersion":1,"featureId":"FEAT-014","ticketKey":"14","contentHash":"ee66085c0ce3e685f916ffbc380c7c5b5894452a1f76f02565f13620a4778583","createdAt":"2026-08-29T16:01:16.977Z","prUrl":"https://github.com/taese83/track/pull/32"}
+{"schemaVersion":1,"featureId":"FEAT-008","ticketKey":"28","contentHash":"b316f3ad99e7d0f6dd23b20c5716258400d42ea0405f83a679a34c6a343035da","createdAt":"2026-08-30T13:03:21.477Z","prUrl":"https://github.com/taese83/track/pull/33"}
