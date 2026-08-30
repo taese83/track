@@ -14,6 +14,29 @@ export interface RawTrackResponse {
   compat: boolean
 }
 
+/**
+ * 파이프라인 2단계 타입 — rawData 파싱 결과. 원본 데이터에 순서 개념이 없어 목록도 순서를 뜻하지 않는다.
+ * 정본은 feature-plan Data Model이다.
+ */
+export interface ParsedPiece {
+  /** 파싱 시 부여하는 임시 식별자 */
+  pieceId: string
+  /** 카탈로그 23종 + 미지원 문자열 */
+  pieceClass: string
+  x: number
+  y: number
+  angleDeg: number
+  /** 팔레트 인덱스(방향 플래그 아님) */
+  colorIndex: number
+  /** 회전·이동 적용 후 절대 좌표계 끝점 */
+  vertex1: { x: number; y: number }
+  vertex2: { x: number; y: number }
+  /** FEAT-009 판단 근거 */
+  isSupported: boolean
+  /** REQ-F-021 — 좌표 가산은 FEAT-006이 소비한다 */
+  compatCorrectionApplied?: boolean
+}
+
 export type TrackErrorCode =
   /** 400 — 코드/URL 형식 불일치. allowlist 밖 host 포함 */
   | 'INVALID_INPUT_FORMAT'
