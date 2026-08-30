@@ -24,8 +24,12 @@ const RAD = Math.PI / 180
  */
 const WAVE_PIECE_PREFIX = 'Chi'
 
-/** 돌출량(cm). 픽셀 측정값이며 D-032 개정에서 5cm로 되돌아와 측정값과 정확히 일치한다 */
-const WAVE_AMPLITUDE = 5
+/**
+ * 돌출량(cm). D-032는 픽셀 측정값 5cm를 썼고 등급이 `measured`였다. 화면에서 굴곡이
+ * 약하다는 사용자 지정으로 **8cm**로 올린다 — 등급은 `measured`가 아니라 **사용자 지정
+ * `confirmed`**다. 측정값을 덮어쓴 것이므로 그 사실을 숨기지 않는다.
+ */
+const WAVE_AMPLITUDE = 8
 
 /**
  * 모양은 `sin²(πt)`다 — 양 끝 기울기가 0이라 앞뒤 직선과 매끄럽게 잇고 마루도 각지지
@@ -103,17 +107,23 @@ export function buildPiecePath(oriented: OrientedPiece): PiecePath {
     const isWave = piece.pieceClass.startsWith(WAVE_PIECE_PREFIX)
 
     /**
-     * 돌출 방향은 **진행 방향 기준 왼쪽**이다(D-032 개정 — 사용자 재지정 `confirmed`).
-     * 진행 방향이 곧 기준이므로 `flipped`면 기준축도 뒤집어야 한다 — vertex1→vertex2
-     * 방향으로 고정하면 역방향 통과에서 돌출이 오른쪽으로 나온다(TC-016-3).
+     * 돌출 방향은 **진행 방향 기준 오른쪽**이다.
      *
-     * 편집기 y는 화면 아래로 증가한다. 진행 방향 `(dx, dy)`의 왼손 쪽은 `(dy, −dx)`다 —
-     * +x로 갈 때 왼쪽은 화면 위(−y)다.
+     * D-032 본문의 픽셀 실측이 오른쪽이었고, 같은 날 §개정에서 사용자 재지정으로 왼쪽이
+     * 됐다. 화면에서 반대로 보인다는 사용자 지정(2026-08-31)으로 **1차 실측 방향으로
+     * 되돌린다.** 좌표 변환 결함이 아니다 — 편집기 `(x, y)`의 왼손 방향 `(ty, −tx)`는
+     * 씬 `(x, z)` 매핑에서 `(tz, 0, −tx)`가 되고 이는 씬의 `up × travel`과 같다(핸디드니스
+     * 보존). 즉 종전 코드는 개정이 정한 "왼쪽"을 정확히 그리고 있었다.
+     *
+     * 진행 방향이 곧 기준이므로 `flipped`면 기준축도 뒤집어야 한다 — vertex1→vertex2
+     * 방향으로 고정하면 역방향 통과에서 돌출이 반대편으로 나온다(TC-016-3).
+     *
+     * 편집기 y는 화면 아래로 증가한다. 진행 방향 `(dx, dy)`의 오른손 쪽은 `(−dy, dx)`다.
      */
     const travelX = flipped ? from.x - to.x : to.x - from.x
     const travelY = flipped ? from.y - to.y : to.y - from.y
-    const leftX = chord === 0 ? 0 : travelY / chord
-    const leftY = chord === 0 ? 0 : -travelX / chord
+    const sideX = chord === 0 ? 0 : -travelY / chord
+    const sideY = chord === 0 ? 0 : travelX / chord
 
     return {
       // 곡면 돌출로 실제 경로는 현보다 길지만, 웨이브는 고도 변화가 0이라(D-032)
@@ -128,7 +138,7 @@ export function buildPiecePath(oriented: OrientedPiece): PiecePath {
         }
         if (!isWave) return base
         const bow = waveBow(t)
-        return { x: base.x + leftX * bow, y: base.y + leftY * bow }
+        return { x: base.x + sideX * bow, y: base.y + sideY * bow }
       },
     }
   }

@@ -17,14 +17,14 @@ import { extractUpstreamVars } from '@/shared/lib/track/extract-upstream-vars'
 import { buildElevatedSegments, orientPath } from './index'
 import { buildPiecePath } from './piece-path'
 
-const WAVE_AMPLITUDE = 5
+const WAVE_AMPLITUDE = 8
 
 function distanceBetween(a: { x: number; y: number }, b: { x: number; y: number }): number {
   return Math.hypot(a.x - b.x, a.y - b.y)
 }
 
-/** 진행 방향 왼쪽으로 얼마나 벗어났는가(cm). 오른쪽이면 음수다 */
-function leftOffsetAt(piece: ParsedPiece, flipped: boolean, t: number): number {
+/** 진행 방향 오른쪽으로 얼마나 벗어났는가(cm). 왼쪽이면 음수다 */
+function rightOffsetAt(piece: ParsedPiece, flipped: boolean, t: number): number {
   const path = buildPiecePath({ piece, flipped })
   const point = path.pointAt(t)
 
@@ -33,14 +33,14 @@ function leftOffsetAt(piece: ParsedPiece, flipped: boolean, t: number): number {
   const travelX = to.x - from.x
   const travelY = to.y - from.y
   const chord = Math.hypot(travelX, travelY)
-  // 편집기 y는 화면 아래로 증가한다 — 진행 방향 (dx, dy)의 왼쪽은 (dy, −dx)다
-  const leftX = travelY / chord
-  const leftY = -travelX / chord
+  // 편집기 y는 화면 아래로 증가한다 — 진행 방향 (dx, dy)의 오른쪽은 (−dy, dx)다
+  const sideX = -travelY / chord
+  const sideY = travelX / chord
 
   // 직선 기준선(돌출 없는 경로) 대비 변위를 왼쪽 축에 투영한다
   const baseX = from.x + travelX * t
   const baseY = from.y + travelY * t
-  return (point.x - baseX) * leftX + (point.y - baseY) * leftY
+  return (point.x - baseX) * sideX + (point.y - baseY) * sideY
 }
 
 function wavePiece(overrides: Partial<ParsedPiece> = {}): ParsedPiece {
@@ -58,19 +58,19 @@ function wavePiece(overrides: Partial<ParsedPiece> = {}): ParsedPiece {
   }
 }
 
-describe('TC-016-1 — 중앙에서 진행 방향 왼쪽으로 5cm 벗어난다', () => {
+describe('TC-016-1 — 중앙에서 진행 방향 오른쪽으로 8cm 벗어난다', () => {
   it('t=0.5에서 정확히 5cm다', () => {
-    expect(leftOffsetAt(wavePiece(), false, 0.5)).toBeCloseTo(WAVE_AMPLITUDE, 9)
+    expect(rightOffsetAt(wavePiece(), false, 0.5)).toBeCloseTo(WAVE_AMPLITUDE, 9)
   })
 
   it('양 끝의 횡변위가 0이다 — 양 끝은 직선이다', () => {
-    expect(leftOffsetAt(wavePiece(), false, 0)).toBeCloseTo(0, 9)
-    expect(leftOffsetAt(wavePiece(), false, 1)).toBeCloseTo(0, 9)
+    expect(rightOffsetAt(wavePiece(), false, 0)).toBeCloseTo(0, 9)
+    expect(rightOffsetAt(wavePiece(), false, 1)).toBeCloseTo(0, 9)
   })
 
   it('모양이 sin²(πt)다 — 삼각형이 아니다', () => {
     for (const t of [0.1, 0.25, 0.4, 0.75]) {
-      expect(leftOffsetAt(wavePiece(), false, t)).toBeCloseTo(
+      expect(rightOffsetAt(wavePiece(), false, t)).toBeCloseTo(
         Math.sin(Math.PI * t) ** 2 * WAVE_AMPLITUDE,
         9,
       )
@@ -80,14 +80,14 @@ describe('TC-016-1 — 중앙에서 진행 방향 왼쪽으로 5cm 벗어난다'
     // sin²(0.1π) = 0.0955 vs 삼각형 0.2 — 두 배 넘게 차이 난다.
     const triangleAt = (t: number) => (1 - Math.abs(2 * t - 1)) * WAVE_AMPLITUDE
     expect(triangleAt(0.25)).toBeCloseTo(Math.sin(Math.PI * 0.25) ** 2 * WAVE_AMPLITUDE, 9)
-    expect(leftOffsetAt(wavePiece(), false, 0.1)).toBeCloseTo(0.4775, 3)
-    expect(triangleAt(0.1)).toBeCloseTo(1, 9)
+    expect(rightOffsetAt(wavePiece(), false, 0.1)).toBeCloseTo(0.764, 3)
+    expect(triangleAt(0.1)).toBeCloseTo(1.6, 9)
   })
 
   it('양 끝의 기울기가 0이라 앞뒤 직선과 매끄럽게 잇는다', () => {
     const h = 1e-5
     const rateAt = (t: number) =>
-      (leftOffsetAt(wavePiece(), false, t + h) - leftOffsetAt(wavePiece(), false, t - h)) / (2 * h)
+      (rightOffsetAt(wavePiece(), false, t + h) - rightOffsetAt(wavePiece(), false, t - h)) / (2 * h)
 
     // 삼각형이면 양 끝에서도 기울기가 일정하다(10cm/단위) — 그것과 자릿수로 비교한다.
     // 절대 0과 비교하면 유한차분의 잔차(≈1e-3)에 걸린다.
@@ -100,34 +100,34 @@ describe('TC-016-1 — 중앙에서 진행 방향 왼쪽으로 5cm 벗어난다'
   })
 
   it('웨이브가 아닌 직선은 벗어나지 않는다', () => {
-    expect(leftOffsetAt(wavePiece({ pieceClass: 'Str1' }), false, 0.5)).toBeCloseTo(0, 12)
+    expect(rightOffsetAt(wavePiece({ pieceClass: 'Str1' }), false, 0.5)).toBeCloseTo(0, 12)
   })
 })
 
-describe('TC-016-3 — 역방향 통과에서도 왼쪽이다', () => {
-  it('flipped에서도 진행 방향 기준 왼쪽으로 5cm다', () => {
-    expect(leftOffsetAt(wavePiece(), true, 0.5)).toBeCloseTo(WAVE_AMPLITUDE, 9)
+describe('TC-016-3 — 역방향 통과에서도 오른쪽이다', () => {
+  it('flipped에서도 진행 방향 기준 오른쪽으로 8cm다', () => {
+    expect(rightOffsetAt(wavePiece(), true, 0.5)).toBeCloseTo(WAVE_AMPLITUDE, 9)
   })
 
   it('절대 좌표로는 반대편으로 나온다 — 진행 방향이 반대이기 때문이다', () => {
     const forward = buildPiecePath({ piece: wavePiece(), flipped: false }).pointAt(0.5)
     const backward = buildPiecePath({ piece: wavePiece(), flipped: true }).pointAt(0.5)
-    expect(forward.y).toBeCloseTo(-WAVE_AMPLITUDE, 9)
-    expect(backward.y).toBeCloseTo(WAVE_AMPLITUDE, 9)
+    expect(forward.y).toBeCloseTo(WAVE_AMPLITUDE, 9)
+    expect(backward.y).toBeCloseTo(-WAVE_AMPLITUDE, 9)
     // 진행축 위치는 같은 지점이다
     expect(forward.x).toBeCloseTo(backward.x, 9)
   })
 
   it('마루가 옮겨가지 않는다 — sin²는 매개변수를 뒤집어도 같은 값이다', () => {
     for (const t of [0.2, 0.35, 0.8]) {
-      expect(leftOffsetAt(wavePiece(), true, t)).toBeCloseTo(leftOffsetAt(wavePiece(), false, t), 9)
+      expect(rightOffsetAt(wavePiece(), true, t)).toBeCloseTo(rightOffsetAt(wavePiece(), false, t), 9)
     }
   })
 
   it('어느 방향으로 통과해도 양 끝은 여전히 0이다(TC-016-4의 전제)', () => {
     for (const flipped of [false, true]) {
-      expect(leftOffsetAt(wavePiece(), flipped, 0)).toBeCloseTo(0, 9)
-      expect(leftOffsetAt(wavePiece(), flipped, 1)).toBeCloseTo(0, 9)
+      expect(rightOffsetAt(wavePiece(), flipped, 0)).toBeCloseTo(0, 9)
+      expect(rightOffsetAt(wavePiece(), flipped, 1)).toBeCloseTo(0, 9)
     }
   })
 })
