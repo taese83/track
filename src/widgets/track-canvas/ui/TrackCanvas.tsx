@@ -29,6 +29,7 @@ import {
   buildTrackGeometries,
 } from '../lib/track-geometry'
 import type { MarkerPlacement } from '../lib/marker-geometry'
+import { LARGE_TRACK_NOTICE } from '../lib/perf-mitigation'
 import { markerShapeOf, segmentTextOf } from '../lib/segment-encoding'
 import { laneSurfaceColorOf, surfaceColorOf } from '../lib/segment-appearance'
 import type { SceneLayout } from '../lib/scene-layout'
@@ -234,8 +235,13 @@ function TrackMesh({ layout, elevated }: TrackCanvasProps) {
         </Html>
       ))}
 
-      {/* FEAT-015 텍스트 채널 — 평지가 아닌 세그먼트에만 붙는다 */}
-      {scene.labels.map((label) => (
+      {/*
+        FEAT-015 텍스트 채널 — 평지가 아닌 세그먼트에만 붙는다.
+        대형 트랙에서는 끈다(FEAT-011): 라벨은 DOM이고 매 프레임 3D 위치로 변환되므로
+        수십 개가 되면 렌더 루프에 얹힌다. 유형 정보는 목록(FEAT-013)에 그대로 남는다.
+      */}
+      {layout.mitigation.showSegmentLabels &&
+        scene.labels.map((label) => (
         <Html
           key={label.key}
           // 표식 위로 충분히 띄운다 — 6cm로 뒀을 때 라벨 상자가 표식을 통째로 가려
@@ -262,7 +268,7 @@ function TrackMesh({ layout, elevated }: TrackCanvasProps) {
             {label.text}
           </span>
         </Html>
-      ))}
+        ))}
     </group>
   )
 }
@@ -363,6 +369,7 @@ export function TrackCanvas({ layout, elevated }: TrackCanvasProps) {
       data-testid="track-canvas"
       data-render-state={ready ? 'ready' : 'pending'}
       data-segment-count={layout.segments.length}
+      data-mitigated={layout.mitigation.mitigated}
       tabIndex={0}
       role="application"
       aria-label="3D 트랙 뷰 — 방향키로 회전, +/- 로 확대·축소"
@@ -392,6 +399,22 @@ export function TrackCanvas({ layout, elevated }: TrackCanvasProps) {
           onEnd={handleOrbitEnd}
         />
       </Canvas>
+
+      {/*
+        FEAT-011 — 완화 상태를 화면에 알린다. 프리뷰는 이 안내를 셸의 alert 슬롯에 뒀지만
+        그 슬롯의 소유자는 `TrackScreen`(page)이다. 같은 파일이 이미 `canvas-truncated`
+        안내를 캔버스 위에 얹고 있으므로 그 선례를 따른다 — 조용히 최적화하지 않는 것이
+        요구이고, 위치는 TC가 지정하지 않는다.
+      */}
+      {layout.mitigation.mitigated ? (
+        <p
+          className="absolute top-3 right-3 rounded-[4px] px-2 py-1 text-[12px]"
+          style={{ background: 'rgb(26 29 33 / 0.92)', color: 'var(--color-warning)' }}
+          data-testid="canvas-large-track"
+        >
+          {LARGE_TRACK_NOTICE}
+        </p>
+      ) : null}
 
       {layout.truncated ? (
         <p
