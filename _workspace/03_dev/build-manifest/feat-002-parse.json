@@ -1,0 +1,21 @@
+{
+  "task": "feat-002-parse",
+  "readMode": "injected",
+  "reads": [
+    "_workspace/03_dev/change-scope.md",
+    "_workspace/02_design/piece-geometry.md"
+  ],
+  "outputs": [
+    "src/entities/track/model/piece-catalog.ts",
+    "src/entities/track/model/types.ts",
+    "src/entities/track/lib/parse-track-string.ts",
+    "src/entities/track/lib/parse-track-string.test.ts",
+    "src/features/load-track/model/useTrackFetch.ts",
+    "src/pages/track-viewer/ui/TrackViewerPage.tsx",
+    "e2e/track-parse.spec.ts"
+  ],
+  "planLock": {
+    "digest": "4096c0b50b2f67ef",
+    "at": "2026-08-30T01:32:12.937Z"
+  }
+}
