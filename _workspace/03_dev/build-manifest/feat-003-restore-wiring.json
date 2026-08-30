@@ -1,0 +1,19 @@
+{
+  "task": "feat-003-restore-wiring",
+  "readMode": "injected",
+  "reads": [
+    "_workspace/03_dev/change-scope.md"
+  ],
+  "outputs": [
+    "fixtures/track/README.md",
+    "src/features/load-track/model/types.ts",
+    "src/pages/track-viewer/ui/ErrorScreen.tsx",
+    "src/pages/track-viewer/ui/TrackViewerPage.tsx",
+    "e2e/track-restore.spec.ts"
+  ],
+  "planLock": {
+    "digest": "afcfd532d80c9537",
+    "at": "2026-08-30T04:25:18.109Z",
+    "specDigest": "586ceddb8d34945c55149fb900f3ac5b28e5881e8538c1353032dfcca399c0d3"
+  }
+}
