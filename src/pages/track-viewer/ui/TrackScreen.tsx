@@ -13,7 +13,12 @@ import type { ReactNode } from 'react'
 import type { ClosureValidation } from '@/entities/track/lib/closure'
 import type { ElevatedSegment } from '@/entities/track/lib/elevation'
 import { TrackCursorProvider, useTrackCursor } from '@/shared/lib/track-cursor'
-import { SectionList, reachableCountOf } from '@/widgets/section-list'
+import {
+  SECTION_LIST_PANEL_WIDTH_PX,
+  SECTION_LIST_RAIL_WIDTH_PX,
+  SectionList,
+  reachableCountOf,
+} from '@/widgets/section-list'
 import type { SectionListItem } from '@/widgets/section-list'
 import { TrackCanvas } from '@/widgets/track-canvas'
 import type { SceneLayout } from '@/widgets/track-canvas'
@@ -78,10 +83,22 @@ function SectionColumn({
   )
 
   return (
-    <>
+    // 컬럼 폭을 목록과 같은 값으로 고정한다. 요약의 내재 폭이 더 넓으면 컬럼이 320px 예약을
+    // 밀어낸다 — 실측으로 캔버스가 384.7px 늘어난 반면 목록은 264px만 줄었다
+    // (layout-spec §글로벌 셸의 예약 폭 위반).
+    <div
+      className="flex min-h-0 flex-col"
+      style={{ width: expanded ? SECTION_LIST_PANEL_WIDTH_PX : SECTION_LIST_RAIL_WIDTH_PX }}
+    >
+      {/*
+        요약은 `open`이 기본이다. 접어 두면 화면에서 보이지 않아 TC-002-1·TC-003-1·TC-003-5가
+        확인할 대상을 잃는다(실측: 접힌 채로 두자 상류 e2e 11건이 `fetch-success` 미표시로
+        실패했다). 사용자는 접을 수 있지만 기본은 열림이다.
+      */}
       {expanded && (
         <details
-          className="shrink-0 border-b px-3 py-2 text-[12px]"
+          open
+          className="max-h-[45%] w-full shrink-0 overflow-auto border-b px-3 py-2 text-[12px]"
           style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-secondary)' }}
         >
           <summary className="cursor-pointer">파이프라인 요약</summary>
@@ -98,7 +115,7 @@ function SectionColumn({
         onToggleExpanded={handleToggle}
         variant="sidebar"
       />
-    </>
+    </div>
   )
 }
 
@@ -138,9 +155,7 @@ export function TrackScreen({
           접으면 56px 레일로 줄고 캔버스가 그 폭을 가져간다 — 위로 사라지지 않는다
           (component-spec §측면 접기 계약). 폭은 `SectionList`가 스스로 정한다.
         */}
-        <div className="flex min-h-0 shrink-0 flex-col">
-          <SectionColumn items={items} summary={pipelineSummary} />
-        </div>
+        <SectionColumn items={items} summary={pipelineSummary} />
 
         <div className="min-w-0 flex-1">
           <TrackCanvas layout={layout} elevated={elevated} />

@@ -35,8 +35,8 @@ const SKELETON_ROWS = 12
  * layout-spec §글로벌 셸의 예약 폭과 §측면 접기 계약의 레일 폭.
  * **폭의 소유자는 이 컴포넌트다** — 셸이 함께 정하면 접기 상태와 어긋난다.
  */
-const PANEL_WIDTH_PX = 320
-const RAIL_WIDTH_PX = 56
+export const SECTION_LIST_PANEL_WIDTH_PX = 320
+export const SECTION_LIST_RAIL_WIDTH_PX = 56
 
 const LIST_ID = 'section-list-box'
 const HEADING_ID = 'section-list-h'
@@ -97,7 +97,11 @@ export function SectionList({
 
   // full-width(WebGL 미지원 대체 화면)에서는 폭을 잡지 않고 셸이 주는 만큼 쓴다
   const width =
-    variant === 'full-width' ? undefined : expanded ? PANEL_WIDTH_PX : RAIL_WIDTH_PX
+    variant === 'full-width'
+      ? undefined
+      : expanded
+        ? SECTION_LIST_PANEL_WIDTH_PX
+        : SECTION_LIST_RAIL_WIDTH_PX
 
   return (
     <section

@@ -1,0 +1,175 @@
+// FEAT-013 — 텍스트 구간 목록의 브라우저 축.
+//
+// vitest는 `environment: node`라 "패널을 열면"·"키보드 포커스가 있는 상태"를 만들 수 없다.
+// 순서·유형·미지원 라벨의 **내용**은 순수 축(`section-items.test.ts`)이 수치로 재고,
+// 여기서는 **화면에 나타나고 조작이 반영되는가**만 본다.
+import AxeBuilder from '@axe-core/playwright'
+import { expect, test, type Locator, type Page } from '@playwright/test'
+
+async function submit(page: Page, value: string) {
+  await page.getByTestId('url-input').fill(value)
+  await page.getByTestId('url-submit').click()
+}
+
+async function openTrack(page: Page, code = 'WS67Y2'): Promise<Locator> {
+  await submit(page, code)
+  const list = page.getByTestId('section-list')
+  await expect(list).toBeVisible()
+  return list
+}
+
+test.beforeEach(async ({ page }) => {
+  await page.goto('/')
+})
+
+test('TC-013-1 · 132개 세그먼트가 순서대로 나열되고 각 행에 타입·유형이 표시된다', async ({
+  page,
+}) => {
+  await openTrack(page)
+
+  await expect(page.getByTestId('section-list-count')).toHaveText('132개 구간')
+  const rows = page.getByRole('option')
+  await expect(rows).toHaveCount(132)
+
+  // 첫 행은 순서의 기점이다 — 번호·타입·유형 셋이 다 있어야 "표시된다"가 성립한다
+  const first = page.getByTestId('section-row-0')
+  await expect(first).toContainText('1')
+  await expect(first).toContainText('Str2')
+  await expect(first).toContainText('START')
+
+  // 순서가 화면에서도 이어진다 — 스크롤해 중간과 끝을 실제로 확인한다
+  const middle = page.getByTestId('section-row-65')
+  await middle.scrollIntoViewIfNeeded()
+  await expect(middle).toContainText('66')
+
+  const last = page.getByTestId('section-row-131')
+  await last.scrollIntoViewIfNeeded()
+  await expect(last).toBeVisible()
+  await expect(last).toContainText('132')
+})
+
+test('TC-013-1 · 접으면 56px 레일로 줄고 캔버스가 그 폭을 가져간다', async ({ page }) => {
+  const list = await openTrack(page)
+  const canvas = page.getByTestId('track-canvas')
+  await expect(canvas).toHaveAttribute('data-render-state', 'ready')
+
+  const expandedList = await list.boundingBox()
+  const expandedCanvas = await canvas.boundingBox()
+  expect(expandedList?.width).toBeCloseTo(320, 0)
+
+  const toggle = page.getByTestId('section-list-toggle')
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true')
+  await toggle.click()
+
+  // 위로 사라지지 않는다 — 레일이 남는다(component-spec §측면 접기 계약)
+  await expect(list).toBeVisible()
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+  const railBox = await list.boundingBox()
+  expect(railBox?.width).toBeCloseTo(56, 0)
+
+  // 레일에도 제목이 남는다
+  await expect(page.getByRole('heading', { name: '구간 목록' })).toBeVisible()
+  await expect(page.getByRole('option')).toHaveCount(0)
+
+  // 캔버스가 확보한 폭을 실제로 쓴다
+  const collapsedCanvas = await canvas.boundingBox()
+  expect(collapsedCanvas!.width).toBeGreaterThan(expandedCanvas!.width)
+  expect(collapsedCanvas!.width - expandedCanvas!.width).toBeCloseTo(
+    expandedList!.width - railBox!.width,
+    0,
+  )
+
+  // 다시 펼치면 원래 폭과 132행이 복원된다
+  await toggle.click()
+  await expect(page.getByRole('option')).toHaveCount(132)
+  expect((await list.boundingBox())?.width).toBeCloseTo(320, 0)
+})
+
+test('TC-013-1 · 접었다 펴도 같은 버튼에 포커스가 남는다', async ({ page }) => {
+  await openTrack(page)
+  const toggle = page.getByTestId('section-list-toggle')
+
+  await toggle.focus()
+  await page.keyboard.press('Enter')
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+  // DOM이 갱신돼도 포커스가 날아가지 않아야 한다(a11y-responsive §포커스 순서)
+  await expect(toggle).toBeFocused()
+
+  await page.keyboard.press('Enter')
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true')
+  await expect(toggle).toBeFocused()
+})
+
+test('TC-013-2(부분) · 행을 클릭하면 공유 커서가 그 행으로 옮겨간다', async ({ page }) => {
+  await openTrack(page)
+
+  // 초기 선택은 첫 행이다
+  await expect(page.getByTestId('section-row-0')).toHaveAttribute('aria-selected', 'true')
+
+  const target = page.getByTestId('section-row-7')
+  await target.click()
+  await expect(target).toHaveAttribute('aria-selected', 'true')
+  await expect(page.getByTestId('section-row-0')).toHaveAttribute('aria-selected', 'false')
+
+  // 선택은 하나뿐이다 — 둘이 선택돼 보이면 커서가 아니라 토글이 된다
+  await expect(page.locator('[role="option"][aria-selected="true"]')).toHaveCount(1)
+})
+
+test('TC-013-3 · 미지원 피스 행이 타입명과 함께 표기된다', async ({ page }) => {
+  await openTrack(page, 'UNSUPP')
+
+  // 복원 순서에 못 낀 미지원 피스도 목록에 남는다(실측: 134피스 중 순서는 132개)
+  await expect(page.getByTestId('section-list-count')).toHaveText('134개 구간')
+
+  for (const label of ['미지원: Xyz9', '미지원: Wob2']) {
+    const row = page.locator('[role="option"]', { hasText: label })
+    await expect(row).toHaveCount(1)
+    // 뭉뚱그리지 않는다 — 각 행이 자기 타입명을 갖는다
+    await expect(row).toHaveAttribute('aria-disabled', 'true')
+  }
+})
+
+test('TC-013-4 · 방향키로 순회하고 Enter로 확정한다', async ({ page }) => {
+  await openTrack(page)
+
+  const first = page.getByTestId('section-row-0')
+  await first.focus()
+  await expect(first).toBeFocused()
+
+  // 방향키는 포커스만 옮긴다 — 커서(aria-selected)는 그대로다
+  await page.keyboard.press('ArrowDown')
+  await page.keyboard.press('ArrowDown')
+  await expect(page.getByTestId('section-row-2')).toBeFocused()
+  await expect(first).toHaveAttribute('aria-selected', 'true')
+
+  // Enter에서만 커서가 확정된다(공유 커서 계약 §쓰기는 명시적 확정 이벤트에서만)
+  await page.keyboard.press('Enter')
+  await expect(page.getByTestId('section-row-2')).toHaveAttribute('aria-selected', 'true')
+  await expect(first).toHaveAttribute('aria-selected', 'false')
+
+  // Home/End로 양 끝까지 간다
+  await page.keyboard.press('End')
+  await expect(page.getByTestId('section-row-131')).toBeFocused()
+  await page.keyboard.press('Home')
+  await expect(first).toBeFocused()
+})
+
+test('TC-013-4 · 목록 전체가 Tab stop 하나다', async ({ page }) => {
+  await openTrack(page)
+
+  // 132개 행이 각각 Tab stop이면 캔버스까지 132번 눌러야 한다 — APG 컴포지트 패턴 위반
+  const tabbable = page.locator('[role="option"][tabindex="0"]')
+  await expect(tabbable).toHaveCount(1)
+
+  await page.getByTestId('section-row-3').focus()
+  await expect(page.locator('[role="option"][tabindex="0"]')).toHaveCount(1)
+  await expect(page.getByTestId('section-row-3')).toHaveAttribute('tabindex', '0')
+})
+
+test('구간 목록 화면에 접근성 위반이 없다', async ({ page }) => {
+  await openTrack(page)
+  const results = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+    .analyze()
+  expect(results.violations).toEqual([])
+})
