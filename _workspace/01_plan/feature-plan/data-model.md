@@ -21,7 +21,7 @@ interface ParsedPiece {
   y: number
   angleDeg: number
   colorIndex: number        // 팔레트 인덱스(방향 플래그 아님). 고도 변화 피스(Bri*/Ban*)에 한해
-                             // c=3=상승·c=2=하강(measured, decision-log N-001 해소).
+                             // c=3=상승·c=2=하강(measured, D-014 — decision-log N-001 해소).
                              // Str1.c5=마커 직선(고도 0, REQ-F-020), 그 외 c값은 별도 팔레트 의미(예: Str1.c6=주황)
   vertex1: { x: number; y: number }   // 회전·이동 적용 후 절대 좌표계 끝점
   vertex2: { x: number; y: number }

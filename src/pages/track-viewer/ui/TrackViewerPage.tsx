@@ -17,6 +17,8 @@ import { useTrackFetch } from '@/features/load-track'
 import type { LoadErrorReason } from '@/features/load-track'
 import type { ParsedPiece } from '@/entities/track/model/types'
 import { AppHeader } from '@/widgets/app-header/ui/AppHeader'
+import { buildSectionItems } from '@/widgets/section-list'
+import type { SectionListItem } from '@/widgets/section-list'
 import { buildSceneLayout, markRenderStart } from '@/widgets/track-canvas'
 import type { SceneLayout } from '@/widgets/track-canvas'
 
@@ -85,6 +87,7 @@ type ViewOutcome =
       closure: ClosureValidation
       layout: SceneLayout
       elevated: readonly ElevatedSegment[]
+      items: SectionListItem[]
       totalPieceCount: number
     }
   | { kind: 'failure'; reason: LoadErrorReason; rawSnippet: string }
@@ -163,12 +166,20 @@ export function TrackViewerPage() {
     })
     const scene = buildScene(parsed.pieces, closure)
 
+    // 목록의 순서는 **자리가 정해진 것만** — 복원이 확정됐으면 그 순서, 부분 실패면
+    // FEAT-004가 이어붙인 접두부다. 나머지 피스는 buildSectionItems가 자리 없음으로 남긴다.
+    const items = buildSectionItems({
+      pieces: parsed.pieces,
+      orderedPieceIds: closure.connectedPieceIds,
+    })
+
     return {
       kind: 'restored',
       restored,
       closure,
       layout: scene.layout,
       elevated: scene.elevated,
+      items,
       totalPieceCount: parsed.pieces.length,
     }
   }, [track, parsed])
@@ -203,7 +214,12 @@ export function TrackViewerPage() {
       </a>
       <AppHeader onSwitchTrack={handleSwitchTrack} sourceUrl={SOURCE_EDITOR_URL} />
 
-      <main id="main-content" className="flex flex-1 flex-col" data-view-state={viewState}>
+      {/*
+        `min-h-0` — flex 자식의 기본 `min-height: auto`는 내용이 커지면 `flex-1`을 밀어낸다.
+        FEAT-013의 132행 목록이 들어오면서 셸이 뷰포트를 넘겨 스트립이 화면 밖으로 밀렸다
+        (실측: 목록 4211px · 스트립 y=4342). 스크롤은 목록 안에서만 일어나야 한다.
+      */}
+      <main id="main-content" className="flex min-h-0 flex-1 flex-col" data-view-state={viewState}>
         {state.status === 'error' ? (
           <ErrorScreen
             reason={state.reason}
@@ -217,6 +233,7 @@ export function TrackViewerPage() {
               elevated={outcome.elevated}
               closure={outcome.closure}
               totalPieceCount={outcome.totalPieceCount}
+              items={outcome.items}
               pipelineSummary={
                 <div data-testid="fetch-success">
                   <h2 className="text-[15px] leading-[1.3] font-semibold">
