@@ -303,7 +303,7 @@
     },
     {
       "scope": "src/entities/track/lib/elevation",
-      "rationale": "FEAT-005 고도 프로파일 · FEAT-016 웨이브 횡돌출(피스 내부 2D 경로 변형이라 같은 모듈이다)"
+      "rationale": "FEAT-005 고도 프로파일 · FEAT-016 웨이브 횡돌출(피스 내부 2D 경로 변형이라 같은 모듈이다) · FEAT-017 판 축을 프로파일 계약에 실어 렌더러로 내보낸다"
     },
     {
       "scope": "src/features/load-track",
@@ -319,7 +319,7 @@
     },
     {
       "scope": "src/widgets/track-canvas",
-      "rationale": "FEAT-006/007/008/009/011/015가 공유하는 3D 표면 — 이 여섯은 경계로 갈라지지 않으므로 순차화가 필요하다"
+      "rationale": "FEAT-006/007/008/009/011/015/017이 공유하는 3D 표면 — 이 일곱은 경계로 갈라지지 않으므로 순차화가 필요하다"
     },
     {
       "scope": "src/widgets/profile-strip",
@@ -412,7 +412,7 @@
           },
           {
             "path": "_workspace/01_plan/feature-plan/specs-pipeline.md",
-            "sha256": "04fef9a960c711f09e8f15e76054d641c2759aae88ae58f41dc3854c52d3142a"
+            "sha256": "9050bf7e10f2967ac0165a12e2aa5839e42a5e9bc5ccd157d9d0135a839dc51c"
           },
           {
             "path": "_workspace/01_plan/feature-plan/specs-scene.md",
@@ -427,7 +427,7 @@
             "sha256": "20f3b493ca321e56fa083d65c661deafa2720280fffbfe055da741b9d12221ae"
           }
         ],
-        "sha256": "fda806c2334d7d26535a5b6223d014f65d644042eb16d5d665866208a7f6d32d"
+        "sha256": "0664a1561c83ce3057f87ef26119e86562761bba3ead5665fb5f100972c2b0a8"
       },
       {
         "path": "_workspace/01_plan/tech-stack.md",
@@ -503,9 +503,9 @@
       {
         "path": "_workspace/02_design/solution-design.md",
         "present": true,
-        "sha256": "bbf1fc228d20a3bc4e2e607cf4f0ff7a2c469bf2d8f2f666faaf26342b97cd0e"
+        "sha256": "fb0ac081ee11e980452106987b6a20c745eee0654b9f1aa15332434e2f28f0be"
       }
     ],
-    "combined": "4be6083961556eda0a14321ff7897df964ad9790f1c0e0cbac6a4b9524e87a92"
+    "combined": "cb50133247f255dd1fe2ab6a0760cac743069a8cd5e8d78ada637c18cf3066be"
   }
 }

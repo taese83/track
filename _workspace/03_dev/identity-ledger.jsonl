@@ -35,4 +35,5 @@
 {"schemaVersion":1,"featureId":"FEAT-015","ticketKey":"26","contentHash":"93761d13619260df5d3d95fe3e453a35bd7b3d0212b3458e7881022a4977085f","createdAt":"2026-08-30T13:03:21.475Z","prUrl":"https://github.com/taese83/track/pull/35"}
 {"schemaVersion":1,"featureId":"FEAT-009","ticketKey":"10","contentHash":"e43b25eacb7d79feec8a75018852e27fcb559a11a820fe5c7d1fd7b88c875b51","createdAt":"2026-08-29T16:01:02.584Z","prUrl":"https://github.com/taese83/track/pull/36"}
 {"schemaVersion":1,"featureId":"FEAT-016","ticketKey":"27","contentHash":"8aee086f928e6153fd75c299ed5cccf1fe3b1ab92ebdfa599631c6f156a1c8f2","createdAt":"2026-08-30T13:03:21.476Z","prUrl":"https://github.com/taese83/track/pull/37"}
+{"schemaVersion":1,"featureId":"FEAT-017","ticketKey":"38","contentHash":"c2e66f2450b2f807a59b6ecbe38e150966aea10b76086e0b4d1a3d4b720f389c","createdAt":"2026-08-30T16:50:54.120Z","branch":"feature/mini4wd-track-3d"}
 {"schemaVersion":1,"featureId":"FEAT-011","ticketKey":"9","contentHash":"d15089e3b1ff452801dc6ca78453699e862cb9ab8bd95f8ba37c21f88e888cf7","createdAt":"2026-08-29T16:00:58.879Z","prUrl":"https://github.com/taese83/track/pull/40"}
