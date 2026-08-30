@@ -12,6 +12,8 @@ import { BufferAttribute, BufferGeometry } from 'three'
 
 import { boundaryLinesOf } from './lane-bands'
 import type { BandPoint, SegmentBands } from './lane-bands'
+import { MARKER_LIFT_CM, markerTriangles, placeMarkerPoint } from './marker-geometry'
+import type { MarkerPlacement } from './marker-geometry'
 
 export interface ColoredGeometry {
   color: string
@@ -97,3 +99,53 @@ export function buildBoundaryGeometry(bands: readonly SegmentBands[]): BufferGeo
   geometry.setAttribute('position', new BufferAttribute(new Float32Array(positions), 3))
   return geometry
 }
+
+/**
+ * FEAT-015 형태 채널 — 표식 전체를 버퍼 하나로 합친다. 참조 트랙에서 표식이 붙는 것은
+ * 평지가 아닌 세그먼트뿐이라(슬로프·뱅크·웨이브·레인체인지·마커) 수십 개 규모다.
+ */
+export function buildMarkerGeometry(placements: readonly MarkerPlacement[]): BufferGeometry {
+  const positions: number[] = []
+  for (const placement of placements) {
+    for (const triangle of markerTriangles(placement.shape)) {
+      for (const point of triangle) {
+        const world = placeMarkerPoint(placement, point)
+        positions.push(world.x, world.y, world.z)
+      }
+    }
+  }
+  const geometry = new BufferGeometry()
+  geometry.setAttribute('position', new BufferAttribute(new Float32Array(positions), 3))
+  geometry.computeVertexNormals()
+  return geometry
+}
+
+/**
+ * 뱅크의 파선 윤곽(형태 채널 보조). 바깥 두 가장자리만 쓴다 — 레인 경계선까지 파선으로
+ * 만들면 파선이 트랙 전체를 덮어 "뱅크만 다르다"는 신호가 사라진다.
+ *
+ * `LineDashedMaterial`은 `computeLineDistances()`로 계산한 누적 거리를 읽는다 — 그것을
+ * 부르지 않으면 파선이 실선으로 그려진다(조용한 실패).
+ */
+export function buildDashedOutlineGeometry(
+  bands: readonly SegmentBands[],
+  isDashed: (band: SegmentBands) => boolean,
+): BufferGeometry {
+  const positions: number[] = []
+  for (const band of bands) {
+    if (!isDashed(band) || band.lanes.length === 0) continue
+    const edges = [band.lanes[0]!.lo, band.lanes[band.lanes.length - 1]!.hi]
+    for (const edge of edges) {
+      for (let index = 0; index + 1 < edge.length; index += 1) {
+        const a = edge[index]!
+        const b = edge[index + 1]!
+        // 표면과 같은 높이면 z-fighting이 인다 — 표식과 같은 만큼 띄운다
+        positions.push(a.x, a.y + MARKER_LIFT_CM, a.z, b.x, b.y + MARKER_LIFT_CM, b.z)
+      }
+    }
+  }
+  const geometry = new BufferGeometry()
+  geometry.setAttribute('position', new BufferAttribute(new Float32Array(positions), 3))
+  return geometry
+}
+

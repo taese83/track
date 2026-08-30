@@ -12,6 +12,8 @@ import type { ElevatedSegment, OrientedPiece, PiecePath } from '@/entities/track
 
 import { compatCorrectionOf } from './compat-correction'
 import { isLaneChangeClass } from './lane-model'
+import { directionOf, kindOf } from './segment-encoding'
+import type { SegmentDirection, SegmentKind } from './segment-encoding'
 
 export interface ScenePoint {
   x: number
@@ -39,6 +41,13 @@ export interface SceneSegment {
   isSupported: boolean
   /** REQ-F-021 보정이 이 세그먼트 좌표에 더해졌는가 */
   compatCorrected: boolean
+  /**
+   * 세그먼트 유형·방향(FEAT-015). 렌더가 색·형태·텍스트 **세 채널**에 각각 태운다 —
+   * 이 둘이 없던 동안 3D 뷰에서 뱅크와 슬로프가 구별되지 않았다.
+   * 방향의 출처는 기하가 아니라 **피스의 선언 색**이다(D-014).
+   */
+  kind: SegmentKind
+  direction: SegmentDirection
 }
 
 export interface SceneBounds {
@@ -178,6 +187,8 @@ export function buildSceneLayout(input: SceneLayoutInput): SceneLayout {
       exitTangentRad: tangentAt(path, 'exit'),
       isSupported: piece.isSupported,
       compatCorrected: correction.applied,
+      kind: kindOf(piece.pieceClass, piece.colorIndex),
+      direction: directionOf(piece.pieceClass, piece.colorIndex),
     }
   })
 

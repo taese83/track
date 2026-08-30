@@ -1,6 +1,6 @@
 // 세그먼트 표면색. design-system §1 "상승/하강은 원본 편집기 색을 쓴다"를 그대로 따른다 —
 // 팔레트를 새로 고르면 사용자 1순위 성공 조건인 "도면과 3D 나란히 대조"가 깨진다.
-import type { ElevatedSegment } from '@/entities/track/lib/elevation'
+import type { SegmentDirection } from './segment-encoding'
 
 /** design-system tokens §2. 3D 표면 전용 원본 실측색이며 텍스트에는 쓰지 않는다 */
 const RISE_SURFACE = '#AD0A09'
@@ -44,18 +44,17 @@ export function laneSurfaceColorOf(baseColor: string, lane: number): string {
   return lane === MID_LANE ? lift(baseColor, MID_LANE_LIFT) : baseColor
 }
 
-/** 고도 변화로 보기에는 너무 작은 값(부동소수 잔차·이음새 미세 단차) */
-const ELEVATION_EPSILON = 1e-6
-
-export function surfaceColorOf(
-  isSupported: boolean,
-  elevated: ElevatedSegment | undefined,
-): string {
+/**
+ * 표면색. **방향의 출처는 기하가 아니라 피스의 선언 색이다**(D-014).
+ *
+ * 종전에는 `absoluteElevationEnd − absoluteElevationStart`의 부호로 색을 정했다. 그러면
+ * 하강색(c=2) 뱅크가 D-045에 따라 **위로 솟을 때 화면이 그것을 "상승"이라고 말한다** —
+ * 선언과 기하의 불일치가 색 채널에서 지워진다. 세 채널을 모두 선언에 맞추면 그 불일치가
+ * 남고, 텍스트가 무엇을 선언했는지 말한다(TC-015-4).
+ */
+export function surfaceColorOf(isSupported: boolean, direction: SegmentDirection): string {
   if (!isSupported) return UNSUPPORTED_SURFACE
-  if (elevated === undefined) return FLAT_SURFACE
-
-  const delta = elevated.absoluteElevationEnd - elevated.absoluteElevationStart
-  if (delta > ELEVATION_EPSILON) return RISE_SURFACE
-  if (delta < -ELEVATION_EPSILON) return FALL_SURFACE
+  if (direction === 'rise') return RISE_SURFACE
+  if (direction === 'fall') return FALL_SURFACE
   return FLAT_SURFACE
 }

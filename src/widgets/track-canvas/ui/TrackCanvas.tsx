@@ -7,11 +7,12 @@
 //
 // WebGL 지원 게이트도 여기 없다: `TrackCanvas`는 지원 확인 이후에만 마운트된다
 // (component-spec §TrackCanvas, 게이트는 FEAT-014 소유).
-import { OrbitControls } from '@react-three/drei'
+import { Html, OrbitControls } from '@react-three/drei'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ComponentRef, KeyboardEvent } from 'react'
 import { Spherical, Vector3 } from 'three'
+import type { LineSegments } from 'three'
 
 import type { ElevatedSegment } from '@/entities/track/lib/elevation'
 
@@ -19,7 +20,15 @@ import { markFirstFrame, recordOrbitFrame, resetOrbitFps } from '../lib/perf-sta
 import { applyOrbitKey, initialOrbitFor, orbitLimitsFor } from '../lib/orbit-camera'
 import type { OrbitState } from '../lib/orbit-camera'
 import { buildLaneBands } from '../lib/lane-bands'
-import { buildBoundaryGeometry, buildTrackGeometries } from '../lib/track-geometry'
+import type { SegmentBands } from '../lib/lane-bands'
+import {
+  buildBoundaryGeometry,
+  buildDashedOutlineGeometry,
+  buildMarkerGeometry,
+  buildTrackGeometries,
+} from '../lib/track-geometry'
+import type { MarkerPlacement } from '../lib/marker-geometry'
+import { markerShapeOf, segmentTextOf } from '../lib/segment-encoding'
 import { laneSurfaceColorOf, surfaceColorOf } from '../lib/segment-appearance'
 import type { SceneLayout } from '../lib/scene-layout'
 
@@ -65,6 +74,20 @@ function PerfProbe({ orbiting }: { orbiting: { current: boolean } }) {
 const LANE_LINE_COLOR = '#E6E8EC'
 const LANE_LINE_OPACITY = 0.45
 
+/** 표식·파선은 어느 표면색 위에서도 읽혀야 한다 — 색 채널과 독립인 것이 형태 채널의 요건이다 */
+const MARKER_COLOR = '#F2F4F8'
+
+/** 세그먼트 가운데 레인의 중간 표본 — 표식과 라벨이 붙는 자리 */
+function anchorOf(band: SegmentBands): { x: number; y: number; z: number } | null {
+  const middle = band.lanes[Math.floor(band.lanes.length / 2)]
+  if (middle === undefined || middle.lo.length === 0) return null
+  const at = Math.floor(middle.lo.length / 2)
+  const lo = middle.lo[at]
+  const hi = middle.hi[at]
+  if (lo === undefined || hi === undefined) return null
+  return { x: (lo.x + hi.x) / 2, y: Math.max(lo.y, hi.y), z: (lo.z + hi.z) / 2 }
+}
+
 function TrackMesh({ layout, elevated }: TrackCanvasProps) {
   const elevatedByOrder = useMemo(
     () => new Map(elevated.map((segment) => [segment.order, segment])),
@@ -75,19 +98,64 @@ function TrackMesh({ layout, elevated }: TrackCanvasProps) {
   // layout이 바뀔 때만 다시 만든다 — 매 프레임 만들면 BufferGeometry가 프레임마다 쌓인다.
   const scene = useMemo(() => {
     const bands = buildLaneBands(layout.segments)
+    const byOrder = new Map(layout.segments.map((segment) => [segment.order, segment]))
+
     const surfaces = buildTrackGeometries(bands, (band, lane) =>
       laneSurfaceColorOf(
-        surfaceColorOf(band.isSupported, elevatedByOrder.get(band.order)),
+        surfaceColorOf(band.isSupported, byOrder.get(band.order)?.direction ?? 'none'),
         lane,
       ),
     )
-    return { surfaces, boundaries: buildBoundaryGeometry(bands) }
+
+    // FEAT-015 — 색 하나로 유형을 말하지 않는다. 형태(표식·파선)와 텍스트(라벨)를 더한다.
+    const placements: MarkerPlacement[] = []
+    const labels: { key: string; text: string; at: { x: number; y: number; z: number } }[] = []
+    for (const band of bands) {
+      const segment = byOrder.get(band.order)
+      if (segment === undefined) continue
+      // 유형·방향의 정본은 **배치 단계에서 판정해 `SceneSegment`에 실린 값**이다.
+      // 여기서 클래스·색으로 다시 계산하면 두 곳이 답을 달리할 수 있다.
+      if (segment.kind === 'plain') continue
+      const anchor = anchorOf(band)
+      if (anchor === null) continue
+
+      placements.push({
+        ...anchor,
+        // 진입·진출 접선의 평균 — 코너에서도 표식이 트랙을 따라 눕는다
+        headingRad: (segment.entryTangentRad + segment.exitTangentRad) / 2,
+        shape: markerShapeOf(segment.kind, segment.direction),
+      })
+      labels.push({
+        key: segment.pieceId,
+        text: segmentTextOf(segment.kind, segment.direction),
+        at: anchor,
+      })
+    }
+
+    return {
+      surfaces,
+      boundaries: buildBoundaryGeometry(bands),
+      markers: buildMarkerGeometry(placements),
+      dashed: buildDashedOutlineGeometry(
+        bands,
+        (band) => byOrder.get(band.order)?.kind === 'bank',
+      ),
+      labels,
+    }
   }, [layout, elevatedByOrder])
+
+  // `LineDashedMaterial`은 누적 거리를 읽는다 — 계산하지 않으면 파선이 실선으로 그려진다
+  const dashedRef = useRef<LineSegments>(null)
+  useEffect(() => {
+    dashedRef.current?.computeLineDistances()
+  }, [scene])
 
   useEffect(
     () => () => {
       scene.surfaces.forEach((surface) => surface.geometry.dispose())
       scene.boundaries.dispose()
+      scene.markers.dispose()
+      scene.dashed.dispose()
     },
     [scene],
   )
@@ -100,6 +168,7 @@ function TrackMesh({ layout, elevated }: TrackCanvasProps) {
           <meshStandardMaterial color={surface.color} side={2} roughness={0.8} metalness={0} />
         </mesh>
       ))}
+
       {/*
         경계선은 색 단독 구분을 막는 **형태 축**이다(REQ-NFR-003). 면 위에 겹치므로
         `depthWrite`를 끄지 않으면 같은 깊이에서 z-fighting이 인다.
@@ -112,6 +181,46 @@ function TrackMesh({ layout, elevated }: TrackCanvasProps) {
           depthWrite={false}
         />
       </lineSegments>
+
+      {/* FEAT-015 형태 채널 — 뱅크만 윤곽이 파선이다 */}
+      <lineSegments ref={dashedRef} geometry={scene.dashed}>
+        <lineDashedMaterial color={MARKER_COLOR} dashSize={6} gapSize={4} depthWrite={false} />
+      </lineSegments>
+
+      {/* FEAT-015 형태 채널 — 유형별 표식 */}
+      <mesh geometry={scene.markers}>
+        <meshBasicMaterial color={MARKER_COLOR} side={2} depthWrite={false} />
+      </mesh>
+
+      {/* FEAT-015 텍스트 채널 — 평지가 아닌 세그먼트에만 붙는다 */}
+      {scene.labels.map((label) => (
+        <Html
+          key={label.key}
+          // 표식 위로 충분히 띄운다 — 6cm로 뒀을 때 라벨 상자가 표식을 통째로 가려
+          // 형태 채널이 화면에서 사라졌다(2026-08-31 캡처 확인)
+          position={[label.at.x, label.at.y + 22, label.at.z]}
+          center
+          // 근거 오버레이(FEAT-010)보다 위로 올라오지 않게 한다 — 라벨이 총계 바를 덮으면
+          // 등급 표기가 가려진다
+          zIndexRange={[0, 0]}
+          style={{ pointerEvents: 'none' }}
+        >
+          <span
+            data-testid="segment-label"
+            data-segment-text={label.text}
+            style={{
+              whiteSpace: 'nowrap',
+              fontSize: 10,
+              padding: '1px 4px',
+              borderRadius: 3,
+              color: '#0F1114',
+              background: 'rgb(242 244 248 / 0.88)',
+            }}
+          >
+            {label.text}
+          </span>
+        </Html>
+      ))}
     </group>
   )
 }
