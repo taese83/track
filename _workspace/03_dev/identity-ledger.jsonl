@@ -19,3 +19,6 @@
 {"schemaVersion":1,"featureId":"FEAT-005","ticketKey":"5","contentHash":"1a9a826e2c76d419113b352b4eb95492d113b7a06b79ae5b30ad6c8ccd763acf","createdAt":"2026-08-29T16:00:45.107Z","prUrl":"https://github.com/taese83/track/pull/19"}
 {"schemaVersion":1,"featureId":"FEAT-006","ticketKey":"6","contentHash":"10b412cb761cb3d134068008ed33ecd8b1192206fd3ab86c7fe4842f39e6db1e","createdAt":"2026-08-29T16:00:48.693Z","prUrl":"https://github.com/taese83/track/pull/21"}
 {"schemaVersion":1,"featureId":"FEAT-013","ticketKey":"13","contentHash":"cb51019298cb2e826f2b5a05f0db246ca0fef305ecf4c3086d60a6ce656273f6","createdAt":"2026-08-29T16:01:13.571Z","prUrl":"https://github.com/taese83/track/pull/24"}
+{"schemaVersion":1,"featureId":"FEAT-015","ticketKey":"26","contentHash":"93761d13619260df5d3d95fe3e453a35bd7b3d0212b3458e7881022a4977085f","createdAt":"2026-08-30T12:52:43.162Z","branch":"main"}
+{"schemaVersion":1,"featureId":"FEAT-016","ticketKey":"27","contentHash":"8aee086f928e6153fd75c299ed5cccf1fe3b1ab92ebdfa599631c6f156a1c8f2","createdAt":"2026-08-30T12:52:46.600Z","branch":"main"}
+{"schemaVersion":1,"featureId":"FEAT-008","ticketKey":"28","contentHash":"b316f3ad99e7d0f6dd23b20c5716258400d42ea0405f83a679a34c6a343035da","createdAt":"2026-08-30T12:54:54.245Z","branch":"main","supersedes":"8"}
