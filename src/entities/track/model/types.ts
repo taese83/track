@@ -37,6 +37,21 @@ export interface ParsedPiece {
   compatCorrectionApplied?: boolean
 }
 
+/**
+ * 파이프라인 3단계 타입 — 끝점 매칭으로 복원한 진행 순서.
+ * 정본은 feature-plan Data Model이다.
+ * FEAT-003은 orderedPieceIds만 채운다. 나머지 4필드는 FEAT-004가 계산해 채운다.
+ */
+export interface RestoredPath {
+  /** Str2(START)부터 시작하는 결정적 순서 */
+  orderedPieceIds: string[]
+  /** XY 평면 폐곡선 여부 */
+  isClosedLoop: boolean
+  brokenAt: { afterPieceId: string; reason: string } | null
+  isZClosed: boolean | null
+  zClosureGap: { value: number; grade: 'measured' | 'confirmed' | 'inferred' | 'unknown' } | null
+}
+
 export type TrackErrorCode =
   /** 400 — 코드/URL 형식 불일치. allowlist 밖 host 포함 */
   | 'INVALID_INPUT_FORMAT'
