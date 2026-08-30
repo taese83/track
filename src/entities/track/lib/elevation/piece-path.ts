@@ -24,29 +24,13 @@ const RAD = Math.PI / 180
  */
 const WAVE_PIECE_PREFIX = 'Chi'
 
-/** 돌출량(cm). D-032의 픽셀 측정값이며 등급은 `measured`다 */
+/** 돌출량(cm). 픽셀 측정값이며 D-032 개정에서 5cm로 되돌아와 측정값과 정확히 일치한다 */
 const WAVE_AMPLITUDE = 5
 
 /**
- * 모양은 `sin²(πt)` — 부풀림이 피스 전체에 퍼진다.
- *
- * **가운데로 모을 수 없다(기하 한계, 2026-08-31 실측).** 레인 면은 중심선에서 ±18cm
- * 오프셋이라 중심선의 곡률반경이 반폭보다 작아지면 안쪽 가장자리가 자기 자신을 접는다
- * (offset curve self-intersection). 실측 최소 곡률반경:
- *
- * | 형상 | 최소 R | 판정 |
- * |---|---|---|
- * | 전구간 `sin²` 5cm | 29.5cm | OK |
- * | 전구간 `sin²` 8cm | 18.5cm | OK(반폭 18cm에 아슬아슬) |
- * | 구간 0.8 · 8cm | 11.8cm | 접힘 |
- * | 구간 0.6 · 8cm | 0.1cm | 접힘 |
- *
- * 관계식은 `R ≈ 29.5 × (5/돌출량) × 구간²`다 — Ω처럼 좁고 깊게 만들수록 제곱으로
- * 나빠진다. 지수를 2 미만으로 낮춰 마루를 납작하게 만드는 것도 안 된다: `sin^q`의 2계
- * 도함수가 `sin^(q−2)`라 q<2면 구간 경계에서 곡률이 **발산**한다.
- *
- * Ω(옴) 자 형태를 그리려면 `lane-bands`가 오프셋 접힘을 처리해야 한다 — 그것은 이 파일이
- * 아니라 캔버스 위젯의 일이다.
+ * 모양은 `sin²(πt)`다 — 양 끝 기울기가 0이라 앞뒤 직선과 매끄럽게 잇고 마루도 각지지
+ * 않는다("양 끝은 직선"과 "각진 것이 아니라 곡면"을 동시에 만족한다, D-032 개정).
+ * 1차 확정이던 삼각형 `1 − |2t − 1|`은 사용자 재지정으로 폐기됐다.
  *
  * `sin²(π(1 − t)) = sin²(πt)`라 **매개변수를 뒤집어도 같은 값**이다 — 역방향 통과에서
  * 마루가 옮겨가지 않는다.
@@ -119,23 +103,21 @@ export function buildPiecePath(oriented: OrientedPiece): PiecePath {
     const isWave = piece.pieceClass.startsWith(WAVE_PIECE_PREFIX)
 
     /**
-     * 돌출 방향은 **진행 방향 기준 오른쪽**이다.
+     * 돌출 방향은 **편집기 2D 좌표에서 `n = [−tan.y, tan.x]`의 양의 방향**이다.
      *
-     * D-032 본문의 픽셀 실측이 오른쪽이었고, 같은 날 §개정에서 사용자 재지정으로 왼쪽이
-     * 됐다. 화면에서 반대로 보인다는 사용자 지정(2026-08-31)으로 **1차 실측 방향으로
-     * 되돌린다.** 좌표 변환 결함이 아니다 — 편집기 `(x, y)`의 왼손 방향 `(ty, −tx)`는
-     * 씬 `(x, z)` 매핑에서 `(tz, 0, −tx)`가 되고 이는 씬의 `up × travel`과 같다(핸디드니스
-     * 보존). 즉 종전 코드는 개정이 정한 "왼쪽"을 정확히 그리고 있었다.
+     * 종전 구현은 `(tan.y, −tan.x)`를 써서 **부호가 반대**였다 — 프리뷰와 나란히 놓으면
+     * 웨이브가 서로 반대편으로 튀어나왔고, 사용자가 프리뷰 쪽이 맞다고 확정했다
+     * (2026-08-31). 원인은 "왼쪽/오른쪽"이라는 낱말이다: 편집기 좌표에서 재는 것과
+     * 투영된 화면에서 보는 것이 달라, D-032 개정의 "왼쪽"을 편집기 좌표로 읽으면 부호가
+     * 뒤집힌다. 그래서 정본이 낱말 대신 **이 벡터**로 방향을 정한다.
      *
-     * 진행 방향이 곧 기준이므로 `flipped`면 기준축도 뒤집어야 한다 — vertex1→vertex2
-     * 방향으로 고정하면 역방향 통과에서 돌출이 반대편으로 나온다(TC-016-3).
-     *
-     * 편집기 y는 화면 아래로 증가한다. 진행 방향 `(dx, dy)`의 오른손 쪽은 `(−dy, dx)`다.
+     * 진행 방향이 기준이므로 `flipped`면 기준축도 뒤집는다 — vertex1→vertex2로 고정하면
+     * 역방향 통과에서 돌출이 반대편으로 나온다(TC-016-3).
      */
     const travelX = flipped ? from.x - to.x : to.x - from.x
     const travelY = flipped ? from.y - to.y : to.y - from.y
-    const sideX = chord === 0 ? 0 : -travelY / chord
-    const sideY = chord === 0 ? 0 : travelX / chord
+    const bowX = chord === 0 ? 0 : -travelY / chord
+    const bowY = chord === 0 ? 0 : travelX / chord
 
     return {
       // 곡면 돌출로 실제 경로는 현보다 길지만, 웨이브는 고도 변화가 0이라(D-032)
@@ -150,7 +132,7 @@ export function buildPiecePath(oriented: OrientedPiece): PiecePath {
         }
         if (!isWave) return base
         const bow = waveBow(t)
-        return { x: base.x + sideX * bow, y: base.y + sideY * bow }
+        return { x: base.x + bowX * bow, y: base.y + bowY * bow }
       },
     }
   }
