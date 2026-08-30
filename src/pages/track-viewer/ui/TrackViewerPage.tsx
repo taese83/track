@@ -23,6 +23,7 @@ import { buildSceneLayout, markRenderStart } from '@/widgets/track-canvas'
 import type { SceneLayout } from '@/widgets/track-canvas'
 
 import { isCanvasBroken } from '../lib/canvas-failure-watch'
+import { buildScreenProfileModel } from '../lib/profile-model'
 import { detectWebglSupport } from '../lib/webgl-support'
 
 import { ErrorScreen } from './ErrorScreen'
@@ -287,7 +288,7 @@ export function TrackViewerPage() {
         ) : state.status === 'success' && track !== null && outcome !== null ? (
           outcome.kind === 'restored' ? (
             !canRender3d ? (
-              <WebglFallbackScreen items={outcome.items} />
+              <WebglFallbackScreen items={outcome.items} profileModel={buildScreenProfileModel({ elevated: outcome.elevated, items: outcome.items, closure: outcome.closure })} />
             ) : (
             <TrackScreen
               layout={outcome.layout}

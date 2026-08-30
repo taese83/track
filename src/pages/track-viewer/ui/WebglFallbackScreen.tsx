@@ -13,6 +13,8 @@
 import { useCallback, useMemo, useState } from 'react'
 
 import { TrackCursorProvider, useTrackCursor } from '@/shared/lib/track-cursor'
+import { ProfileStrip } from '@/widgets/profile-strip'
+import type { ProfileModel } from '@/widgets/profile-strip'
 import { SectionList, reachableCountOf } from '@/widgets/section-list'
 import type { SectionListItem } from '@/widgets/section-list'
 
@@ -48,11 +50,31 @@ function FallbackList({ items }: { items: readonly SectionListItem[] }) {
   )
 }
 
-export interface WebglFallbackScreenProps {
-  items: readonly SectionListItem[]
+/** 스트립 열. 3D 셸과 같은 구조다 — 대체 화면이라고 다른 컴포넌트를 쓰지 않는다 */
+function FallbackProfile({ model }: { model: ProfileModel }) {
+  const { currentIndex, setCursor } = useTrackCursor()
+  const [collapsed, setCollapsed] = useState(false)
+  const handleToggle = useCallback(() => setCollapsed((prev) => !prev), [])
+  const handleScrub = useCallback((index: number) => setCursor(index, 'strip'), [setCursor])
+
+  return (
+    <ProfileStrip
+      model={model}
+      currentIndex={currentIndex}
+      onScrub={handleScrub}
+      collapsed={collapsed}
+      onToggleCollapsed={handleToggle}
+    />
+  )
 }
 
-export function WebglFallbackScreen({ items }: WebglFallbackScreenProps) {
+export interface WebglFallbackScreenProps {
+  items: readonly SectionListItem[]
+  /** states.md §WebGL 미지원 — "스트립은 유지"다. 고도는 파싱됐으므로 2D로 그릴 수 있다 */
+  profileModel: ProfileModel
+}
+
+export function WebglFallbackScreen({ items, profileModel }: WebglFallbackScreenProps) {
   const reachableCount = useMemo(() => reachableCountOf(items), [items])
 
   return (
@@ -84,16 +106,7 @@ export function WebglFallbackScreen({ items }: WebglFallbackScreenProps) {
           style={{ height: STRIP_HEIGHT_PX, borderColor: 'var(--color-border)' }}
           aria-label="고도 프로파일 탐색"
         >
-          <div
-            className="flex h-full w-full items-center justify-center p-4 text-center text-[13px]"
-            style={{ color: 'var(--color-text-secondary)' }}
-          >
-            <span>
-              하단 프로파일 스트립은 아직 구현되지 않았습니다.
-              <br />
-              FEAT-012
-            </span>
-          </div>
+          <FallbackProfile model={profileModel} />
         </section>
       </div>
     </TrackCursorProvider>

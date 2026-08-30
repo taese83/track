@@ -21,8 +21,12 @@ import {
   reachableCountOf,
 } from '@/widgets/section-list'
 import type { SectionListItem } from '@/widgets/section-list'
+import { ProfileStrip } from '@/widgets/profile-strip'
+import type { ProfileModel } from '@/widgets/profile-strip'
 import { TrackCanvas } from '@/widgets/track-canvas'
 import type { SceneLayout } from '@/widgets/track-canvas'
+
+import { buildScreenProfileModel } from '../lib/profile-model'
 
 import { EvidenceOverlay } from './EvidenceOverlay'
 
@@ -47,21 +51,6 @@ export interface TrackScreenProps {
  */
 const STRIP_HEIGHT_PX = 140
 const ALERT_HEIGHT_PX = 40
-
-function PendingPanel({ owner, note }: { owner: string; note: string }) {
-  return (
-    <div
-      className="flex h-full w-full items-center justify-center p-4 text-center text-[13px]"
-      style={{ color: 'var(--color-text-secondary)' }}
-    >
-      <span>
-        {note}
-        <br />
-        {owner}
-      </span>
-    </div>
-  )
-}
 
 /**
  * 목록 열. 커서 소비는 Provider 안에서만 가능하므로 셸에서 한 겹 분리한다.
@@ -122,6 +111,28 @@ function SectionColumn({
   )
 }
 
+/**
+ * 스트립 열. 커서 소비는 Provider 안에서만 가능하므로 셸에서 한 겹 분리한다(목록과 같은 구조).
+ * 접힘은 이 열의 로컬 상태다 — 공유 커서와 달리 다른 표면이 알 필요가 없다.
+ */
+function ProfileColumn({ model }: { model: ProfileModel }) {
+  const { currentIndex, setCursor } = useTrackCursor()
+  const [collapsed, setCollapsed] = useState(false)
+
+  const handleToggle = useCallback(() => setCollapsed((prev) => !prev), [])
+  const handleScrub = useCallback((index: number) => setCursor(index, 'strip'), [setCursor])
+
+  return (
+    <ProfileStrip
+      model={model}
+      currentIndex={currentIndex}
+      onScrub={handleScrub}
+      collapsed={collapsed}
+      onToggleCollapsed={handleToggle}
+    />
+  )
+}
+
 export function TrackScreen({
   layout,
   elevated,
@@ -132,6 +143,11 @@ export function TrackScreen({
 }: TrackScreenProps) {
   const reachableCount = useMemo(() => reachableCountOf(items), [items])
   const rendered = layout.segments.length
+
+  const profileModel = useMemo(
+    () => buildScreenProfileModel({ elevated, items, closure }),
+    [elevated, items, closure],
+  )
   const banner =
     closure.isClosedLoop && closure.isZClosed !== false
       ? null
@@ -177,7 +193,7 @@ export function TrackScreen({
         style={{ height: STRIP_HEIGHT_PX, borderColor: 'var(--color-border)' }}
         aria-label="고도 프로파일 탐색"
       >
-        <PendingPanel owner="FEAT-012" note="하단 프로파일 스트립은 아직 구현되지 않았습니다." />
+        <ProfileColumn model={profileModel} />
       </section>
       </div>
     </TrackCursorProvider>
