@@ -17,7 +17,7 @@ import { extractUpstreamVars } from '@/shared/lib/track/extract-upstream-vars'
 import { buildElevatedSegments, orientPath } from './index'
 import { buildPiecePath } from './piece-path'
 
-const WAVE_AMPLITUDE = 8
+const WAVE_AMPLITUDE = 5
 
 function distanceBetween(a: { x: number; y: number }, b: { x: number; y: number }): number {
   return Math.hypot(a.x - b.x, a.y - b.y)
@@ -58,7 +58,7 @@ function wavePiece(overrides: Partial<ParsedPiece> = {}): ParsedPiece {
   }
 }
 
-describe('TC-016-1 — 중앙에서 진행 방향 오른쪽으로 8cm 벗어난다', () => {
+describe('TC-016-1 — 중앙에서 진행 방향 오른쪽으로 5cm 벗어난다', () => {
   it('t=0.5에서 정확히 5cm다', () => {
     expect(rightOffsetAt(wavePiece(), false, 0.5)).toBeCloseTo(WAVE_AMPLITUDE, 9)
   })
@@ -80,8 +80,8 @@ describe('TC-016-1 — 중앙에서 진행 방향 오른쪽으로 8cm 벗어난�
     // sin²(0.1π) = 0.0955 vs 삼각형 0.2 — 두 배 넘게 차이 난다.
     const triangleAt = (t: number) => (1 - Math.abs(2 * t - 1)) * WAVE_AMPLITUDE
     expect(triangleAt(0.25)).toBeCloseTo(Math.sin(Math.PI * 0.25) ** 2 * WAVE_AMPLITUDE, 9)
-    expect(rightOffsetAt(wavePiece(), false, 0.1)).toBeCloseTo(0.764, 3)
-    expect(triangleAt(0.1)).toBeCloseTo(1.6, 9)
+    expect(rightOffsetAt(wavePiece(), false, 0.1)).toBeCloseTo(0.4775, 3)
+    expect(triangleAt(0.1)).toBeCloseTo(1, 9)
   })
 
   it('양 끝의 기울기가 0이라 앞뒤 직선과 매끄럽게 잇는다', () => {
@@ -105,7 +105,7 @@ describe('TC-016-1 — 중앙에서 진행 방향 오른쪽으로 8cm 벗어난�
 })
 
 describe('TC-016-3 — 역방향 통과에서도 오른쪽이다', () => {
-  it('flipped에서도 진행 방향 기준 오른쪽으로 8cm다', () => {
+  it('flipped에서도 진행 방향 기준 오른쪽으로 5cm다', () => {
     expect(rightOffsetAt(wavePiece(), true, 0.5)).toBeCloseTo(WAVE_AMPLITUDE, 9)
   })
 

@@ -24,12 +24,8 @@ const RAD = Math.PI / 180
  */
 const WAVE_PIECE_PREFIX = 'Chi'
 
-/**
- * 돌출량(cm). D-032는 픽셀 측정값 5cm를 썼고 등급이 `measured`였다. 화면에서 굴곡이
- * 약하다는 사용자 지정으로 **8cm**로 올린다 — 등급은 `measured`가 아니라 **사용자 지정
- * `confirmed`**다. 측정값을 덮어쓴 것이므로 그 사실을 숨기지 않는다.
- */
-const WAVE_AMPLITUDE = 8
+/** 돌출량(cm). D-032의 픽셀 측정값이며 등급은 `measured`다 */
+const WAVE_AMPLITUDE = 5
 
 /**
  * 모양은 `sin²(πt)` — 부풀림이 피스 전체에 퍼진다.
