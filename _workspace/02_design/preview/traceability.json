@@ -958,7 +958,7 @@
   ],
   "sourceSnapshot": {
     "algorithm": "sha256",
-    "digest": "19ca8f754d0028ee6e0f9c25ff2281694dd7203894576e65dd8e01f0d62e5910",
+    "digest": "0c853295122d038ad8bf1e9478077a3c111e0a06134511ad7566db666917212d",
     "files": [
       {
         "path": "_workspace/01_plan/feature-plan/data-model.md",
@@ -974,15 +974,15 @@
       },
       {
         "path": "_workspace/01_plan/feature-plan/specs-pipeline.md",
-        "sha256": "55dffdadaacf01dfe62d95d09f2f28bbc370256972b0ac839d3f76dae5abd259"
+        "sha256": "96e91b127c1a09a40cf1977a70ea2e188bba37d9a93d41cb68ee6511daa4cc1f"
       },
       {
         "path": "_workspace/01_plan/feature-plan/specs-scene.md",
-        "sha256": "74e365e97269efbe94d70d914e448e0bd20eb174b4b91c7edef57a1b78fed134"
+        "sha256": "0d08e1e41f18e563acfceaab06e9c0372301d2ba22d9b1ff1c13190b21b2f600"
       },
       {
         "path": "_workspace/01_plan/feature-plan/specs-surfaces.md",
-        "sha256": "cd4f5aecb67e5cd779c88d42272ebbb14c6478d1e018f432ec7c3db9d50ddbd1"
+        "sha256": "8a596ff68501eab19b2791142fb72747c6e76d7b9391e98e7e69e489a34ac818"
       },
       {
         "path": "_workspace/01_plan/feature-plan/traceability.md",

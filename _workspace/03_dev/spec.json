@@ -404,7 +404,7 @@
           },
           {
             "path": "_workspace/01_plan/feature-plan/data-model.md",
-            "sha256": "0efaa669927b3cad43dc7dbe8a276c3a3190da0ab5c9ceb900f63dbf99cd02d6"
+            "sha256": "f6bbb0fcbe97abdef02738b44b5c0a36c1311ad71b7f706d708ed0682c1ada5d"
           },
           {
             "path": "_workspace/01_plan/feature-plan/feature-list.md",
@@ -412,11 +412,11 @@
           },
           {
             "path": "_workspace/01_plan/feature-plan/specs-pipeline.md",
-            "sha256": "55dffdadaacf01dfe62d95d09f2f28bbc370256972b0ac839d3f76dae5abd259"
+            "sha256": "7fb25481fa208c77a14aa3b6e3455c35751427cb2982e9fddd97942f41835113"
           },
           {
             "path": "_workspace/01_plan/feature-plan/specs-scene.md",
-            "sha256": "e4bff5c0006bcd318650c6caf77c838f75b2fe06e9225cf56a4d94249d7d42d3"
+            "sha256": "3f785ede244b09abc0ee821086a5dc58de2650caee66eea119803ddd045077f8"
           },
           {
             "path": "_workspace/01_plan/feature-plan/specs-surfaces.md",
@@ -424,10 +424,10 @@
           },
           {
             "path": "_workspace/01_plan/feature-plan/traceability.md",
-            "sha256": "d45eab359a25a1b3c94f2b6a33e6c8e92407814dfa40db7cb58b49f99aa6393b"
+            "sha256": "20f3b493ca321e56fa083d65c661deafa2720280fffbfe055da741b9d12221ae"
           }
         ],
-        "sha256": "6f779a69c17e2d99d7e1807d7453174d60e6478d87efd0430cce32fe34ddc842"
+        "sha256": "1f244b2500ad5886051999edc9bb0fb055b678474f9f04428895d8ff04fd7526"
       },
       {
         "path": "_workspace/01_plan/tech-stack.md",
@@ -486,10 +486,10 @@
           },
           {
             "path": "_workspace/02_design/component-spec/widgets.md",
-            "sha256": "33bc38264966006be8e0db06ea7183bc256da2450007ddd0a597a31f40887812"
+            "sha256": "e0fa0e64de80a755248a92e459e73eff02fe5a795ac7a81ca4459b36e23b07f2"
           }
         ],
-        "sha256": "98133c1fa96d4eccc952b6dc1a25c741370375d6ce7f77803190b979b717172a"
+        "sha256": "9d6ddf08e13b87a86a420dce512258821c9ffed81bff075df03d3543b3836f0b"
       },
       {
         "path": "_workspace/02_design/state-contract.md",
@@ -506,6 +506,6 @@
         "sha256": "bd39a3d72644c877b524c6d34ca76414ffdb856be5aec532dcc614bec178bbce"
       }
     ],
-    "combined": "ecb52fe8f87b5222b9057bcb09b9ae12c0f6b1ddf080a76b11aec0eec3021d7a"
+    "combined": "a8bedba4ebcef8594a9306dca066a184c7ed0ed54aeb9d512df964881f00fac5"
   }
 }
