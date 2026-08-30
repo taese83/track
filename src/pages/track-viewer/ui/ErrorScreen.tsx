@@ -3,12 +3,12 @@ import { AlertSlot } from '@/shared/ui/AlertSlot/AlertSlot'
 
 export interface ErrorScreenProps {
   reason: LoadErrorReason
-  /** parse 실패일 때만. 접이식 디버그 영역에 그대로 노출한다 */
+  /** 파싱·순서 복원 실패일 때만. 접이식 디버그 영역에 그대로 노출한다 */
   rawSnippet?: string
   onRetry: () => void
 }
 
-/** 원인별 문구 — TC-001-2/3/5가 요구하는 "원인이 구분된" 표시의 실체 */
+/** 원인별 문구 — TC-001-2/3/5, TC-003-4가 요구하는 "원인이 구분된" 표시의 실체 */
 const MESSAGE: Record<LoadErrorReason, string> = {
   'invalid-input': '유효하지 않은 링크입니다. view/XXXXXX 형식으로 다시 입력해 주세요.',
   'not-found': '트랙을 찾을 수 없습니다. 코드가 맞는지 확인해 주세요.',
@@ -16,6 +16,7 @@ const MESSAGE: Record<LoadErrorReason, string> = {
   timeout: '응답이 시간 초과되었습니다.',
   parse: '트랙 데이터를 해석하지 못했습니다.',
   'not-closed-fatal': '트랙 데이터가 심각하게 손상되어 표시할 수 없습니다.',
+  'start-piece-missing': '시작 지점(START)을 찾을 수 없습니다. 편집기에서 START 피스를 놓았는지 확인해 주세요.',
 }
 
 export function ErrorScreen({ reason, rawSnippet, onRetry }: ErrorScreenProps) {

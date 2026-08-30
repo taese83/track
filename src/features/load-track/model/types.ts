@@ -6,6 +6,9 @@
  * 링크입니다")가 확정 문구를 요구하는데 4종만으로는 둘 다 `network`로 뭉개져 서로 다른 원인이
  * 같은 메시지를 받는다(TC-001-5의 "원인이 구분된 에러 메시지" 요구와 정면 충돌).
  * 디자인 프리뷰도 같은 문제를 별도 messageKey로 우회했다.
+ *
+ * `start-piece-missing`은 FEAT-003이 더했다 — 순서 복원의 실패는 파싱이 끝난 뒤에 일어나므로
+ * `parse` 문구("해석하지 못했습니다")로 뭉개면 TC-003-4가 요구하는 START 부재 문구가 나오지 않는다.
  */
 export type LoadErrorReason =
   | 'network'
@@ -14,6 +17,7 @@ export type LoadErrorReason =
   | 'timeout'
   | 'not-found'
   | 'invalid-input'
+  | 'start-piece-missing'
 
 export type LoadState =
   | { status: 'idle' }

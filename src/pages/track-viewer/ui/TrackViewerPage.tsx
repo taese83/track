@@ -2,8 +2,15 @@ import { useCallback, useMemo, useState } from 'react'
 
 import { parseTrackString } from '@/entities/track/lib/parse'
 import type { ParseTrackStringResult } from '@/entities/track/lib/parse'
+import { restoreOrder } from '@/entities/track/lib/restore'
+import type {
+  RestoreOrderFailureReason,
+  RestoreOrderSuccess,
+  StartSelection,
+} from '@/entities/track/lib/restore'
 import { SOURCE_EDITOR_URL } from '@/entities/track/model/schema'
 import { useTrackFetch } from '@/features/load-track'
+import type { LoadErrorReason } from '@/features/load-track'
 import { AppHeader } from '@/widgets/app-header/ui/AppHeader'
 
 import { ErrorScreen } from './ErrorScreen'
@@ -14,25 +21,63 @@ const SNIPPET_MAX_CHARS = 300
 
 type ParseFailure = Extract<ParseTrackStringResult, { ok: false }>
 
+function excerptOf(rawData: string): string {
+  return rawData.length > SNIPPET_MAX_CHARS
+    ? `${rawData.slice(0, SNIPPET_MAX_CHARS)}…(이하 생략, 전체 ${rawData.length}자)`
+    : rawData
+}
+
 function buildParseSnippet(rawData: string, failure: ParseFailure): string {
   if (failure.reason === 'empty-track') {
     return `원문에 피스가 하나도 없습니다(원문 ${rawData.length}자).`
   }
 
-  const excerpt =
-    rawData.length > SNIPPET_MAX_CHARS
-      ? `${rawData.slice(0, SNIPPET_MAX_CHARS)}…(이하 생략, 전체 ${rawData.length}자)`
-      : rawData
   const first = failure.failures[0]
   const cause = first === undefined ? '' : ` 처음 어긋난 곳 — 세그먼트 ${first.segmentIndex}: ${first.detail}.`
 
-  return `${excerpt}\n\n어긋난 세그먼트 ${failure.failures.length}건.${cause}`
+  return `${excerptOf(rawData)}\n\n어긋난 세그먼트 ${failure.failures.length}건.${cause}`
 }
+
+/**
+ * `traversal-incomplete`·`search-budget-exceeded`는 START가 없는 것이 아니라 끝점을 잇다 막힌
+ * 경우다. START 부재 문구로 뭉개면 화면이 없는 원인을 지목하므로, 뜻이 맞는 기존 축인
+ * `not-closed-fatal`("데이터가 심각하게 손상되어 표시할 수 없습니다")에 태운다.
+ */
+const RESTORE_ERROR_REASON: Record<RestoreOrderFailureReason, LoadErrorReason> = {
+  'start-piece-missing': 'start-piece-missing',
+  'traversal-incomplete': 'not-closed-fatal',
+  'search-budget-exceeded': 'not-closed-fatal',
+}
+
+const RESTORE_FAILURE_DETAIL: Record<RestoreOrderFailureReason, string> = {
+  'start-piece-missing': '피스 목록에 START(Str2)가 없어 시작 지점을 정하지 못했습니다.',
+  'traversal-incomplete': '끝점을 이어도 모든 피스를 한 줄로 꿰지 못했습니다.',
+  'search-budget-exceeded': '순서 탐색이 허용 범위를 넘겨 중단했습니다.',
+}
+
+function buildRestoreSnippet(
+  rawData: string,
+  reason: RestoreOrderFailureReason,
+  pieceCount: number,
+): string {
+  return `${excerptOf(rawData)}\n\n${RESTORE_FAILURE_DETAIL[reason]}(파싱된 피스 ${pieceCount}개)`
+}
+
+// TC-003-5 — 후보가 여럿이었다는 사실과 고른 근거가 화면에 남아야 한다
+function describeStart(start: StartSelection): string {
+  return start.reason === 'only-start-piece'
+    ? `${start.pieceId} · 유일한 START`
+    : `${start.pieceId} · START 후보 ${start.candidatePieceIds.length}개 중 원문에 처음 나온 것`
+}
+
+type ViewOutcome =
+  | { kind: 'restored'; restored: RestoreOrderSuccess }
+  | { kind: 'failure'; reason: LoadErrorReason; rawSnippet: string }
 
 /**
  * 화면 상태 머신의 소유자.
  *
- * fetch 성공 뒤의 파싱은 `track`의 동기 순수 파생이라 별도 상태를 두지 않는다.
+ * fetch 성공 뒤의 파싱·순서 복원은 `track`의 동기 순수 파생이라 별도 상태를 두지 않는다.
  * `3d`/`partial-failure`/`webgl-unsupported`와 그 3분할 셸은 FEAT-006/012/013 소관이라
  * 여기서는 아직 그리지 않는다 — 임시 셸을 그리면 그 표면에 소유자가 둘이 된다.
  */
@@ -55,11 +100,29 @@ export function TrackViewerPage() {
     }
   }, [parsed])
 
+  const outcome = useMemo<ViewOutcome | null>(() => {
+    if (track === null || parsed === null) return null
+    if (!parsed.ok) {
+      return { kind: 'failure', reason: 'parse', rawSnippet: buildParseSnippet(track.rawData, parsed) }
+    }
+
+    const restored = restoreOrder(parsed.pieces)
+    if (!restored.ok) {
+      return {
+        kind: 'failure',
+        reason: RESTORE_ERROR_REASON[restored.reason],
+        rawSnippet: buildRestoreSnippet(track.rawData, restored.reason, parsed.pieces.length),
+      }
+    }
+
+    return { kind: 'restored', restored }
+  }, [track, parsed])
+
   /**
-   * 파싱 실패는 fetch 성공 뒤에 일어나므로 `state.status`만으로는 화면이 에러라는 사실이 드러나지
-   * 않는다. component-spec의 ViewState는 이 경우를 `error`로 규정하므로 노출값을 그에 맞춘다.
+   * 파싱·복원 실패는 fetch 성공 뒤에 일어나므로 `state.status`만으로는 화면이 에러라는 사실이
+   * 드러나지 않는다. component-spec의 ViewState는 이 경우를 `error`로 규정하므로 노출값을 맞춘다.
    */
-  const viewState = state.status === 'success' && parsed !== null && !parsed.ok ? 'error' : state.status
+  const viewState = state.status === 'success' && outcome?.kind === 'failure' ? 'error' : state.status
 
   const handleSwitchTrack = useCallback(() => {
     reset()
@@ -83,8 +146,8 @@ export function TrackViewerPage() {
             {...(state.rawSnippet === undefined ? {} : { rawSnippet: state.rawSnippet })}
             onRetry={retry}
           />
-        ) : state.status === 'success' && track !== null && parsed !== null ? (
-          parsed.ok ? (
+        ) : state.status === 'success' && track !== null && outcome !== null ? (
+          outcome.kind === 'restored' ? (
             <div className="flex flex-1 items-center justify-center p-6">
               <div
                 className="w-full max-w-[640px] rounded-[6px] border p-6"
@@ -115,19 +178,21 @@ export function TrackViewerPage() {
                   <dd className="tabular" data-testid="compat-corrected-count">
                     {stats.compatCorrected}
                   </dd>
+                  <dt style={{ color: 'var(--color-text-secondary)' }}>복원된 순서</dt>
+                  <dd className="tabular" data-testid="ordered-count">
+                    {outcome.restored.orderedPieceIds.length}
+                  </dd>
+                  <dt style={{ color: 'var(--color-text-secondary)' }}>시작 피스</dt>
+                  <dd data-testid="start-selection">{describeStart(outcome.restored.start)}</dd>
                 </dl>
                 <p className="mt-4 text-[14px]" style={{ color: 'var(--color-text-secondary)' }}>
-                  피스 파싱까지 마쳤습니다. 순서 복원·폐곡선 검증·3D 표시는 아직 구현되지
-                  않았습니다(FEAT-003 이후).
+                  피스 순서 복원까지 마쳤습니다. 폐곡선·Z 폐합 검증과 3D 표시는 아직 구현되지
+                  않았습니다(FEAT-004 이후).
                 </p>
               </div>
             </div>
           ) : (
-            <ErrorScreen
-              reason="parse"
-              rawSnippet={buildParseSnippet(track.rawData, parsed)}
-              onRetry={retry}
-            />
+            <ErrorScreen reason={outcome.reason} rawSnippet={outcome.rawSnippet} onRetry={retry} />
           )
         ) : (
           <InputScreen
