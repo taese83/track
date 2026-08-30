@@ -29,7 +29,10 @@ interface AppHeaderProps {
 ### SectionList — FEAT-013/014, 1차 정보원
 
 ```ts
-type SegmentKind = 'straight' | 'corner' | 'slope' | 'bank' | 'lane-change' | 'marker' | 'unsupported'
+type SegmentKind =
+  | 'straight' | 'corner' | 'slope' | 'bank' | 'lane-change'
+  | 'wave'          // 2026-08-30 추가 — 아래 §웨이브 참조
+  | 'marker' | 'unsupported'
 
 interface SectionListItem {
   id: string                    // 원본 피스 안정 ID — canonical key, index 아님
@@ -38,7 +41,8 @@ interface SectionListItem {
   segmentKind: SegmentKind
   evidenceGrade?: EvidenceGrade  // 해당 값이 있는 행만
   unsupportedLabel?: string      // "미지원: {타입명}" (FEAT-009)
-  failed?: boolean                // 부분 실패 지점 이후 — 회색 배경 + 비활성
+  failed?: boolean                // 커서가 갈 수 없는 행 — 회색 배경 + 비활성
+  unplacedReason?: 'disconnected' | 'unsupported'  // 2026-08-30 추가 — 아래 §자리 없는 행
 }
 
 interface SectionListProps {
@@ -54,6 +58,23 @@ interface SectionListProps {
 }
 ```
 
+- **웨이브**(2026-08-30 FEAT-013 구현 중 추가): 종전 `SegmentKind`에 웨이브가 없었는데
+  카탈로그의 `Chi1`/`Chi2`는 23종 **안**이라 `unsupported`가 아니고, `straight`로 적으면 화면이
+  틀린 유형을 말한다. TC-013-1의 유형 열거가 "…등"으로 열려 있어 확장이 계약을 깨지 않는다.
+  유형 판정의 정본은 **피스 클래스**이며 고도 산출에서 유추하지 않는다 — `Bri2`(jump)는 색이
+  없으면 고도가 평평하지만 여전히 슬로프 계열이고, 사용자가 목록에서 찾는 것은 "무슨 피스인가"다.
+  참조 트랙 실측 분포: `bank` `corner` `lane-change` `marker` `slope` `straight` `wave` 7종.
+- **자리 없는 행**(2026-08-30 추가): 복원 순서에 들어가지 못한 피스가 **두 종류** 있고 둘 다
+  목록에서 사라지면 안 된다(제품 계약 §5). 실측으로 확인한 형태다 —
+  `UNSUPP` fixture는 134피스 중 미지원 2개가 복원 순서에 **없고**(끝점을 몰라 사슬에 못 낀다),
+  `OPENLOOP`은 복원이 실패해 FEAT-004의 131개 진단 접두부만 나온다(전체 132).
+  종전 스펙의 `failed`("부분 실패 지점 이후")는 앞의 경우를 담지 못했다 — 그대로 두면
+  TC-013-3("미지원 행에 라벨이 표기된다")이 애초에 성립할 수 없다.
+  `unplacedReason`으로 자리가 없는 **이유**를 남기고 `failed`는 "커서가 갈 수 없다"만 뜻한다.
+  **번호를 지어내지 않는다** — 이어지는 행 번호를 주되 순서상 자리가 아님을 이 필드가 말한다.
+- **폭의 소유자는 이 컴포넌트다**(2026-08-30): 패널 320px / 레일 56px을 상수로 내보내고
+  셸이 그 값을 쓴다. 두 곳에 적으면 접기 상태에서 어긋난다 — 실측으로 셸이 따로 폭을 정했을 때
+  접기 후 캔버스가 384.7px 늘고 목록은 264px만 줄어 320px 예약이 깨졌다.
 - **focusedIndex ≠ currentIndex**: a11y-responsive §포커스 순서에 따라 화살표는 목록 내부 roving tabindex만 이동시키고(TC-013-4 "순회"), Enter/클릭에서만 `onSelect`가 호출되어 공유 커서(`currentIndex`)가 갱신된다. 이 분리가 없으면 화살표 연타만으로 캔버스·스트립이 매 프레임 따라 움직여 §공유 커서 계약의 "쓰기는 명시적 사용자 확정 이벤트에서만" 원칙이 깨진다.
 - **시맨틱**: 목록 컨테이너 `role="listbox"`, 각 행 `role="option" aria-selected={index===currentIndex}`. 진입 시 단일 Tab stop, 내부는 방향키 roving(WAI-ARIA APG 컴포지트 패턴, a11y-responsive §포커스 순서 근거).
 - **실패 행**: `aria-disabled="true"`, `onSelect` 호출 자체를 막는다(1차 방어) + `useTrackCursor().isReachable()`이 2차 방어(shared.md). 시각: `--color-fail-segment` 배경 + 아이콘, 텍스트로도 "연결 실패로 접근 불가" sr-only 부기(색 단독 금지).
