@@ -23,3 +23,6 @@
 {"schemaVersion":1,"featureId":"FEAT-015","ticketKey":"26","contentHash":"93761d13619260df5d3d95fe3e453a35bd7b3d0212b3458e7881022a4977085f","createdAt":"2026-08-30T12:52:43.162Z","branch":"main"}
 {"schemaVersion":1,"featureId":"FEAT-016","ticketKey":"27","contentHash":"8aee086f928e6153fd75c299ed5cccf1fe3b1ab92ebdfa599631c6f156a1c8f2","createdAt":"2026-08-30T12:52:46.600Z","branch":"main"}
 {"schemaVersion":1,"featureId":"FEAT-008","ticketKey":"28","contentHash":"b316f3ad99e7d0f6dd23b20c5716258400d42ea0405f83a679a34c6a343035da","createdAt":"2026-08-30T12:54:54.245Z","branch":"main","supersedes":"8"}
+{"schemaVersion":1,"featureId":"FEAT-015","ticketKey":"26","contentHash":"93761d13619260df5d3d95fe3e453a35bd7b3d0212b3458e7881022a4977085f","createdAt":"2026-08-30T13:02:20.335Z","branch":"main","closed":true}
+{"schemaVersion":1,"featureId":"FEAT-016","ticketKey":"27","contentHash":"8aee086f928e6153fd75c299ed5cccf1fe3b1ab92ebdfa599631c6f156a1c8f2","createdAt":"2026-08-30T13:02:20.337Z","branch":"main","closed":true}
+{"schemaVersion":1,"featureId":"FEAT-008","ticketKey":"28","contentHash":"b316f3ad99e7d0f6dd23b20c5716258400d42ea0405f83a679a34c6a343035da","createdAt":"2026-08-30T13:02:20.337Z","branch":"main","closed":true}
