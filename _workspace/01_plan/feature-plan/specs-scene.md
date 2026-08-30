@@ -2,7 +2,7 @@
 
 ### FEAT-006 — 3D 씬 생성과 카메라 오빗 (형상 일치)
 
-<!-- web-harness:unit feat=FEAT-006 dependsOn=FEAT-004,FEAT-005 -->
+<!-- web-harness:unit feat=FEAT-006 dependsOn=FEAT-004,FEAT-005 paths=src/widgets/track-canvas -->
 
 **동작 명세**: 고도 프로파일이 붙은 세그먼트들을 도면과 일치하는 절대 위치·방향으로 배치하고, 드래그 회전·휠/핀치 확대축소를 즉시 반영하는 오빗 카메라를 제공한다. compat=true 경로에서는 FEAT-002가 부여한 보정 메타데이터에 따라 Cor1의 45/135/225/315° 배치에 위치 보정을 적용한다.
 
@@ -15,7 +15,7 @@
 
 ### FEAT-007 — 트랙 추종 시점 (플라이스루)
 
-<!-- web-harness:unit feat=FEAT-007 dependsOn=FEAT-012 -->
+<!-- web-harness:unit feat=FEAT-007 dependsOn=FEAT-012 paths=src/widgets/track-canvas -->
 
 **동작 명세**: 결정적으로 복원된 순서를 따라 카메라가 START(Str2)부터 화살표 방향으로 이동한다. 기본은 하단 프로파일 스트립(FEAT-012 소유 표면) 스크럽(수동)이며 자동 재생은 옵션(탐색 속도 조절·즉시 일시정지)이다. 카메라 피치는 고도 프로파일의 미분에서 파생한다. FEAT-007 자신은 프로파일 스트립의 렌더링을 소유하지 않고 FEAT-012가 발생시키는 조작 이벤트를 구독할 뿐이다.
 
@@ -29,7 +29,7 @@
 
 ### FEAT-008 — 레인체인지 표현
 
-<!-- web-harness:unit feat=FEAT-008 dependsOn=FEAT-004,FEAT-005 -->
+<!-- web-harness:unit feat=FEAT-008 dependsOn=FEAT-004,FEAT-005 paths=src/widgets/track-canvas -->
 
 **동작 명세**: Lan* 피스 구간에서 레인 좌우 이동을 3D 뷰와 플라이스루 양쪽에서 시각적으로 구분해 표현한다. 텍스트 구간 목록(TC-008-3)에서의 표기는 FEAT-013이 소유한 표면 위에 레인체인지를 한 세그먼트 유형으로 얹는 것이며, 목록 자체의 렌더·조작 책임은 FEAT-013에 있다.
 
@@ -40,7 +40,7 @@
 
 ### FEAT-011 — 대형 트랙 성능 완화
 
-<!-- web-harness:unit feat=FEAT-011 dependsOn=FEAT-006 -->
+<!-- web-harness:unit feat=FEAT-011 dependsOn=FEAT-006 paths=src/widgets/track-canvas -->
 
 **동작 명세**: 대형 트랙 임계값은 300피스로 통일한다(참조 트랙 132피스 대비 약 2.3배, 잠정·ASSUMPTION-006). 132~300피스 구간은 "경계 구간"으로 정의하며, 이 구간에서는 완화 적용 여부가 Must 요구가 아니고 구현체 재량이다. 300피스를 초과하면 완화 상태로 전환하고 "대형 트랙: 일부 최적화 적용" 안내를 표시한다.
 

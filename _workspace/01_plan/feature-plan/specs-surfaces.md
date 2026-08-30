@@ -2,7 +2,7 @@
 
 ### FEAT-009 — 미지원 피스 노출
 
-<!-- web-harness:unit feat=FEAT-009 dependsOn=FEAT-002 -->
+<!-- web-harness:unit feat=FEAT-009 dependsOn=FEAT-002 paths=src/widgets/track-canvas -->
 
 **동작 명세**: 23종 정의 밖이거나 미구현 상태(예: 초기 구현 미확정인 Chi* 등)인 피스 타입을 만나면 조용히 생략하지 않고 와이어프레임 플레이스홀더와 "미지원: {타입명}" 라벨을 상시 노출한다. 동일한 표기는 FEAT-013(텍스트 구간 목록)에도 반영되며, 3D 뷰의 플레이스홀더 렌더와는 별도 표시 경로다.
 
@@ -13,7 +13,7 @@
 
 ### FEAT-010 — 근거 등급 표기 (정직성)
 
-<!-- web-harness:unit feat=FEAT-010 dependsOn=FEAT-004,FEAT-005 -->
+<!-- web-harness:unit feat=FEAT-010 dependsOn=FEAT-004,FEAT-005 paths=src/shared/ui -->
 
 **동작 명세**: 슬로프 낙차·뱅크 전이곡선·레인 폭·총 길이·총 피스 수 등 값 옆에 등급 배지(measured/confirmed/inferred/unknown)를 3D 뷰와 프로파일 그래프 양쪽에 상시 노출한다. R2(절대 단위 표기 금지, B-001 미해소)에 따라 총 길이·낙차 등은 절대 미터 단위로 표시하지 않는다. 범례는 접힘·펼침 상태 모두 3D 뷰의 동일한 중앙축에 정렬하며, 개폐로 패널 폭이 달라져도 트리거의 중심 X 좌표는 바뀌지 않는다.
 
@@ -26,7 +26,7 @@
 
 ### FEAT-012 — 하단 프로파일 스트립 (표면)
 
-<!-- web-harness:unit feat=FEAT-012 dependsOn=FEAT-006,FEAT-008,FEAT-010,FEAT-013 -->
+<!-- web-harness:unit feat=FEAT-012 dependsOn=FEAT-006,FEAT-008,FEAT-010,FEAT-013 paths=src/widgets/profile-strip -->
 
 **동작 명세**: 경로 전체의 고도 프로파일(`ElevatedSegment.elevationProfile`과 누적 절대 고도)을 화면 하단에 가로 스트립 그래프로 렌더하고, 현재 카메라 위치를 인디케이터로 표시하며 클릭/드래그/키보드 조작을 이벤트로 FEAT-007에 전달하는 owner다. 그래프 형상·구간 경계 표시·스케일 축 표기는 FEAT-007(카메라 이동)과 분리된 이 표면 고유의 책임이다.
 
@@ -39,7 +39,7 @@
 
 ### FEAT-013 — 텍스트 구간 목록 (표면)
 
-<!-- web-harness:unit feat=FEAT-013 dependsOn=FEAT-004,FEAT-005 -->
+<!-- web-harness:unit feat=FEAT-013 dependsOn=FEAT-004,FEAT-005 paths=src/widgets/section-list -->
 
 **동작 명세**: `RestoredPath` 순서를 따라 전체 세그먼트를 표 형태로 나열하는 접이식 패널이다. 데스크톱/태블릿에서 접으면 목록은 위쪽으로 사라지지 않고 좌측 56px 측면 레일로 축소되어 확보한 폭을 3D 캔버스가 사용하며, 펼치면 기존 측면 폭과 전체 행을 복원한다. 각 행은 순서·피스 타입·구간 유형(직선/코너/슬로프/뱅크/레인체인지/마커/미지원 등)을 표시하고, 행 클릭 또는 키보드 조작 시 프로파일 스트립·3D 카메라가 해당 지점으로 이동한다(FEAT-007/FEAT-012와 연동).
 
@@ -52,7 +52,7 @@
 
 ### FEAT-014 — WebGL 미지원 감지 및 2D 대체 표현
 
-<!-- web-harness:unit feat=FEAT-014 dependsOn=none -->
+<!-- web-harness:unit feat=FEAT-014 dependsOn=none paths=src/pages/track-viewer,src/widgets/section-list -->
 
 **동작 명세**: 브라우저가 WebGL을 지원하지 않거나 컨텍스트 생성에 실패하면 3D 렌더를 시도하지 않고 감지 즉시 안내 메시지와 2D 요약 표현(FEAT-013 텍스트 구간 목록)으로 대체한다. 이 감지는 FEAT-006(3D 씬 생성) 진입 이전 단계에서 게이트로 동작한다.
 
