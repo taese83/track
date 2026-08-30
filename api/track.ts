@@ -30,6 +30,7 @@ const ERROR_STATUS: Record<TrackErrorCode, number> = {
   UPSTREAM_FETCH_FAILED: 502,
   UPSTREAM_TIMEOUT: 504,
   UPSTREAM_RESPONSE_UNRECOGNIZED: 502,
+  FIXTURE_NOT_RECORDED: 501,
   INTERNAL_ERROR: 500,
 }
 
@@ -69,9 +70,16 @@ type UpstreamOutcome =
   | { kind: 'not-found' }
   | { kind: 'failed'; detail: string }
   | { kind: 'timeout' }
+  /** fixture 모드에서만 나온다 — 업스트림에 묻지 않았으므로 존재 여부를 모른다 */
+  | { kind: 'not-recorded' }
 
-/** fixture 모드에서 파일로 녹화할 수 없는 실패를 합성하는 예약 코드 (fixtures/track/README.md) */
+/**
+ * fixture 모드에서 파일로 녹화할 수 없는 실패를 합성하는 예약 코드 (fixtures/track/README.md).
+ * **"존재하지 않는 코드"도 예약 코드다** — api-schema §9가 그것을 에러 fixture 1종으로
+ * 규정했기 때문이다. 녹화본이 없다는 사실에서 "업스트림에 없다"를 유도하지 않는다.
+ */
 const RESERVED_FIXTURE_CODES: Record<string, UpstreamOutcome | 'slow'> = {
+  ZZZZZZ: { kind: 'not-found' },
   SRVERR: { kind: 'failed', detail: 'fixture: upstream responded 503' },
   TIMEOUT: { kind: 'timeout' },
   SLOWLY: 'slow',
@@ -97,7 +105,9 @@ async function readFixtureFile(code: string): Promise<UpstreamOutcome> {
     const body = await readFile(path.join(fixtureDir, `${code}.js.txt`), 'utf8')
     return { kind: 'ok', body }
   } catch {
-    return { kind: 'not-found' } // 등록되지 않은 코드 = 존재하지 않는 트랙
+    // 녹화본이 없다 ≠ 업스트림에 없다. fixture 모드는 편집기를 호출하지 않으므로
+    // (api-schema §9) 존재 여부를 **알 수 없다** — 아는 것만 말한다.
+    return { kind: 'not-recorded' }
   }
 }
 
@@ -163,6 +173,11 @@ export async function handleTrackRequest(urlParam: string | null): Promise<Track
     switch (outcome.kind) {
       case 'not-found':
         return fail('TRACK_NOT_FOUND', `track ${code} does not exist upstream`)
+      case 'not-recorded':
+        return fail(
+          'FIXTURE_NOT_RECORDED',
+          `track ${code} is not recorded in local fixtures; upstream was not contacted`,
+        )
       case 'timeout':
         return fail('UPSTREAM_TIMEOUT', `upstream did not respond within ${UPSTREAM_TIMEOUT_MS}ms`)
       case 'failed':

@@ -16,6 +16,11 @@ export type LoadErrorReason =
   | 'not-closed-fatal'
   | 'timeout'
   | 'not-found'
+  /**
+   * 로컬 fixture 모드에 이 코드의 녹화본이 없다. `not-found`와 갈라 둔다 —
+   * 서버가 업스트림에 묻지 않았으므로 "없는 코드"라고 말할 근거가 없다.
+   */
+  | 'fixture-not-recorded'
   | 'invalid-input'
   | 'start-piece-missing'
 

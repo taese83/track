@@ -63,6 +63,14 @@ export type TrackErrorCode =
   | 'UPSTREAM_TIMEOUT'
   /** 502 — compat/text 변수 추출 실패(편집기 응답 포맷 변경 등) */
   | 'UPSTREAM_RESPONSE_UNRECOGNIZED'
+  /**
+   * 501 — **로컬 fixture 모드 전용.** 이 코드의 녹화본이 없어 업스트림에 묻지 않았다.
+   * `TRACK_NOT_FOUND`와 갈라야 하는 이유: fixture 모드는 편집기를 호출하지 않으므로
+   * 트랙의 존재 여부를 **알 수 없다**. 둘을 같은 코드로 보내면 화면이 "코드가 맞는지
+   * 확인해 주세요"라고 말하는데, 실재하는 코드에 대해 그것은 근거 없는 단정이다.
+   * production(`NODE_ENV=production` 또는 `TRACK_UPSTREAM=live`)에서는 발생하지 않는다.
+   */
+  | 'FIXTURE_NOT_RECORDED'
   /** 500 — 위 어디에도 속하지 않는 예외 */
   | 'INTERNAL_ERROR'
 

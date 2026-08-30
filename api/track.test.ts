@@ -46,6 +46,33 @@ describe('handleTrackRequest — fixture 업스트림', () => {
     expect(asError(result.body).code).toBe('TRACK_NOT_FOUND')
   })
 
+  // 회귀(2026-08-30 사용자 보고): FTSBH1은 업스트림에 **실재한다**(실측 GET /load/FTSBH1.js
+  // → 200 · 3343B). 그런데 fixture 모드가 녹화본 부재를 404 "존재하지 않는 코드"로 접어
+  // 화면이 "코드가 맞는지 확인해 주세요"라고 말했다. fixture 모드는 편집기를 호출하지
+  // 않으므로(api-schema §9) 존재 여부를 알 수 없다 — 아는 것만 말해야 한다.
+  it('녹화본이 없는 코드는 404가 아니라 501 FIXTURE_NOT_RECORDED다', async () => {
+    const result = await handleTrackRequest('https://mini4wd-track-editor.pimentoso.com/view/FTSBH1')
+
+    expect(result.status).toBe(501)
+    const error = asError(result.body)
+    expect(error.code).toBe('FIXTURE_NOT_RECORDED')
+    // 묻지 않았다는 사실이 메시지에 남아야 한다 — 로그만 보는 사람도 오해하지 않도록
+    expect(error.message).toContain('upstream was not contacted')
+    // 존재를 부정하지 않는다
+    expect(error.message).not.toContain('does not exist')
+  })
+
+  it('예약 코드 ZZZZZZ만 "존재하지 않음"을 뜻한다 — 두 판정이 갈린다', async () => {
+    const missing = asError((await handleTrackRequest('ZZZZZZ')).body)
+    const unrecorded = asError((await handleTrackRequest('FTSBH1')).body)
+
+    expect(missing.code).not.toBe(unrecorded.code)
+    // 둘 다 캐시되지 않는다(api-schema §7 — 에러 응답 캐시 금지)
+    for (const input of ['ZZZZZZ', 'FTSBH1']) {
+      expect((await handleTrackRequest(input)).headers['cache-control']).toBe('no-store')
+    }
+  })
+
   it('업스트림 비-2xx는 502 UPSTREAM_FETCH_FAILED다 (TC-001-5)', async () => {
     const result = await handleTrackRequest('SRVERR')
 

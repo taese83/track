@@ -59,6 +59,21 @@ test('TC-001-3 · 존재하지 않는 트랙 코드는 "트랙을 찾을 수 없
   await expect(page.getByTestId('error-retry')).toBeVisible()
 })
 
+/**
+ * 회귀(2026-08-30 사용자 보고) — 실재하는 트랙 코드 FTSBH1이 "코드가 맞는지 확인해 주세요"로
+ * 착지했다. 업스트림 실측은 200(3343B)이었고, 404를 낸 것은 녹화본 부재를 "존재하지 않음"으로
+ * 접은 로컬 fixture 경로였다. 화면이 사용자에게 **틀린 원인**을 지목하던 문제다.
+ */
+test('녹화본 없는 코드는 "코드를 확인하라"고 말하지 않는다', async ({ page }) => {
+  await submit(page, 'https://mini4wd-track-editor.pimentoso.com/view/FTSBH1')
+
+  const alert = page.getByRole('alert')
+  await expect(alert).toContainText('로컬 녹화본에 없어')
+  // 이 문구가 다시 나오면 회귀다 — 코드는 맞았다
+  await expect(alert).not.toContainText('코드가 맞는지 확인해 주세요')
+  await expect(page.getByTestId('error-retry')).toBeVisible()
+})
+
 test('TC-001-4 · 임계값을 넘겨 지연되면 "시간이 걸리고 있어요" 안내가 추가된다', async ({ page }) => {
   await submit(page, 'SLOWLY')
 
