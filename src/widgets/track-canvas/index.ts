@@ -1,0 +1,6 @@
+export { TrackCanvas } from './ui/TrackCanvas'
+export type { TrackCanvasProps } from './ui/TrackCanvas'
+export { markRenderStart } from './lib/perf-stats'
+export type { PerfStats } from './lib/perf-stats'
+export { buildSceneLayout } from './lib/scene-layout'
+export type { SceneBounds, SceneLayout, SceneLayoutInput, SceneSegment, ScenePoint } from './lib/scene-layout'
