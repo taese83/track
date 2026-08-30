@@ -52,7 +52,7 @@
 
 ### FEAT-014 — WebGL 미지원 감지 및 2D 대체 표현
 
-<!-- web-harness:unit feat=FEAT-014 dependsOn=FEAT-013,FEAT-006 paths=src/pages/track-viewer,src/widgets/section-list -->
+<!-- web-harness:unit feat=FEAT-014 dependsOn=FEAT-013,FEAT-006,FEAT-010 paths=src/pages/track-viewer,src/widgets/section-list -->
 
 **동작 명세**: 브라우저가 WebGL을 지원하지 않거나 컨텍스트 생성에 실패하면 3D 렌더를 시도하지 않고 감지 즉시 안내 메시지와 2D 요약 표현(FEAT-013 텍스트 구간 목록)으로 대체한다. 이 감지는 FEAT-006(3D 씬 생성) 진입 이전 단계에서 게이트로 동작한다.
 
