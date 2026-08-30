@@ -17,12 +17,40 @@
     "TC-003-5",
     "TC-003-6"
   ],
-  "ALLOWED_PATHS": [],
-  "PUBLIC_CONTRACTS_TO_PRESERVE": [],
-  "NON_GOALS": [],
-  "CHANGE_BUDGET": null,
+  "ALLOWED_PATHS": [
+    "src/entities/track/lib/restore/",
+    "src/entities/track/model/",
+    "src/features/load-track/model/types.ts",
+    "src/pages/track-viewer/ui/TrackViewerPage.tsx",
+    "src/pages/track-viewer/ui/ErrorScreen.tsx",
+    "fixtures/track/",
+    "e2e/"
+  ],
+  "PUBLIC_CONTRACTS_TO_PRESERVE": [
+    "ParsedPiece 10필드와 parseTrackString 시그니처 — FEAT-003은 소비자이며 파서를 바꾸지 않는다",
+    "parse-track-string.test.ts 35건과 piece-catalog.ts 끝점 카탈로그 23종 — 회귀 금지",
+    "GET /api/track 응답 봉투·TrackErrorCode 6종·RawTrackResponse 4필드·isRawTrackResponse",
+    "extractCode / isTrackCode / ALLOWED_HOST — FEAT-001의 host 위장 거부 회귀 금지",
+    "LoadState 5종과 LoadErrorReason 기존 6종 — 제거·개명 금지(추가는 허용)",
+    "e2e 20건의 관측 동작 — FEAT-001 11건(세션 캐시 요청 0건·출처 링크 상시 노출)과 FEAT-002 9건",
+    "접근성 baseline: skip link · TopBar의 h1 단독 소유 · ErrorScreen의 details 접이식 디버그 영역 · 화면당 primary 1개",
+    "요청당 업스트림 fetch 정확히 1회 — 순서 복원 추가로 재조회가 생기지 않는다",
+    "data-view-state가 실패 화면에서 error를 노출하는 성질(FEAT-002가 교정)"
+  ],
+  "NON_GOALS": [
+    "폐곡선·Z폐합 검증 화면과 부분 실패 UI — FEAT-004. 탐색이 폐합을 성공 판정으로 쓰더라도 화면 계약으로 승격하지 않는다",
+    "고도 프로파일 — FEAT-005",
+    "3D 씬·카메라·3분할 셸 — FEAT-006/007/012/013",
+    "레인체인지 — FEAT-008",
+    "미지원 피스 배지 UI — FEAT-009",
+    "근거등급 UI — FEAT-010",
+    "대형 트랙 완화 — FEAT-011",
+    "WebGL 게이트 — FEAT-014",
+    "px↔실물 cm 배율 확정 — 허용오차는 편집기 px 단위로 다룬다"
+  ],
+  "CHANGE_BUDGET": "src 5~8파일(restore 알고리즘·타입·화면 배선·에러 축 1개 추가) + 테스트. 신규 런타임 의존성 0. 신규 fixture 1종(MULTISTART)",
   "sourceDigest": "78d7d6f5f300654d231bcff2d55ac4c4dece7f950e302b01b671fab268d7f3e8",
-  "needsConfirmation": true
+  "needsConfirmation": false
 }
 ```
 
@@ -115,3 +143,93 @@
 틀린 답으로 지목된 `Str1(658,600)`은 raw#31로 무리 B다. **TC-003-3은 이 쌍(#18↔#25,
 #31↔#32)으로 기계 검증 가능하다** — "108/124번"이라는 서수는 복원된 순서 기준이라
 구현 전에는 쓸 수 없고, raw 인덱스와 좌표는 지금 쓸 수 있다.
+
+### R1 실행 증거 (오케스트레이터가 직접 실행 — 두 빌더 스폰 모두 셸 도구가 없어 자체 확인 미실행)
+
+실행 위치 `workspace/track` · Node `v24.18.1`(`.nvmrc` pin 일치).
+
+| 게이트 | 명령 | exit | 결과 |
+|---|---|---|---|
+| 스폰 완결성 (domain) | `verify-spawn-completion --paths src/entities/track fixtures --expect ×5` | 0 | 검사 15 · SUSPECT 0 · MISSING 0 |
+| 스폰 완결성 (wiring) | `verify-spawn-completion --paths src/features src/pages e2e fixtures --expect ×5` | 0 | 검사 19 · SUSPECT 0 · MISSING 0 |
+| typecheck | `pnpm typecheck` | 0 | — |
+| lint (소유 범위) | `npx eslint src api e2e` | 0 | — |
+| unit | `pnpm test` | 0 | 5파일 **117 테스트**(복원 17건 신규) |
+| build | `pnpm build` | 0 | — |
+| e2e | `pnpm e2e` | 0 | **27 통과**(FEAT-001 11 · FEAT-002 9 · FEAT-003 신규 7) |
+
+| TC | 유닛 | e2e | 관측값 |
+|---|---|---|---|
+| TC-003-1 | ✅ | ✅ | 132개 순서, `Str2` 시작, **마지막 진출 끝점이 START 진입점으로 복귀(좌표 `<0.001px`)** · `ordered-count` = 132 |
+| TC-003-2 | ✅ | ✅ | 3회 반복 동일 + **입력 배열 셔플에도 동일**(seed 3종) |
+| TC-003-3 | ✅ | — | 무리 A(#18↔#25)·B(#31↔#32)끼리 인접, **D-039가 배제한 #18↔#31을 고르지 않음** |
+| TC-003-4 | ✅ | ✅ | `NOSTART` → `start-piece-missing`, 전용 문구 + 디버그 발췌, 성공 카드 부재 |
+| TC-003-5 | ✅ | ✅ | `MULTISTART` → 최초 등장 `Str2` 선택 + 근거 노출, 나머지 `Str2`도 순서에 포함 |
+| TC-003-6 | ✅ | — | START 진출이 `vertex2`(화살표) 쪽 — 반대편은 `>1px` |
+
+**빌더가 미검증으로 남긴 핵심 주장이 실행으로 확인됐다.** 그는 "`SEAM_TOLERANCE = 1`이 실측
+간극 사이 값이라는 것이 그 상수가 옳다는 증명은 아니다"라고 정직하게 적었다 — 참조 트랙
+132/132 복원과 좌표 수준 폐합이 이제 실행 증거다. D-038 ②(매달린 끝 #117↔#118 연결)도 발화를
+테스트로 고정했다.
+
+### 요청 외 변경 1건 — 사전 보고된 계약 충돌 (e2e/track-parse.spec.ts)
+
+배선 빌더가 **자기 소유 범위 밖임을 알고 손대지 않은 채 정확히 사전 보고**했고, e2e 실행이
+그 예측을 그대로 재현했다(27건 중 정확히 그 1건만 실패).
+
+FEAT-002가 남긴 `회귀 · START 부재는 파싱 실패가 아니다(판정은 FEAT-003)`는 제목 스스로
+밝히듯 **이 티켓을 기다리던 자리표**였다. 당시에는 순서 복원이 없어 파싱만 끝나면 성공 카드가
+떴고 `piece-count` 131을 기대했다. FEAT-003이 그 판정을 붙이면서 `NOSTART`는 복원 실패 화면으로
+간다 — 두 기대는 **동시에 성립할 수 없다.**
+
+삭제하지 않고 **지켜야 할 회귀를 다시 표현했다**: 지킬 것은 화면 종류가 아니라 *두 실패가
+구분된다*는 사실이다(`data-model.md`: "두 실패를 하나의 에러 타입으로 합치면 REQ-F-007 검증
+자체가 불가능해진다"). 갱신본은 `NOSTART`가 START 부재 문구를 내고 파싱 문구를 **내지 않음**을
+확인한 뒤, 대조군으로 `PARSEFAIL`이 여전히 파싱 문구를 냄을 확인한다. `e2e/`는 이 라운드의
+`ALLOWED_PATHS` 안이다.
+
+### 라운드 종료 게이트 3종
+
+| 게이트 | 상태 | 근거 |
+|---|---|---|
+| ① 승격 QA | **N/A** | `CAPABILITY_ESCALATION: none`. 실제 diff에 서버 실행 경로·인증/DB/서버 SDK·신규 엔드포인트 fetch·외부 키가 없다(`api/` 무변경, 신규 런타임 의존성 0) |
+| ② Evidence 재발급 | **BLOCKED (하네스 결함, FEAT-002와 동일)** | `_workspace/04_qa/evidence/` 부재로 재발급 의무 미발화. `run-quality-gates`는 여전히 ingestion 마커로 exit 2 — 원인·판단은 `change-scope-archive/FEAT-002.md` 참조 |
+| ③ 문서 동기화 | **완료** | `DOCS_TO_UPDATE: none`. 부수 정정 1건: `fixtures/track/README.md`에 `MULTISTART` 행 추가 + 성공 fixture 개수 서술 8종 → 9종 |
+
+### 스폰 사고 1건 — 소유권 훅 오판으로 1차 스폰 전면 차단 (94,430 토큰 소모)
+
+`feat-003-restore-domain` 1차 스폰이 5개 owned 경로 전부에서 차단돼 **디스크 변경 0건**으로
+끝났다. 원인은 `enforce-agent-ownership.mjs`의 `readAllowedPaths`다:
+
+1. 티켓 픽업이 발급한 뼈대는 ```json change-scope 펜스에 `"ALLOWED_PATHS": []`를 넣는다.
+2. 나는 **정본인 펜스가 아니라 마크다운 줄에만** 경로를 채웠다(내 실수).
+3. 펜스가 비어 폴백이 돌았는데, 폴백 정규식
+   `/^[-*\s]*["*]{0,2}ALLOWED_PATHS["*]{0,2}\s*[:：]\s*(\S.*)$/mi`가 문서에서 **먼저 나오는
+   펜스 자신의 줄** `  "ALLOWED_PATHS": [],`을 잡아 경로 목록 `["[]"]`을 만들었다.
+4. 접두 `[]`는 어떤 경로와도 맞지 않아 layerMap과의 교집합이 공집합이 됐다.
+
+FEAT-002가 통과한 이유는 그 펜스의 `ALLOWED_PATHS`가 8개로 채워져 조기 반환됐기 때문이다.
+
+**조치**: 펜스를 채웠다(재현·검증 완료). 산출물은 1차 스폰이 반환 본문으로 보존해 재개
+스폰이 그대로 썼다 — 재설계 없음.
+
+**하네스 쪽 미해소 2건**(이 프로젝트 밖 `web-harness` repo 작업이라 손대지 않았다):
+- 폴백 정규식이 JSON 펜스 영역을 제외하지 않는다. 훅 주석은 "판정할 수 없으면 통과시키지
+  않는다"며 fail-closed를 의도했으나 실제로는 판정 불가가 아니라 **틀린 판정**이 나오고,
+  에러 메시지가 원인을 `spec-lock layerMap`으로 반대로 가리킨다.
+- 차단된 에이전트가 `enforce-agent-ownership.mjs`를 읽을 수 없다(`enforce-sensitive-access`의
+  `DENY_PATH_OUTSIDE`). 차단 규칙을 못 읽으니 자력 진단이 불가능하다.
+
+### Layer 3 runaway 임계 초과 1건
+
+`feat-003-restore-domain`이 누적 133,512 토큰으로 임계 120,000을 넘었다. 원인은 알고리즘이
+아니라 **위 차단 진단에 쓴 1차 94,430 토큰**이다. 재개분 단독 소비는 누적치로만 보고돼 분리
+관측이 불가능하다 — 지어내지 않고 그대로 기록한다.
+
+### 관측했으나 조치하지 않은 것 (범위 밖 — FEAT-004/011)
+
+- `OPENLOOP` 제출 시 `traversal-incomplete` → `not-closed-fatal` **전면 에러 화면**이 뜬다.
+  부분 실패 UI(연결 가능 구간 렌더 + 경고 배너)는 FEAT-004의 NON_GOAL이라 그대로 뒀다.
+  **FEAT-004가 이 화면을 부분 실패로 바꿔야 TC-004-2가 성립한다.**
+- `LARGE1`(304피스) 제출 시 백트래킹이 `SEARCH_NODE_BUDGET`(200k)까지 메인 스레드에서 돌 수
+  있다. 완화는 FEAT-011 소관이다.
