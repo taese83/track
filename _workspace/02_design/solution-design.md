@@ -186,7 +186,7 @@ FEAT 단위 티켓 14건이 병행될 예정이라 이 경계가 실사용된다
 | `src/features/load-track` | FEAT-001 클라이언트 | 실존 슬라이스 |
 | `src/shared/lib/track-cursor` | 공유 커서 owner | component-spec이 경로까지 고정 |
 | `src/shared/ui` | EvidenceBadge/AlertSlot/Legend/TopBar | component-spec이 경로까지 고정 |
-| `src/widgets/track-canvas` | FEAT-006/007/008/009/011 3D 표면 | component-spec |
+| `src/widgets/track-canvas` | FEAT-006/007/008/009/011/015 3D 표면 | component-spec |
 | `src/widgets/profile-strip` | FEAT-012 owner | component-spec |
 | `src/widgets/section-list` | FEAT-013/014 대체 표현 | component-spec |
 | `src/widgets/view-controls` | ControlCluster | component-spec |
@@ -334,11 +334,11 @@ substrate의 두 키는 **하네스 기본값**(eslint/prettier)으로 채워지
     {"scope": "src/entities/track/lib/parse", "rationale": "FEAT-002 파싱 — OD-001 확정으로 하위 디렉터리가 병렬 경계가 된다"},
     {"scope": "src/entities/track/lib/restore", "rationale": "FEAT-003 순서 복원"},
     {"scope": "src/entities/track/lib/closure", "rationale": "FEAT-004 폐곡선 검증"},
-    {"scope": "src/entities/track/lib/elevation", "rationale": "FEAT-005 고도 프로파일"},
+    {"scope": "src/entities/track/lib/elevation", "rationale": "FEAT-005 고도 프로파일 · FEAT-016 웨이브 횡돌출(피스 내부 2D 경로 변형이라 같은 모듈이다)"},
     {"scope": "src/features/load-track", "rationale": "FEAT-001 클라이언트 슬라이스(실존)"},
     {"scope": "src/shared/lib/track-cursor", "rationale": "공유 커서. component-spec이 경로까지 고정했고 목록·캔버스·스트립·컨트롤이 모두 구독한다 — FEAT-013이 만들고 나머지는 소비만 한다"},
     {"scope": "src/shared/ui", "rationale": "EvidenceBadge·AlertSlot·Legend·TopBar 공용 프리미티브"},
-    {"scope": "src/widgets/track-canvas", "rationale": "FEAT-006/007/008/009/011이 공유하는 3D 표면 — 이 다섯은 경계로 갈라지지 않으므로 순차화가 필요하다"},
+    {"scope": "src/widgets/track-canvas", "rationale": "FEAT-006/007/008/009/011/015가 공유하는 3D 표면 — 이 여섯은 경계로 갈라지지 않으므로 순차화가 필요하다"},
     {"scope": "src/widgets/profile-strip", "rationale": "FEAT-012 owner. FEAT-007은 이벤트 구독자일 뿐이다"},
     {"scope": "src/widgets/section-list", "rationale": "FEAT-013 owner이자 FEAT-014 대체 표현의 주 콘텐츠"},
     {"scope": "src/widgets/view-controls", "rationale": "ControlCluster — 시점·재생·탐색 속도"},

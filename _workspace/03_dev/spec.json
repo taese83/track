@@ -303,7 +303,7 @@
     },
     {
       "scope": "src/entities/track/lib/elevation",
-      "rationale": "FEAT-005 고도 프로파일"
+      "rationale": "FEAT-005 고도 프로파일 · FEAT-016 웨이브 횡돌출(피스 내부 2D 경로 변형이라 같은 모듈이다)"
     },
     {
       "scope": "src/features/load-track",
@@ -319,7 +319,7 @@
     },
     {
       "scope": "src/widgets/track-canvas",
-      "rationale": "FEAT-006/007/008/009/011이 공유하는 3D 표면 — 이 다섯은 경계로 갈라지지 않으므로 순차화가 필요하다"
+      "rationale": "FEAT-006/007/008/009/011/015가 공유하는 3D 표면 — 이 여섯은 경계로 갈라지지 않으므로 순차화가 필요하다"
     },
     {
       "scope": "src/widgets/profile-strip",
@@ -412,11 +412,11 @@
           },
           {
             "path": "_workspace/01_plan/feature-plan/specs-pipeline.md",
-            "sha256": "7fb25481fa208c77a14aa3b6e3455c35751427cb2982e9fddd97942f41835113"
+            "sha256": "04fef9a960c711f09e8f15e76054d641c2759aae88ae58f41dc3854c52d3142a"
           },
           {
             "path": "_workspace/01_plan/feature-plan/specs-scene.md",
-            "sha256": "3f785ede244b09abc0ee821086a5dc58de2650caee66eea119803ddd045077f8"
+            "sha256": "2ee8e26410da6d8460d1ec04176177b95817a437ab620376964a9ca68d3eb9df"
           },
           {
             "path": "_workspace/01_plan/feature-plan/specs-surfaces.md",
@@ -427,7 +427,7 @@
             "sha256": "20f3b493ca321e56fa083d65c661deafa2720280fffbfe055da741b9d12221ae"
           }
         ],
-        "sha256": "1f244b2500ad5886051999edc9bb0fb055b678474f9f04428895d8ff04fd7526"
+        "sha256": "fda806c2334d7d26535a5b6223d014f65d644042eb16d5d665866208a7f6d32d"
       },
       {
         "path": "_workspace/01_plan/tech-stack.md",
@@ -503,9 +503,9 @@
       {
         "path": "_workspace/02_design/solution-design.md",
         "present": true,
-        "sha256": "bd39a3d72644c877b524c6d34ca76414ffdb856be5aec532dcc614bec178bbce"
+        "sha256": "bbf1fc228d20a3bc4e2e607cf4f0ff7a2c469bf2d8f2f666faaf26342b97cd0e"
       }
     ],
-    "combined": "a8bedba4ebcef8594a9306dca066a184c7ed0ed54aeb9d512df964881f00fac5"
+    "combined": "4be6083961556eda0a14321ff7897df964ad9790f1c0e0cbac6a4b9524e87a92"
   }
 }
