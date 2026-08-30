@@ -1,0 +1,3 @@
+const COMPATIBILITY_ID = 26586;
+var compat = parseInt(258262) < COMPATIBILITY_ID;
+var text = '#';
