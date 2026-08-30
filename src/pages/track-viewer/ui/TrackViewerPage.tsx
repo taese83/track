@@ -113,7 +113,13 @@ function buildScene(pieces: readonly ParsedPiece[], closure: ClosureValidation) 
   const oriented = orientPath(connected)
   const elevated = buildElevatedSegments(oriented).segments
   const truncated = connected.length < pieces.length
-  return { layout: buildSceneLayout({ oriented, elevated, truncated }), elevated }
+  // 피스 전체를 넘긴다 — `oriented`는 순서에 자리를 얻은 것만 담으므로, 이것이 없으면
+  // 씬이 미지원 피스의 **존재 자체를 모른다**(FEAT-009). 실측: `UNSUPP` 134피스 중 2개가
+  // `connectedPieceIds`에서 빠져 3D에 한 개도 들어오지 않았다.
+  return {
+    layout: buildSceneLayout({ oriented, elevated, truncated, allPieces: pieces }),
+    elevated,
+  }
 }
 
 /**

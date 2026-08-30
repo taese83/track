@@ -25,6 +25,7 @@ import {
   buildBoundaryGeometry,
   buildDashedOutlineGeometry,
   buildMarkerGeometry,
+  buildPlaceholderGeometry,
   buildTrackGeometries,
 } from '../lib/track-geometry'
 import type { MarkerPlacement } from '../lib/marker-geometry'
@@ -76,6 +77,9 @@ const LANE_LINE_OPACITY = 0.45
 
 /** 표식·파선은 어느 표면색 위에서도 읽혀야 한다 — 색 채널과 독립인 것이 형태 채널의 요건이다 */
 const MARKER_COLOR = '#F2F4F8'
+
+/** design-system tokens §2 `warning` — 미지원은 경고이지 트랙이 아니다 */
+const PLACEHOLDER_COLOR = '#E8B339'
 
 /** 세그먼트 가운데 레인의 중간 표본 — 표식과 라벨이 붙는 자리 */
 function anchorOf(band: SegmentBands): { x: number; y: number; z: number } | null {
@@ -133,6 +137,8 @@ function TrackMesh({ layout, elevated }: TrackCanvasProps) {
     }
 
     return {
+      placeholders: buildPlaceholderGeometry(layout.unsupportedPlaceholders),
+      placeholderLabels: layout.unsupportedPlaceholders,
       surfaces,
       boundaries: buildBoundaryGeometry(bands),
       markers: buildMarkerGeometry(placements),
@@ -156,6 +162,7 @@ function TrackMesh({ layout, elevated }: TrackCanvasProps) {
       scene.boundaries.dispose()
       scene.markers.dispose()
       scene.dashed.dispose()
+      scene.placeholders.dispose()
     },
     [scene],
   )
@@ -191,6 +198,41 @@ function TrackMesh({ layout, elevated }: TrackCanvasProps) {
       <mesh geometry={scene.markers}>
         <meshBasicMaterial color={MARKER_COLOR} side={2} depthWrite={false} />
       </mesh>
+
+      {/*
+        FEAT-009 — 미지원 피스는 조용히 생략하지 않는다. 경로에 끼워 넣지 않고 자기 선언
+        좌표에 와이어프레임을 세운다(끝점을 모르는 피스를 이어 붙이면 있지도 않은 연결을
+        주장하게 된다). 채워 그리지 않는 것이 요구다 — 면이면 "여기 트랙이 있다"로 읽힌다.
+      */}
+      <lineSegments geometry={scene.placeholders}>
+        <lineBasicMaterial color={PLACEHOLDER_COLOR} depthWrite={false} />
+      </lineSegments>
+
+      {/* 미지원 피스마다 **개별** 라벨 — 여러 개를 "미지원 N건"으로 합치지 않는다(TC-009-3) */}
+      {scene.placeholderLabels.map((placeholder) => (
+        <Html
+          key={placeholder.pieceId}
+          position={[placeholder.x, placeholder.y + 22, placeholder.z]}
+          center
+          zIndexRange={[0, 0]}
+          style={{ pointerEvents: 'none' }}
+        >
+          <span
+            data-testid="unsupported-label"
+            data-piece-class={placeholder.pieceClass}
+            style={{
+              whiteSpace: 'nowrap',
+              fontSize: 10,
+              padding: '1px 4px',
+              borderRadius: 3,
+              color: '#0F1114',
+              background: 'rgb(232 179 57 / 0.92)',
+            }}
+          >
+            {placeholder.label}
+          </span>
+        </Html>
+      ))}
 
       {/* FEAT-015 텍스트 채널 — 평지가 아닌 세그먼트에만 붙는다 */}
       {scene.labels.map((label) => (
