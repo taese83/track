@@ -1,0 +1,19 @@
+{
+  "task": "feat-002-parse-domain",
+  "readMode": "injected",
+  "reads": [
+    "_workspace/02_design/piece-geometry.md"
+  ],
+  "outputs": [
+    "src/entities/track/model/types.ts",
+    "src/entities/track/lib/parse/piece-catalog.ts",
+    "src/entities/track/lib/parse/parse-track-string.ts",
+    "src/entities/track/lib/parse/parse-track-string.test.ts",
+    "src/entities/track/lib/parse/index.ts"
+  ],
+  "planLock": {
+    "digest": "093b99e79d88a3fc",
+    "at": "2026-08-30T03:55:54.705Z",
+    "specDigest": "586ceddb8d34945c55149fb900f3ac5b28e5881e8538c1353032dfcca399c0d3"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "project": {
+    "appRoot": ".",
+    "packageManager": "pnpm",
+    "aliases": { "@/*": "src/*" },
+    "router": "react-router"
+  },
+  "uiLibrary": {
+    "package": "tailwindcss",
+    "themePath": "src/index.css",
+    "uiLane": "tailwind-shadcn",
+    "vendoredUiPath": "src/shared/ui"
+  },
+  "api": {
+    "clientImport": "@/features/load-track",
+    "responseWrapper": "ResponseSuccessType|ResponseErrorType (src/entities/track/model/types.ts)",
+    "queryLibrary": null,
+    "authContext": null
+  },
+  "serviceContext": null,
+  "modal": { "registryPath": null },
+  "msw": { "directory": null, "activationEnv": null },
+  "openapi": { "source": null, "generator": "manual-types" }
+}

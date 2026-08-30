@@ -1,0 +1,18 @@
+{
+  "task": "feat-002-parse-wiring",
+  "readMode": "injected",
+  "reads": [
+    "_workspace/03_dev/change-scope.md"
+  ],
+  "outputs": [
+    "fixtures/track/EMPTY1.js.txt",
+    "fixtures/track/README.md",
+    "src/pages/track-viewer/ui/TrackViewerPage.tsx",
+    "e2e/track-parse.spec.ts"
+  ],
+  "planLock": {
+    "digest": "303efa3c0482d167",
+    "at": "2026-08-30T03:56:08.120Z",
+    "specDigest": "586ceddb8d34945c55149fb900f3ac5b28e5881e8538c1353032dfcca399c0d3"
+  }
+}
