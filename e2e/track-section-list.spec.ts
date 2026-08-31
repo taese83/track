@@ -166,6 +166,61 @@ test('TC-013-4 · 목록 전체가 Tab stop 하나다', async ({ page }) => {
   await expect(page.getByTestId('section-row-3')).toHaveAttribute('tabindex', '0')
 })
 
+/** 행이 목록 상자의 스크롤 뷰포트 안에 완전히 들어왔는가. smooth 스크롤 대기는 호출부의 poll이 맡는다 */
+async function rowIsInView(page: Page, index: number): Promise<boolean> {
+  const box = await page.getByTestId('section-list-box').boundingBox()
+  const row = await page.getByTestId(`section-row-${index}`).boundingBox()
+  if (box === null || row === null) return false
+  return row.y >= box.y - 1 && row.y + row.height <= box.y + box.height + 1
+}
+
+test('TC-013-6 · 스트립을 클릭하면 목록이 그 행으로 스크롤되고 roving 포커스가 옮겨간다', async ({
+  page,
+}) => {
+  await openTrack(page)
+
+  const slider = page.getByTestId('profile-strip-slider')
+  const box = (await slider.boundingBox())!
+  await page.mouse.click(box.x + box.width * 0.9, box.y + box.height / 2)
+
+  const n = Number(await slider.getAttribute('aria-valuenow'))
+  expect(n).toBeGreaterThan(60)
+
+  const row = page.getByTestId(`section-row-${n}`)
+  await expect(row).toHaveAttribute('aria-selected', 'true')
+  // 목록 밖에서 옮긴 커서가 목록의 roving 포커스도 가져간다 — Tab이 그 행으로 돌아온다
+  await expect(row).toHaveAttribute('tabindex', '0')
+
+  await expect.poll(() => rowIsInView(page, n)).toBe(true)
+
+  // 스트립의 키보드 포커스는 빼앗지 않는다
+  // (실측으로 확인할 값: tabIndex=0 슬라이더를 마우스로 클릭했을 때 포커스가 실제로 붙는지)
+  await expect(slider).toBeFocused()
+  await expect(page.getByTestId('section-list-box')).not.toBeFocused()
+})
+
+test('TC-013-6 · 스트립 End 키로 끝까지 가면 마지막 행이 보이고, 목록에서 고른 경우엔 스크롤을 건드리지 않는다', async ({
+  page,
+}) => {
+  await openTrack(page)
+
+  const slider = page.getByTestId('profile-strip-slider')
+  await slider.focus()
+  await page.keyboard.press('End')
+  await expect(slider).toHaveAttribute('aria-valuenow', '131')
+
+  await expect(page.getByTestId('section-row-131')).toHaveAttribute('tabindex', '0')
+  await expect.poll(() => rowIsInView(page, 131)).toBe(true)
+
+  // 목록에서 직접 고르면(source `list`) 사용자의 스크롤 위치를 건드리지 않는다
+  const listBox = page.getByTestId('section-list-box')
+  const before = await listBox.evaluate((node) => node.scrollTop)
+  await page.getByTestId('section-row-129').click()
+  await expect(page.getByTestId('section-row-129')).toHaveAttribute('aria-selected', 'true')
+  const after = await listBox.evaluate((node) => node.scrollTop)
+  expect(Math.abs(after - before)).toBeLessThanOrEqual(1)
+})
+
 test('구간 목록 화면에 접근성 위반이 없다', async ({ page }) => {
   await openTrack(page)
   const results = await new AxeBuilder({ page })

@@ -31,7 +31,7 @@ export const WEBGL_UNSUPPORTED_NOTICE =
 
 /** 목록 소비는 Provider 안에서만 가능하므로 셸에서 한 겹 분리한다(3D 셸과 같은 구조) */
 function FallbackList({ items }: { items: readonly SectionListItem[] }) {
-  const { currentIndex, setCursor } = useTrackCursor()
+  const { currentIndex, setCursor, lastSource } = useTrackCursor()
   const [focusedIndex, setFocusedIndex] = useState(0)
 
   const handleSelect = useCallback((index: number) => setCursor(index, 'list'), [setCursor])
@@ -45,6 +45,7 @@ function FallbackList({ items }: { items: readonly SectionListItem[] }) {
       onSelect={handleSelect}
       // 대체 화면에서는 펼침이 고정이다 — 토글 핸들러를 넘기지 않으므로 버튼도 없다
       expanded
+      followCursor={lastSource !== 'list'}
       variant="full-width"
     />
   )

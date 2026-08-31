@@ -64,7 +64,7 @@ function SectionColumn({
   items: readonly SectionListItem[]
   summary: ReactNode
 }) {
-  const { currentIndex, setCursor } = useTrackCursor()
+  const { currentIndex, setCursor, lastSource } = useTrackCursor()
   const [expanded, setExpanded] = useState(true)
   const [focusedIndex, setFocusedIndex] = useState(0)
 
@@ -104,6 +104,7 @@ function SectionColumn({
         onFocusMove={setFocusedIndex}
         onSelect={handleSelect}
         expanded={expanded}
+        followCursor={lastSource !== 'list'}
         onToggleExpanded={handleToggle}
         variant="sidebar"
       />
