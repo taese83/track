@@ -40,7 +40,10 @@ TEST_EVIDENCE: (2026-08-31 확정 · 실행 위치 D:\Project\track · Node v22.
     (병렬 부하 flake: axe/fps/자동재생) · 남은 1건 `track-evidence "캔버스 컬럼이 좁아져도…"`(범례 패널 311.6px > 304px)은
     **기준 소스 52314a3에서도 동일 실패** — 기존 결함, 이번 변경과 무관. FEAT-001 `track-load.spec` **12/12 통과**
     (501 문구 회귀 테스트 포함).
-  - `verify-spawn-completion` 18/18 OK · `validate-spec-conformance` 결과는 완료 보고 참조
+  - `verify-spawn-completion` 18/18 OK · `validate-spec-conformance`: **FAIL[acceptanceCoverage] TC-001-9, TC-008-2** —
+    TC-001-9는 `api/track.test.ts` 3개 케이스 이름에 인용돼 있으나 검사기는 `testLayers`(`src`·`e2e`)만 훑고 `api/`는
+    보지 않는다(vitest include에는 `api/**/*.test.ts`가 있다). auto 모드는 실업스트림 호출이라 fixtures 웹서버의 e2e로는
+    재현할 수 없어 e2e 인용을 만들지 않았다(표면 인용 금지). TC-008-2는 선행 라운드부터의 공백.
   - 미검증(정직 표기): 브라우저 UI에서 실재 URL → 3D 뷰까지의 화면 스냅샷은 찍지 않았다 — 서버 응답 200과
     기존 e2e의 fetch-success→3D 경로가 각각 검증돼 있고 클라이언트 코드는 무변경이다.
 CAPABILITY_ESCALATION: none — 서버 실행 경로·의존성·클라이언트 fetch 신설 없음. 이미 배포본이 타는 업스트림
