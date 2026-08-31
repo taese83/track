@@ -28,11 +28,21 @@ NON_GOALS:
   - `.github/scripts` lint 오류 8건(기존, FEAT-011 라운드에서 이미 관측)
 CHANGE_BUDGET: `api/track.ts` 모드 판정 함수 1개 + `api/track.test.ts` auto 모드 describe 1개(≈5 케이스) +
   `ErrorScreen.tsx` 문자열 1건. 의존성 0. 파일 3개.
-TEST_EVIDENCE: (라운드 종료 시 아래 갱신)
-  - 변경 전 재현: `TRACK_UPSTREAM` 미지정으로 `handleTrackRequest('FTSBH1')` → 501 (기존 unit이 `fixtures` 명시로 고정)
-  - 변경 후: unit — auto에서 녹화본/예약 코드는 fetch 0회, 미녹화는 fetch 1회·200; production 미지정은 live;
-    `fixtures` 명시는 501 유지. 게이트 typecheck·lint·test·build·e2e. 브라우저/HTTP 스모크 — dev 서버에
-    미녹화 실재 코드 1회 요청(LOCAL_VERIFIABLE, 네트워크 필요).
+TEST_EVIDENCE: (2026-08-31 확정 · 실행 위치 D:\Project\track · Node v22.11.0 — `engines >=22.12.0` 미만, Vite 8 경고 · pnpm 9.12.3)
+  - 변경 전 재현: `pnpm dev`(localhost:5177, `TRACK_UPSTREAM` 미지정) GET /api/track?url=…/view/FTSBH1 → **501**
+  - 변경 후 같은 요청 → **200**, 실데이터(`Str2;839.000;676.000;…`), cache-control `public, s-maxage=3600…` ·
+    WS67Y2(녹화본) → 200 · ZZZZZZ(예약) → 404 — LOCAL_VERIFIABLE, 업스트림 실호출 1회
+  - unit `pnpm test`: 28 files · **335/335**(+7, `auto 모드` describe, TC-001-9 인용) · typecheck 0 · build 0
+  - lint: `eslint api src/pages/track-viewer` 0 · 전체 `pnpm lint`는 `.github/scripts/close-merged-tickets.mjs` 기존 오류 8건으로 실패(범위 밖, FEAT-011 라운드와 동일)
+  - e2e: `pnpm e2e`는 **이 머신에서 웹서버 대기 시간 초과** — Vite 8 preview가 `::1`에만 바인딩되고
+    `playwright.config.ts`는 `127.0.0.1:4173`을 폴링한다(실측: 127.0.0.1 연결 불가·localhost/[::1] 200).
+    `localhost`로 바꾼 임시 설정(untracked, 삭제됨)으로 실행: **81 통과 · 5 실패** → 실패 5건 단일 워커 재실행 **4 통과**
+    (병렬 부하 flake: axe/fps/자동재생) · 남은 1건 `track-evidence "캔버스 컬럼이 좁아져도…"`(범례 패널 311.6px > 304px)은
+    **기준 소스 52314a3에서도 동일 실패** — 기존 결함, 이번 변경과 무관. FEAT-001 `track-load.spec` **12/12 통과**
+    (501 문구 회귀 테스트 포함).
+  - `verify-spawn-completion` 18/18 OK · `validate-spec-conformance` 결과는 완료 보고 참조
+  - 미검증(정직 표기): 브라우저 UI에서 실재 URL → 3D 뷰까지의 화면 스냅샷은 찍지 않았다 — 서버 응답 200과
+    기존 e2e의 fetch-success→3D 경로가 각각 검증돼 있고 클라이언트 코드는 무변경이다.
 CAPABILITY_ESCALATION: none — 서버 실행 경로·의존성·클라이언트 fetch 신설 없음. 이미 배포본이 타는 업스트림
   fetch 경로가 로컬에서도 켜질 뿐이며 SSRF 차단·호출 계약은 그대로다.
 DOCS_TO_UPDATE: `02_design/api-schema/fixtures.md` §9 · `02_design/api-schema/common-envelope.md` §6 —
@@ -47,7 +57,10 @@ DOCS_TO_UPDATE: `02_design/api-schema/fixtures.md` §9 · `02_design/api-schema/
 
 **사전 관측(고치지 않음)**: 디자인 프리뷰 `validate-design-preview`가 `STALE(SOURCE_CHANGED)` — 이전 라운드부터의
 상태이며 이번 변경은 화면 계약을 바꾸지 않아 재생성하지 않는다. 세션 Node v22.11.0은 `engines`
-(`>=22.12.0`) 미만 — 게이트 결과에 버전을 병기한다.
+(`>=22.12.0`) 미만 — 게이트 결과에 버전을 병기한다. Gate 0 `validate-development-readiness`의 소유권 예행은
+Windows에서 하네스 결함으로 실행 불가(`new URL(...).pathname`이 `/C:/…`를 내 `D:\C:\…`로 해석, MODULE_NOT_FOUND) —
+실제 소유권 훅은 스폰 시점에 작동했다(스폰 산출물 3개 정상). `playwright.config.ts`의 `127.0.0.1` 폴링 vs
+Vite 8 `::1` 바인딩 불일치는 개선 제안으로 남긴다(범위 밖·사용자 판단).
 
 ```json change-scope
 {
