@@ -30,8 +30,9 @@ export interface ClosureValidation extends Pick<
 > {
   brokenAt: { afterPieceId: string; reason: BrokenReason } | null
   /**
-   * START부터 끊긴 지점까지 이어지는 구간. 부분 실패 시 이 구간만 정상 렌더하고
-   * 나머지는 회색으로 내린다(TC-004-2/3). 복원이 성공했으면 순서 전체와 같다.
+   * 이어진 구간. 복원이 성공했으면 순서 전체와 같다. 부분 실패 시 START에서 **양방향**으로
+   * 이어진 사슬(D-050 — 뒤쪽 걷기를 뒤집어 앞에 붙인다)이며, 그 사슬만 정상 렌더하고
+   * 나머지는 회색으로 내린다(TC-004-2/3). START는 사슬 중간에 올 수 있다.
    */
   connectedPieceIds: string[]
   /**
@@ -180,18 +181,23 @@ function mutualDanglingPartners(endpoints: readonly Endpoint[]): Map<Endpoint, E
  * 복원이 실패했을 때 START부터 이어붙일 수 있는 데까지만 걸어간다.
  * FEAT-003의 전역 탐색(백트래킹)과 달리 되돌아가지 않는다 — 정본 순서를 다시 찾는 것이 아니라
  * "어디서 끊겼는가"를 답하는 진단이기 때문이다.
+ *
+ * `exitVertex`는 START에서 나가는 끝이다 — 화살표(vertex2) 쪽이 앞, 반대(vertex1) 쪽이 뒤.
+ * 이미 지난 피스(`alreadyVisited`)는 다시 밟지 않는다(양방향 걷기에서 앞쪽 사슬과 겹치지 않게).
  */
 function walkConnectedPrefix(
   pieces: readonly ParsedPiece[],
   startPiece: ParsedPiece,
+  exitVertex: VertexIndex = 1,
+  alreadyVisited: ReadonlySet<string> = new Set(),
 ): ParsedPiece[] {
   const endpoints = endpointsOf(pieces)
   const mutual = mutualDanglingPartners(endpoints)
-  const visited = new Set<string>([startPiece.pieceId])
+  const visited = new Set<string>([...alreadyVisited, startPiece.pieceId])
   const walked: ParsedPiece[] = [startPiece]
 
   let exit: Endpoint | undefined = endpoints.find(
-    (endpoint) => endpoint.piece === startPiece && endpoint.vertexIndex === 1,
+    (endpoint) => endpoint.piece === startPiece && endpoint.vertexIndex === exitVertex,
   )
 
   while (exit !== undefined) {
@@ -227,6 +233,26 @@ function walkConnectedPrefix(
   }
 
   return walked
+}
+
+/**
+ * START에서 **양방향**으로 이어진 사슬(D-050). 화살표 방향 걷기가 짧게 끝나도(실측 R84APY:
+ * 앞 6피스, 뒤 106피스) 트랙은 대개 한 사슬로 이어져 있다 — 뒤쪽 걷기를 뒤집어 앞에 붙이면
+ * 사슬은 START를 **화살표 방향으로 통과**하므로 D-038 ①의 출발 방향은 그대로다.
+ * 뒤쪽 걷기는 앞쪽이 밟은 피스를 다시 밟지 않는다(두 갈래가 같은 고리에서 만나면 한쪽에서 멈춘다).
+ */
+function walkConnectedChain(
+  pieces: readonly ParsedPiece[],
+  startPiece: ParsedPiece,
+): ParsedPiece[] {
+  const forward = walkConnectedPrefix(pieces, startPiece, 1)
+  const backward = walkConnectedPrefix(
+    pieces,
+    startPiece,
+    0,
+    new Set(forward.map((piece) => piece.pieceId)),
+  )
+  return [...backward.slice(1).reverse(), ...forward]
 }
 
 function sumElevation(
@@ -274,7 +300,7 @@ export function validateClosure(input: ClosureValidationInput): ClosureValidatio
     }
   } else {
     const startPiece = supported.find((piece) => piece.pieceClass === START_PIECE_CLASS)
-    ordered = startPiece === undefined ? [] : walkConnectedPrefix(supported, startPiece)
+    ordered = startPiece === undefined ? [] : walkConnectedChain(supported, startPiece)
   }
 
   const connectedPieceIds = ordered.map((piece) => piece.pieceId)

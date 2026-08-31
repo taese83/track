@@ -61,9 +61,9 @@ function buildParseSnippet(rawData: string, failure: ParseFailure): string {
  * 부분 실패 렌더("연결 가능한 구간은 정상 렌더, 렌더링은 중단되지 않는다")의 입력이다.
  *
  * 종전에는 이 둘을 `not-closed-fatal` 에러 화면에 태워 폐합 판정에 닿지 못했다. 실측(R84APY,
- * 2026-09-01): 편집기 원본이 3갈래 분기 + 매달린 끝 하나인 "고리 + 꼬리"라 START 화살표
- * 방향으로 6/112피스만 이어지는데, 화면은 아무것도 그리지 않고 "심각하게 손상"이라고만 했다.
- * OPENLOOP 픽스처도 같은 경로로 에러였다 — TC-004-2의 구현 회귀(D-048).
+ * 2026-09-01): 복원이 막힌 트랙에서 화면은 아무것도 그리지 않고 "심각하게 손상"이라고만 했다.
+ * OPENLOOP 픽스처도 같은 경로로 에러였다 — TC-004-2의 구현 회귀(D-048). (R84APY 자체는 이후
+ * D-051의 끼어든 끝 규칙으로 112피스 폐곡선이 복원돼 이 경로를 더는 타지 않는다.)
  */
 const RESTORE_FAILURE_DETAIL: Record<RestoreOrderFailureReason, string> = {
   'start-piece-missing': '피스 목록에 START(Str2)가 없어 시작 지점을 정하지 못했습니다.',
@@ -90,10 +90,17 @@ function describeStart(start: StartSelection): string {
  * 복원이 막힌 화면의 요약 — 어디까지 이어졌고 어느 피스 뒤에서 끊겼는지가 남아야 사용자가
  * 편집기에서 그 자리를 찾는다(제품 계약 §5 "조용히 숨기지 않는다").
  */
-function describeRestoreFailure(reason: RestoreOrderFailureReason, closure: ClosureValidation): string {
-  const startId = closure.connectedPieceIds[0] ?? '—'
+function describeRestoreFailure(
+  reason: RestoreOrderFailureReason,
+  closure: ClosureValidation,
+  startId: string | undefined,
+): string {
+  // D-050 — 사슬은 START 양방향이라 START가 중간에 온다. 앞·뒤로 몇 피스가 이어졌는지 남긴다
+  const at = startId === undefined ? -1 : closure.connectedPieceIds.indexOf(startId)
+  const span =
+    at < 0 ? '' : ` START 앞 ${at}·뒤 ${closure.connectedPieceIds.length - at - 1}피스가 이어짐.`
   const brokenAfter = closure.brokenAt === null ? '' : ` ${closure.brokenAt.afterPieceId} 뒤에서 끊김.`
-  return `${startId} · 순서 복원 실패 — ${RESTORE_FAILURE_DETAIL[reason]}${brokenAfter}`
+  return `${startId ?? '—'} · 순서 복원 실패 — ${RESTORE_FAILURE_DETAIL[reason]}${span}${brokenAfter}`
 }
 
 type ViewOutcome =
@@ -356,7 +363,11 @@ export function TrackViewerPage() {
                     <dd data-testid="start-selection">
                       {outcome.restored.ok
                         ? describeStart(outcome.restored.start)
-                        : describeRestoreFailure(outcome.restored.reason, outcome.closure)}
+                        : describeRestoreFailure(
+                            outcome.restored.reason,
+                            outcome.closure,
+                            parsed?.ok ? parsed.pieces.find((piece) => piece.pieceClass === 'Str2')?.pieceId : undefined,
+                          )}
                     </dd>
                   </dl>
                   <p className="mt-3 text-[12px]" style={{ color: 'var(--color-text-secondary)' }}>

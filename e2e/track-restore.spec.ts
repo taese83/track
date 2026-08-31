@@ -83,26 +83,29 @@ test('TC-004-2 · 끝점이 어긋난 비폐곡선(OPENLOOP)은 연결 구간까
   await expect(page.getByTestId('alert-slot')).toContainText('연결이 끊긴 지점까지만 표시했습니다 — 131/132피스')
 
   await expect(page.getByTestId('piece-count')).toHaveText('132')
+  // OPENLOOP은 떨어져 나간 피스 1개만 빠진다 — 양방향 사슬(D-050)도 그 피스에는 닿지 못한다
   await expect(page.getByTestId('ordered-count')).toHaveText('131')
   const start = page.getByTestId('start-selection')
   await expect(start).toContainText('순서 복원 실패')
   await expect(start).toContainText('뒤에서 끊김')
 })
 
-test('TC-004-2 · 실측 R84APY(3갈래 분기 + 매달린 끝)는 START 화살표 방향 6피스까지 렌더한다', async ({
+test('D-051 · 실측 R84APY(끼어든 끝 + 16px 벌어진 이음새)는 112피스 폐곡선으로 복원되어 전부 렌더된다', async ({
   page,
 }) => {
   await submit(page, 'R84APY')
 
   await expect(page.getByTestId('track-screen')).toBeVisible()
   await expect(page.getByRole('alert')).toHaveCount(0)
-  await expect(page.getByTestId('alert-slot')).toContainText('6/112피스')
   await expect(page.getByTestId('track-canvas')).toHaveAttribute('data-render-state', 'ready')
+  await expect(page.getByTestId('canvas-truncated')).toHaveCount(0)
+  // 끊김 계열 배너가 없다(고도 폐합 배너는 이 트랙의 뱅크·슬로프 구성에 달렸으므로 단언하지 않는다)
+  await expect(page.getByTestId('alert-slot')).not.toContainText('끊긴')
+  await expect(page.getByTestId('alert-slot')).not.toContainText('닫히지 않아')
 
   await expect(page.getByTestId('piece-count')).toHaveText('112')
-  await expect(page.getByTestId('ordered-count')).toHaveText('6')
-  // 끊긴 자리(Lan2 뒤 직선 p60)가 요약에 남아 사용자가 편집기에서 찾을 수 있다
-  await expect(page.getByTestId('start-selection')).toContainText('p60 뒤에서 끊김')
+  await expect(page.getByTestId('ordered-count')).toHaveText('112')
+  await expect(page.getByTestId('start-selection')).toContainText('p61 · 유일한 START')
 })
 
 test('회귀 · 손상된 원문은 복원 실패가 아니라 여전히 파싱 실패다', async ({ page }) => {

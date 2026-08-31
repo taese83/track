@@ -121,19 +121,53 @@ function isBridged(a: Endpoint, b: Endpoint, bridge: Bridge): boolean {
   )
 }
 
-/** 이웃이 하나도 없는 끝이 정확히 둘이면 이을 곳이 하나뿐이라 모호함이 없다 (D-038 ②) */
+/**
+ * 매달린 끝: ① 이웃이 하나도 없는 끝, 또는 ② 이웃은 있으나 그 이웃들이 **이미 서로 정확히
+ * 짝지어져** 있어 자기 짝이 아닌 끝(D-051 — "끼어든 끝"). 실측 R84APY: 코너 p0의 끝이 세로
+ * 직선 이음새(p70↔p71, 정확 일치)에 0.285px 붙어 있어 ①로는 매달린 끝이 하나(p60)뿐이었고,
+ * 실제 짝인 p60(16px 벌어짐)과 이어지지 못해 112피스 폐곡선이 통째로 복원 실패였다.
+ * 정확 일치가 이음새의 신호라는 TC-003-3의 논리를 그대로 뒤집은 것이다 — 이음새의 두 끝이
+ * 서로 정확히 맞물려 있으면 그 옆의 세 번째 끝은 거기 속하지 않는다.
+ */
+function isExactlyPaired(endpoint: Endpoint, endpoints: readonly Endpoint[]): boolean {
+  const point = pointOf(endpoint)
+  return endpoints.some(
+    (other) => other.node !== endpoint.node && distance(point, pointOf(other)) <= CLUSTER_TOLERANCE,
+  )
+}
+
+/** `endpoint`를 뺀, `around`와 정확히 겹친 끝의 수(자기 자신 포함) */
+function exactClusterSize(around: Endpoint, excluding: Endpoint, endpoints: readonly Endpoint[]): number {
+  const point = pointOf(around)
+  return endpoints.filter(
+    (other) => other.node !== excluding.node && distance(point, pointOf(other)) <= CLUSTER_TOLERANCE,
+  ).length
+}
+
+function isDangling(endpoint: Endpoint, endpoints: readonly Endpoint[]): boolean {
+  const point = pointOf(endpoint)
+  const neighbours = endpoints.filter(
+    (other) => other.node !== endpoint.node && distance(point, pointOf(other)) <= SEAM_TOLERANCE,
+  )
+  if (neighbours.length === 0) return true
+  if (isExactlyPaired(endpoint, endpoints)) return false
+  // 이웃이 속한 정확 무리가 (나를 빼고) **짝수**면 그들끼리 다 짝지어지므로 나는 끼어든 끝이다.
+  // 홀수면 하나가 남으니 내가 그 짝이다 — 참조 트랙 실측: 입체교차 p47·p51·p52가 정확히 겹치고
+  // p38이 0.17px 옆에 있어, 짝수 조건이 없으면 p38이 매달린 끝으로 오판돼 복원이 통째로 실패한다.
+  return neighbours.every((neighbour) => {
+    const size = exactClusterSize(neighbour, endpoint, endpoints)
+    return size >= 2 && size % 2 === 0
+  })
+}
+
+/** 매달린 끝이 정확히 둘이면 이을 곳이 하나뿐이라 모호함이 없다 (D-038 ②) */
 function findDanglingBridge(nodes: readonly TrackNode[]): Bridge {
   const endpoints: Endpoint[] = []
   for (const node of nodes) {
     for (const vertexIndex of VERTEX_INDICES) endpoints.push({ node, vertexIndex })
   }
 
-  const dangling = endpoints.filter((endpoint) => {
-    const point = pointOf(endpoint)
-    return !endpoints.some(
-      (other) => other.node !== endpoint.node && distance(point, pointOf(other)) <= SEAM_TOLERANCE,
-    )
-  })
+  const dangling = endpoints.filter((endpoint) => isDangling(endpoint, endpoints))
 
   const [first, second] = dangling
   if (dangling.length !== 2 || first === undefined || second === undefined) return null

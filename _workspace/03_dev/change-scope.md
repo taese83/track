@@ -58,6 +58,14 @@ CAPABILITY_ESCALATION: none — 서버·의존성·fetch 경로 변화 없음.
 DOCS_TO_UPDATE: `02_design/component-spec/pages.md` §화면 상태 머신 전이 문장("순서복원 실패→error"을 START 부재로
   한정, traversal 실패는 partial-failure) · 결정 D-048(decision-log) · `fixtures/track/README.md` 행.
 
+**후속 2(2026-09-01, 사용자 "계속 못그려??" · "Lan2 다음에 코너인데 왜 못그려?")**: ① D-050 — 복원 실패 시 START **양방향**
+사슬(`walkConnectedChain`, `orientPath` 첫 피스 비-START 허용, 배너·요약 분기). ② D-051 — **끼어든 끝** 규칙(`restore-order.ts`
+`isDangling`): R84APY는 3갈래 분기가 아니라 이음새 하나가 16px 벌어진 폐곡선이었고, p0의 끝이 p70↔p71 정확 일치 이음새에
+0.285px 붙어 매달린 끝으로 세지 않았던 것이 진짜 원인. 짝수 무리 조건 없이는 참조 트랙 입체교차(p47·p51·p52 + p38)를
+오판해 WS67Y2가 통째로 실패한다(1차 실측). 결과: R84APY **112/112 폐곡선** 복원. ALLOWED_PATHS를
+`src/entities/track/lib/restore`·`closure`·`elevation/orient-path.ts`로 확대(FEAT-003/004 소유 경로, 브리프 갱신 후 편집).
+테스트: `restore-order-intruder.test.ts` 4건(D-051 R84APY 112 · 폐곡선 · D-050 합성 111 · WS67Y2 무변경).
+
 **후속 반영(2026-09-01, code-reviewer WARN 2건 low)**: ① `TrackScreen` 배너 분기를 `layout.truncated || !closure.isClosedLoop`로
 정정 — 복원 실패 + 진단 걷기가 전 피스를 덮은 조합에서 "XY 폐곡선이지만…" 오표기 가능성(문구·testid 불변, 조건 1줄).
 ② `walkConnectedPrefix`의 동점 타이브레이크가 사전식(`'p10' < 'p9'`) — 결정성은 유지되며 entities 무변경 계약이라 기록만.
