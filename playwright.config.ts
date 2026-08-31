@@ -1,7 +1,9 @@
 import { defineConfig, devices } from '@playwright/test'
 
 const PORT = 4173
-const BASE_URL = `http://127.0.0.1:${PORT}`
+// 127.0.0.1이 아니라 localhost — Vite 8 preview는 localhost가 ::1로 풀리는 호스트에서 IPv6에만
+// 바인딩하므로 127.0.0.1 폴링은 webServer 대기 시간 초과로 끝난다(2026-08-31 실측, D-046 라운드).
+const BASE_URL = `http://localhost:${PORT}`
 
 export default defineConfig({
   testDir: './e2e',

@@ -16,6 +16,9 @@ TARGET_BEHAVIOR: TC-001-9 — `TRACK_UPSTREAM` 미지정 + 비production은 **au
   종전 그대로. `auto`를 명시값으로도 받는다. `fixture-not-recorded` 문구는 "녹화본 전용 모드(TRACK_UPSTREAM=fixtures)"
   사실에 맞춰 고치되 e2e가 잡는 "로컬 녹화본에 없어"는 유지한다.
 ALLOWED_PATHS: api, src/pages/track-viewer (ErrorScreen.tsx 문구 1건만)
+  + `playwright.config.ts` — **요청 외 변경, 사용자 승인(2026-08-31 "playwright localhost 정정도 포함해서")**:
+    `BASE_URL` `127.0.0.1` → `localhost`. Vite 8 preview가 `::1`에만 바인딩되는 호스트에서 `pnpm e2e`의
+    webServer 대기가 시간 초과되던 환경 결함(TEST_EVIDENCE 참조)의 정정. 테스트 시나리오·타임아웃·리포터는 불변.
 PUBLIC_CONTRACTS_TO_PRESERVE:
   - `GET /api/track` 응답 봉투·에러 코드 7종·상태 코드·cache-control 계약(api-schema §5~7) 불변
   - 업스트림 호출 계약(§2): 요청당 fetch 정확히 1회 · 재시도 없음 · 고정 URL 조립(SSRF 차단) · `X-Requested-With` · 식별 UA · `redirect: 'error'`
