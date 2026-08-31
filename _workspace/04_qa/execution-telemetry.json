@@ -278,6 +278,17 @@
       "durationMs": 628971,
       "outcome": "complete",
       "note": "FEAT-017 판 구간 횡경사 (6 outputs: elevation types/build-elevation(+test), track-canvas scene-layout/lane-bands(+test)). 발췌 주입·읽기 6회 상한·즉시 쓰기 — 1회 완주, verify-spawn-completion 41/41 OK. 실측 필요 상수 6건을 정직 표기. TC-017-4는 관측량(가장자리 높이차→판축 방향 기울기)을 오케스트레이터가 정정"
+    },
+    {
+      "run": "2026-08-31T13:20+iterate",
+      "phase": "P3",
+      "agent": "developer",
+      "retry": false,
+      "tokens": 64738,
+      "toolUses": 16,
+      "durationMs": 393582,
+      "outcome": "complete",
+      "note": "fix #39 TC-008-2 카메라 레인 (2 outputs: flythrough-camera.ts(+test)). 발췌 주입·읽기 4회 상한 — 1회 완주, verify-spawn-completion 28/28 OK. 지시의 이음새 단언(<15cm)이 정상 동작에서도 깨짐을 정확히 짚고 대안으로 교체. 실측에서 WS67Y2 레인체인지 1개(D-047 전제 3개 오류)가 드러나 오케스트레이터가 테스트 전제·D-047 정정, startLane 입력 추가"
     }
   ]
 }
