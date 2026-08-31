@@ -193,8 +193,8 @@ test('TC-013-6 · 스트립을 클릭하면 목록이 그 행으로 스크롤되
 
   await expect.poll(() => rowIsInView(page, n)).toBe(true)
 
-  // 스트립의 키보드 포커스는 빼앗지 않는다
-  // (실측으로 확인할 값: tabIndex=0 슬라이더를 마우스로 클릭했을 때 포커스가 실제로 붙는지)
+  // 스트립의 키보드 포커스는 빼앗지 않는다 — 실측(2026-08-31): Chromium에서 tabIndex=0
+  // 슬라이더는 마우스 클릭으로 포커스를 받으므로 이 단언이 "목록이 포커스를 뺏지 않았다"를 잰다
   await expect(slider).toBeFocused()
   await expect(page.getByTestId('section-list-box')).not.toBeFocused()
 })

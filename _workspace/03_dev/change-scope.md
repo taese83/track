@@ -21,8 +21,16 @@ PUBLIC_CONTRACTS_TO_PRESERVE:
 NON_GOALS: 목록 → 스트립 방향 변경, 접힌 레일 자동 펼침, 목록 정렬/필터, 스크롤 애니메이션 커스텀
 CHANGE_BUDGET: 수정 3파일(SectionList.tsx effect+prop, TrackScreen.tsx·WebglFallbackScreen.tsx prop 배선) + e2e 1파일(2케이스).
   신규 파일 0 · 의존성 0.
-TEST_EVIDENCE: (라운드 종료 시 갱신) e2e TC-013-6 2건(스트립 클릭 90% → 행이 listbox 뷰포트 안·tabindex=0·슬라이더 포커스
-  유지 / End 키 → 마지막 행 가시, 목록에서 보이는 행 클릭 시 scrollTop 불변) · 기존 unit·e2e 회귀 · 게이트 4종.
+TEST_EVIDENCE (2026-08-31 · D:\Project\track · Node v22.11.0(`engines >=22.12.0` 미만) · pnpm 9.12.3):
+  - 변경 전: 스트립으로 커서를 옮기면 목록 행이 `aria-selected`만 되고 스크롤·roving 포커스 불변(SectionList 효과 없음)
+  - 게이트: typecheck 0 · eslint(section-list, track-viewer, e2e 스펙) 0 · unit **348/348**(무변경 — 이 기능은 DOM 축) · build 0
+  - e2e TC-013-6 2건 **통과**(단일 워커 1.4s·1.5s): 스트립 90% 클릭 → `aria-valuenow` > 60인 행이 `aria-selected`·`tabindex=0`·
+    listbox 뷰포트 안(poll) · 슬라이더가 여전히 포커스(실측: Chromium은 tabIndex=0 슬라이더를 클릭으로 포커스) · 목록 상자는
+    비포커스 / End 키 → 131행 가시·tabindex=0, 보이는 129행 클릭 시 scrollTop 변화 ≤1
+  - 전체 `pnpm e2e` **81 통과 · 7 실패(총 88)** → 단일 워커 재실행 **6 통과**(병렬 부하 flake: 배지·axe·휠·fps — 전부 ≤2.2s) ·
+    남은 1건 `track-evidence` 범례 패널 폭(311.6 > 304px)은 기준 소스에서도 동일 실패(기존 결함). 목록 스펙 10/10.
+  - 미검증(정직 표기): `prefers-reduced-motion` 분기와 자동재생(canvas source) 중 목록 추종은 e2e로 재지 않았다 —
+    같은 effect·같은 `followCursor` 경로(lastSource 'canvas' ≠ 'list')이며 브라우저 수동 확인 대상으로 남긴다.
 CAPABILITY_ESCALATION: none
 DOCS_TO_UPDATE: component-spec/widgets.md §SectionList(followCursor·커서 따라가기) · pages.md 상호작용 표 —
   **이 라운드에서 개정 완료(2026-08-31)**. 계획: specs-surfaces.md TC-013-6 · traceability.md · PC-013(plan-delta PASS —
