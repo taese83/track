@@ -20,6 +20,23 @@
 compat 보정을 되감아 감싸고, `lane-bands`의 `offsetPoint`가 가장자리 (x,z)를 만든 뒤 그 함수로 y를 정한다.
 `riseCm`(육교)은 그 위에 더한다 — 레인체인지는 판 밖이라 실제로는 겹치지 않는다.
 
+**TC-017-4의 관측량 정정(오케스트레이터, 2026-08-31).** 개발자는 레인 가장자리 높이차로 단조 증가를 쟀는데 실측이
+0.0065 → 0.0034cm로 **판축과 나란히 달리는 뱅크 피스에서는 그 값이 기하적으로 ~0**임을 드러냈다(횡경사는 판 위에서
+트랙이 돌 때 판축 기울기가 가로로 투영돼 생긴다). TC가 뜻하는 "0에서 판 기울기까지 단조 증가"의 관측 가능한 양은
+**노면의 판축 방향 기울기 ∂y/∂d**이며, 이웃 판의 적합 평면에서 축을 얻어 `surfaceHeightAt`로 직접 잰다.
+실측 0.0016 → 0.3623(판 tan20° = 0.3640) 단조. TC 발명이 아니라 같은 TC의 측정 방법 확정이다.
+
+TEST_EVIDENCE (2026-08-31 · D:\Project\track · Node v22.11.0(`engines >=22.12.0` 미만) · pnpm 9.12.3):
+- unit `pnpm test` **343/343**(+8: elevation 계약 3 · lane-bands TC-017-1~5) · typecheck 0 · eslint(elevation, track-canvas) 0 · build 0
+- TC-017-1 판 표본 192 · 판 계산 최대차 0 · 적합 평면 최대차 2.8e-14cm · TC-017-2 내부 표본 176 · 최대 13.095/13.103cm ·
+  TC-017-3 평지 1494 표본 차 0 · TC-017-4 위 · TC-017-5 판 2개([38–41]·[50–53]) 각 576 표본 잔차 ≤4.4e-14cm·기울기 20.00°
+- e2e `pnpm e2e` **82 통과 · 4 실패** → 단일 워커 재실행 3 통과(병렬 flake: fps·axe·자동재생) · 남은 1건 `track-evidence`
+  범례 패널 폭(311.6 > 304px)은 기준 소스 52314a3에서도 동일 실패(기존 결함, FEAT-001 라운드에서 확인)
+- 미검증(정직 표기): 브라우저 스크린샷으로 판 위 횡경사를 눈으로 확인하지 않았다 — 수치 축 5종이 TC 전부를 덮고
+  렌더 경로(`lane-bands` → `buildTrackGeometries`)는 동일 데이터를 쓴다. 시각 확인은 PR 리뷰에서 dev 서버로 권한다
+- verify-spawn-completion 41/41 · CAPABILITY_ESCALATION none · DOCS_TO_UPDATE: `feature-plan/data-model.md`
+  `ElevationProfile` 개정 완료(12cfe56) + 스팩 재확정
+
 스키마 정본: minimal-change-contract.md · 아래 JSON이 기계 정본(STALE 대조 입력).
 
 ```json change-scope
