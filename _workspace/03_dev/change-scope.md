@@ -39,7 +39,7 @@ TEST_EVIDENCE: (2026-08-31 확정 · 실행 위치 D:\Project\track · Node v22.
   - lint: `eslint api src/pages/track-viewer` 0 · 전체 `pnpm lint`는 `.github/scripts/close-merged-tickets.mjs` 기존 오류 8건으로 실패(범위 밖, FEAT-011 라운드와 동일)
   - e2e: `pnpm e2e`는 **이 머신에서 웹서버 대기 시간 초과** — Vite 8 preview가 `::1`에만 바인딩되고
     `playwright.config.ts`는 `127.0.0.1:4173`을 폴링한다(실측: 127.0.0.1 연결 불가·localhost/[::1] 200).
-    `localhost`로 바꾼 임시 설정(untracked, 삭제됨)으로 실행: **81 통과 · 5 실패** → 실패 5건 단일 워커 재실행 **4 통과**
+    → `playwright.config.ts`를 `localhost`로 정정한 뒤(사용자 승인) 실제 `pnpm e2e`: **81 통과 · 5 실패** → 실패 5건 단일 워커 재실행 **4 통과**
     (병렬 부하 flake: axe/fps/자동재생) · 남은 1건 `track-evidence "캔버스 컬럼이 좁아져도…"`(범례 패널 311.6px > 304px)은
     **기준 소스 52314a3에서도 동일 실패** — 기존 결함, 이번 변경과 무관. FEAT-001 `track-load.spec` **12/12 통과**
     (501 문구 회귀 테스트 포함).
