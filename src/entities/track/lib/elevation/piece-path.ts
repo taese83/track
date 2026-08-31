@@ -1,6 +1,8 @@
 // 피스 내부의 2D 진행 경로. 코너를 현으로만 다루면 기운 평면 위의 높이가 틀어진다 —
 // 판축 거리 d는 **피스 안쪽 점의 위치**로 정해지기 때문이다.
 // 근거: piece-shapes 카탈로그(현 각도의 2배가 선회각) · D-036(끝점 고정, 가운데만 부푼다)
+import { centerlineRouteOf } from './lane-routes'
+import { toAbsolutePath } from './local-path'
 import type { OrientedPiece, Point } from './types'
 
 /** 피스 타입별 선회각(도). 없으면 직선이다 */
@@ -89,6 +91,12 @@ function arcOf(from: Point, to: Point, turnDeg: number): Arc | null {
  */
 export function buildPiecePath(oriented: OrientedPiece): PiecePath {
   const { piece, flipped } = oriented
+
+  // FEAT-018 — 끝이 같은 변에 있는 U턴형 피스는 현·선회각으로 복원할 수 없다. 도면 실측
+  // 로컬 경로가 있으면 그것이 중심선이다(`lane-routes.ts`, D-049).
+  const route = centerlineRouteOf(piece.pieceClass)
+  if (route !== undefined) return toAbsolutePath(route, piece, flipped)
+
   const from = piece.vertex1
   const to = piece.vertex2
   const turnDeg = Object.prototype.hasOwnProperty.call(TURN_DEG, piece.pieceClass)
