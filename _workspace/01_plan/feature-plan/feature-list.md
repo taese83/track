@@ -24,6 +24,7 @@ Page Group을 늘리지 않고 아래 Feature List의 `Screen` 열에 화면 상
 | FEAT-006 | 3D 씬 생성과 카메라 오빗 (형상 일치) | 도면과 일치하는 형상을 자유롭게 둘러본다 | Must | PAGE-001 | 3d-view | keep |
 | FEAT-007 | 트랙 추종 시점 (플라이스루) | 코스를 따라가며 주행 감각으로 확인한다 | Must | PAGE-001 | 3d-view, profile-strip | keep |
 | FEAT-008 | 레인체인지 표현 | 좌우 차선 이동 구간을 시각적으로 구분한다 | Must | PAGE-001 | 3d-view, section-list | keep |
+| FEAT-018 | 레인보우 체인저(Lan2) 기하 | U턴형 레인체인지를 편집기 도면대로 레인별 명시 경로로 그린다 — 안쪽 레인은 작은 U턴, 나머지 둘은 한 칸 안으로 옮겨 큰 U턴 | Should | PAGE-001 | 3d-view | keep (2026-09-01 사용자 요청, D-049) |
 | FEAT-009 | 미지원 피스 노출 | 모르는 부분을 조용히 숨기지 않고 알려준다 | Must | PAGE-001 | 3d-view, section-list | keep |
 | FEAT-010 | 근거 등급 표기 (정직성) | 추정치와 실측치를 구분해 신뢰 범위를 알린다 | Must | PAGE-001 | 3d-view, profile-strip | keep |
 | FEAT-011 | 대형 트랙 성능 완화 | 큰 트랙에서도 조작감을 유지한다 | Must | PAGE-001 | 3d-view | keep |

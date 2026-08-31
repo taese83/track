@@ -112,22 +112,32 @@ export function buildFlythroughPath(input: FlythroughPathInput): FlythroughPath 
 
   for (const segment of usable) {
     const profile = elevatedByOrder.get(segment.order)?.elevationProfile
-    for (let index = 0; index < segment.points.length; index += 1) {
-      const point = segment.points[index]!
-      const offset = laneOffsetAt(segment.pieceClass, lane, point.t)
-      const tangentRad = tangentAt(segment, index)
-      const nx = -Math.sin(tangentRad)
-      const nz = Math.cos(tangentRad)
-      const x = point.x + nx * offset.lateralCm
-      const z = point.z + nz * offset.lateralCm
-      // 가로로 옮기면 그 자리의 노면이 중심선과 다르다(FEAT-017 · D-029). 옮기지 않았을
-      // 때 노면 함수를 다시 부르지 않는 것은 같은 자리에서 미세하게 다른 y가 나와 종전
-      // 경로와 어긋나기 때문이다.
-      let surfaceY = point.y
-      if (offset.lateralCm !== 0 && segment.surfaceHeightAt !== undefined) {
-        surfaceY = segment.surfaceHeightAt(x, z)
+    // FEAT-018 — 명시 레인 경로가 있으면 카메라는 **그 레인의 경로 표본**을 그대로 탄다.
+    // 중심선에 오프셋을 얹으면 레인보우 체인저에서 레인 2가 실제로 도는 작은 U턴이 아니라
+    // 큰 U턴 곁을 달리게 된다.
+    const route = segment.lanePaths?.[lane]
+    const samples = route ?? segment.points
+    for (let index = 0; index < samples.length; index += 1) {
+      const point = samples[index]!
+      let x = point.x
+      let y = point.y
+      let z = point.z
+      if (route === undefined) {
+        const offset = laneOffsetAt(segment.pieceClass, lane, point.t)
+        const tangentRad = tangentAt(segment, index)
+        const nx = -Math.sin(tangentRad)
+        const nz = Math.cos(tangentRad)
+        x = point.x + nx * offset.lateralCm
+        z = point.z + nz * offset.lateralCm
+        // 가로로 옮기면 그 자리의 노면이 중심선과 다르다(FEAT-017 · D-029). 옮기지 않았을
+        // 때 노면 함수를 다시 부르지 않는 것은 같은 자리에서 미세하게 다른 y가 나와 종전
+        // 경로와 어긋나기 때문이다.
+        let surfaceY = point.y
+        if (offset.lateralCm !== 0 && segment.surfaceHeightAt !== undefined) {
+          surfaceY = segment.surfaceHeightAt(x, z)
+        }
+        y = surfaceY + offset.riseCm
       }
-      const y = surfaceY + offset.riseCm
 
       const previous = waypoints[waypoints.length - 1]
       // 이음새의 중복 점은 버린다 — 남기면 진행 방향이 없는 구간이 생긴다.

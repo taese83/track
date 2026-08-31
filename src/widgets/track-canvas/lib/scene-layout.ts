@@ -7,13 +7,18 @@
 // 축 대응(editor → three): x → x, y → z, 고도 → y(위).
 // 편집기 y는 화면 아래로 증가하므로, 위에서 내려다보는 카메라의 up을 -z로 두면 도면과
 // 같은 방향으로 보인다. 여기서 y를 뒤집어 넣으면(z = -y) 도면의 거울상이 된다.
-import { buildPiecePath } from '@/entities/track/lib/elevation'
-import type { ElevatedSegment, OrientedPiece, PiecePath } from '@/entities/track/lib/elevation'
+import { buildPiecePath, laneRoutesOf } from '@/entities/track/lib/elevation'
+import type {
+  ElevatedSegment,
+  LaneRoute,
+  OrientedPiece,
+  PiecePath,
+} from '@/entities/track/lib/elevation'
 import type { ParsedPiece } from '@/entities/track/model/types'
 
 import { compatCorrectionOf } from './compat-correction'
 import { isLaneChangeClass } from './lane-model'
-import { mitigationFor, readMitigationOverride } from './perf-mitigation'
+import { FULL_CURVED_SAMPLES, mitigationFor, readMitigationOverride } from './perf-mitigation'
 import type { MitigationProfile } from './perf-mitigation'
 import { directionOf, kindOf } from './segment-encoding'
 import { buildUnsupportedPlaceholders, placeholderEdges } from './unsupported-placeholder'
@@ -58,6 +63,25 @@ export interface SceneSegment {
    * 횡경사가 사라진다(FEAT-017 · D-029). 판 밖 세그먼트에는 없다.
    */
   surfaceHeightAt?: (x: number, z: number) => number
+  /**
+   * 레인별 **명시 경로** 표본(FEAT-018 · D-049). 주행 레인 인덱스 순이며 각 레인의
+   * `[0]`이 그 레인의 진입점이다. 있으면 레인 면(`lane-bands`)과 추종 카메라
+   * (`flythrough-camera`)가 "중심선 + 가로 오프셋" 대신 이것을 쓴다 — 레인보우 체인저처럼
+   * 레인이 서로 다른 중심의 원호를 도는 피스는 오프셋으로 만들 수 없다.
+   *
+   * **이 표본의 `t`는 그 레인 경로 고유의 호 길이 비율**이지 중심선 `points`의 `t`가 아니다
+   * (레인 2의 `t=0.5`는 작은 U턴 꼭짓점, 중심선의 `t=0.5`는 큰 U턴 꼭짓점). 지금은 명시 경로
+   * 피스가 전부 평지(`Lan*`)라 `heightAt(t)`·`slopeAt(t)`가 0이지만, 고도가 있는 명시 경로
+   * 피스가 생기면 중심선 `t`로 환산해 넘겨야 한다(code-reviewer 2026-09-01).
+   */
+  lanePaths?: SceneSample[][]
+  /**
+   * 레인별 노면 높이 함수(FEAT-018 · D-049 ⑦). 씬 좌표 `(x, z)`와 그 레인 표본의 `t`(전이/판
+   * 구간 판정)를 받아 절대 높이를 낸다. 올라가는 레인은 판 위에 놓이므로 가장자리 높이가
+   * 중심선과 다르다 — `surfaceHeightAt`(FEAT-017)과 같은 이유로, 중심선 높이를 좌우로 복사하면
+   * 면이 비틀린다. `lanePaths`와 같은 인덱스다.
+   */
+  laneSurfaces?: ((x: number, z: number, t: number) => number)[]
 }
 
 export interface SceneBounds {
@@ -152,6 +176,42 @@ function tangentAt(path: PiecePath, at: 'entry' | 'exit'): number {
   return Math.atan2(b.y - a.y, b.x - a.x)
 }
 
+/**
+ * 명시 레인 경로의 표본 간격(cm). 레인보우 체인저는 반원 두 종류(r 42~54)를 담으므로 표본을
+ * **호 길이**로 배분한다 — 피스당 고정 개수로 두면 380cm 경로의 반원이 8° 남짓의 다각형으로
+ * 읽힌다(2026-09-01 사용자 지적 "매끄러운 곡선이어야 한다"). 3cm 간격이면 r=42에서 현의
+ * 처짐이 0.03cm라 눈에 보이지 않는다. 완화(FEAT-011)는 곡선 표본 비율만큼 간격을 늘린다.
+ */
+const ROUTE_SAMPLE_SPACING_CM = 3
+const MIN_ROUTE_SAMPLES = 16
+
+function routeSampleCount(length: number, curvedSamples: number): number {
+  const spacing = (ROUTE_SAMPLE_SPACING_CM * FULL_CURVED_SAMPLES) / Math.max(curvedSamples, 1)
+  return Math.max(MIN_ROUTE_SAMPLES, Math.ceil(length / spacing) + 1)
+}
+
+function sampleRoute(
+  route: LaneRoute,
+  count: number,
+  elevated: ElevatedSegment | undefined,
+  correction: { x: number; y: number },
+): SceneSample[] {
+  const base = elevated?.absoluteElevationStart ?? 0
+  const samples: SceneSample[] = []
+  for (let index = 0; index < count; index += 1) {
+    const t = count === 1 ? 0 : index / (count - 1)
+    const flat = route.pointAt(t)
+    samples.push({
+      t,
+      x: flat.x + correction.x,
+      // 레인 상승은 고도 프로파일이 아니라 레인 면의 추가 높이다(D-035·D-049) — 여기서 더한다
+      y: base + (elevated?.elevationProfile.heightAt(t) ?? 0) + route.riseAt(t),
+      z: flat.y + correction.y,
+    })
+  }
+  return samples
+}
+
 const EMPTY_BOUNDS: SceneBounds = {
   min: { x: 0, y: 0, z: 0 },
   max: { x: 0, y: 0, z: 0 },
@@ -171,9 +231,11 @@ function boundsOf(
   let maxZ = Number.NEGATIVE_INFINITY
 
   // 플레이스홀더도 바운딩박스에 넣는다 — 빼면 카메라 프레이밍 밖으로 나가 "상시 노출"이
-  // 성립하지 않는다(트랙 밖에 선언된 미지원 피스가 화면에서 사라진다).
+  // 성립하지 않는다(트랙 밖에 선언된 미지원 피스가 화면에서 사라진다). 명시 레인 경로도
+  // 같다 — 레인보우 체인저의 큰 U턴은 중심선보다 밖으로 나간다(TC-018-6).
   const points = [
     ...segments.flatMap((segment) => segment.points as readonly ScenePoint[]),
+    ...segments.flatMap((segment) => (segment.lanePaths ?? []).flat() as readonly ScenePoint[]),
     ...placeholders.flatMap((placeholder) => placeholderEdges(placeholder).flat()),
   ]
 
@@ -235,6 +297,19 @@ export function buildSceneLayout(input: SceneLayoutInput): SceneLayout {
 
     const surface = elevated?.elevationProfile.surfaceHeightAt
 
+    // FEAT-018 — 명시 레인 경로가 있는 피스(레인보우 체인저)는 레인마다 따로 표본을 낸다.
+    // 중심선 `points`는 그대로 둔다 — 마커·목록·스트립 거리축의 기준이다.
+    const routes = laneRoutesOf(oriented)
+    const lanePaths = routes?.map((route) =>
+      sampleRoute(route, routeSampleCount(route.length, mitigation.curvedSamples), elevated, correction),
+    )
+    const laneSurfaces = routes?.map(
+      (route) => (x: number, z: number, t: number) =>
+        base +
+        (elevated?.elevationProfile.heightAt(t) ?? 0) +
+        route.riseAtPoint({ x: x - correction.x, y: z - correction.y }, t),
+    )
+
     return {
       pieceId: piece.pieceId,
       pieceClass: piece.pieceClass,
@@ -252,6 +327,8 @@ export function buildSceneLayout(input: SceneLayoutInput): SceneLayout {
             surfaceHeightAt: (x: number, z: number) =>
               surface({ x: x - correction.x, y: z - correction.y }),
           }),
+      ...(lanePaths === undefined ? {} : { lanePaths }),
+      ...(laneSurfaces === undefined ? {} : { laneSurfaces }),
     }
   })
 

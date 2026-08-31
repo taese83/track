@@ -35,9 +35,16 @@ export function orientPath(ordered: readonly ParsedPiece[]): OrientedPiece[] {
   const cost: [number, number][] = ordered.map(() => [INFINITE, INFINITE])
   const from: [VertexIndex, VertexIndex][] = ordered.map(() => [0, 0])
   const head = cost[0]
-  if (head === undefined) return []
-  // START는 화살표(local +x = vertex2) 쪽으로 나간다 (D-038 ①)
-  head[1] = 0
+  const first = ordered[0]
+  if (head === undefined || first === undefined) return []
+  // START는 화살표(local +x = vertex2) 쪽으로 나간다 (D-038 ①). 복원이 막혀 START 양방향
+  // 사슬(D-050)을 받으면 첫 피스는 START가 아니다 — 그때는 어느 끝으로 나갈지 이음새 간격이
+  // 정하고, START는 사슬 중간에서 화살표 방향으로 통과된다.
+  if (first.pieceClass === 'Str2') head[1] = 0
+  else {
+    head[0] = 0
+    head[1] = 0
+  }
 
   for (let index = 0; index + 1 < length; index += 1) {
     const current = ordered[index]

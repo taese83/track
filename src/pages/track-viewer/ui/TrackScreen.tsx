@@ -149,12 +149,17 @@ export function TrackScreen({
     () => buildScreenProfileModel({ elevated, items, closure }),
     [elevated, items, closure],
   )
+  // XY가 열려 있으면 "끊김"이다 — `truncated`만으로 가르면 복원이 막혔는데 진단 걷기가 전
+  // 피스를 덮은 경우(D-050 양방향 사슬)에 "XY 폐곡선"이라고 거짓말한다(code-reviewer 2026-09-01).
+  // 전 피스가 이어졌는데 닫히지 않은 사슬은 "끊긴 지점까지만"이 아니라 "닫히지 않는 사슬 전체"다.
   const banner =
     closure.isClosedLoop && closure.isZClosed !== false
       ? null
-      : layout.truncated
-        ? `연결이 끊긴 지점까지만 표시했습니다 — ${rendered}/${totalPieceCount}피스`
-        : 'XY 폐곡선이지만 고도가 시작점으로 돌아오지 않았습니다'
+      : !closure.isClosedLoop && !layout.truncated
+        ? `트랙이 닫히지 않아 이어진 사슬 전체를 표시했습니다 — ${rendered}/${totalPieceCount}피스`
+        : layout.truncated || !closure.isClosedLoop
+          ? `연결이 끊긴 지점까지만 표시했습니다 — ${rendered}/${totalPieceCount}피스`
+          : 'XY 폐곡선이지만 고도가 시작점으로 돌아오지 않았습니다'
 
   return (
     <TrackCursorProvider totalCount={items.length} reachableCount={reachableCount}>

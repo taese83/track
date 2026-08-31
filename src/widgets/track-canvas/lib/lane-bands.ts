@@ -9,7 +9,7 @@
 // 수직인 **하나의 직선**으로 잘려 맞물리므로, 이음새에서는 양쪽이 같은 절단선을 쓴다
 // (D-036 ④). 그 절단선은 두 접선의 이등분선이고, 가장자리를 그 선 위까지 밀어내는 배율이
 // `1/cos(Δ/2)`다 — 그래서 코너에서 **바깥쪽 가장자리가 안쪽보다 길어진다**.
-import { LANE_COUNT, laneBandAt } from './lane-model'
+import { LANE_COUNT, LANE_PITCH_CM, laneBandAt } from './lane-model'
 import type { SceneSample, SceneSegment } from './scene-layout'
 
 export interface BandPoint {
@@ -31,6 +31,11 @@ export interface SegmentBands {
   pieceClass: string
   isSupported: boolean
   lanes: LaneBand[]
+  /**
+   * 레인이 명시 경로(FEAT-018)로 **따로** 놓여 서로 맞붙지 않는가. 맞붙은 레인은 경계선을
+   * 4줄(바깥 둘 + 사이 둘)로 공유하지만, 따로 놓인 레인은 레인마다 좌·우 둘씩 6줄이다.
+   */
+  separated: boolean
 }
 
 /**
@@ -141,6 +146,45 @@ function offsetPoint(
   }
 }
 
+/** 두 표본 사이 수평 접선. 같은 점이면 0 — 경로 끝에서 이웃 표본이 하나뿐일 때 쓴다 */
+function tangentBetween(from: SceneSample, to: SceneSample): number {
+  const dx = to.x - from.x
+  const dz = to.z - from.z
+  if (dx === 0 && dz === 0) return 0
+  return Math.atan2(dz, dx)
+}
+
+/**
+ * FEAT-018 — 명시 경로 레인의 면. 폭은 그 레인 **자신의** 접선에 수직으로 ±6cm다. 양 끝은
+ * 이웃 피스와 **공유하는 절단선**(`framesFor`의 entry/exit — 중심선 접선 기준)을 쓴다: 두 팔이
+ * 직선이라 레인 접선과 중심선 접선이 같으므로, 이웃이 코너여도 D-036 ④의 미터링이 그대로
+ * 성립한다(code-reviewer 2026-09-01).
+ */
+function routeBand(
+  route: readonly SceneSample[],
+  lane: number,
+  seams: { entry: LateralFrame | undefined; exit: LateralFrame | undefined },
+  laneSurface: ((x: number, z: number, t: number) => number) | undefined,
+): LaneBand {
+  const half = LANE_PITCH_CM / 2
+  const last = route.length - 1
+  const lo: BandPoint[] = []
+  const hi: BandPoint[] = []
+  route.forEach((sample, at) => {
+    const frame =
+      at === 0
+        ? (seams.entry ?? frameOf(tangentBetween(sample, route[1] ?? sample)))
+        : at === last
+          ? (seams.exit ?? frameOf(tangentBetween(route[last - 1] ?? sample, sample)))
+          : frameOf(localTangentRad(route, at))
+    // 가장자리 높이는 **그 자리의 노면**(레인별 판 함수)에서 온다 — 올라가는 레인이 판 위에 놓인다
+    const surface = laneSurface === undefined ? undefined : (x: number, z: number) => laneSurface(x, z, sample.t)
+    lo.push(offsetPoint(sample, frame, -half, 0, surface))
+    hi.push(offsetPoint(sample, frame, half, 0, surface))
+  })
+  return { lane, lo, hi }
+}
+
 /**
  * 미지원 피스는 끝점을 모르고 형상이 한 점으로 눌려 있다 — 폭을 지어내지 않고 레인을
  * 만들지 않는다(FEAT-009가 그 자리에 플레이스홀더를 세운다).
@@ -149,9 +193,21 @@ export function buildLaneBands(segments: readonly SceneSegment[]): SegmentBands[
   return segments.map((segment, index) => {
     const frames = framesFor(segments, index)
     const usable = segment.isSupported && segment.points.length >= 2
+    const routes = segment.lanePaths
+    const separated = usable && routes !== undefined
 
-    const lanes: LaneBand[] = usable
-      ? Array.from({ length: LANE_COUNT }, (_, lane) => {
+    const lanes: LaneBand[] = !usable
+      ? []
+      : routes !== undefined
+        ? routes.map((route, lane) =>
+            routeBand(
+              route,
+              lane,
+              { entry: frames[0], exit: frames[frames.length - 1] },
+              segment.laneSurfaces?.[lane],
+            ),
+          )
+        : Array.from({ length: LANE_COUNT }, (_, lane) => {
           const lo: BandPoint[] = []
           const hi: BandPoint[] = []
           const surface = segment.surfaceHeightAt
@@ -164,7 +220,6 @@ export function buildLaneBands(segments: readonly SceneSegment[]): SegmentBands[
           })
           return { lane, lo, hi }
         })
-      : []
 
     return {
       order: segment.order,
@@ -172,13 +227,18 @@ export function buildLaneBands(segments: readonly SceneSegment[]): SegmentBands[
       pieceClass: segment.pieceClass,
       isSupported: segment.isSupported,
       lanes,
+      separated,
     }
   })
 }
 
-/** 레인 경계선 4줄 — 바깥 두 줄과 레인 사이 두 줄. 색 단독 구분을 보조하는 형태 축이다 */
+/**
+ * 레인 경계선 — 맞붙은 레인은 4줄(바깥 두 줄과 레인 사이 두 줄), 따로 놓인 레인(FEAT-018)은
+ * 레인마다 좌·우 둘씩. 색 단독 구분을 보조하는 형태 축이다.
+ */
 export function boundaryLinesOf(bands: SegmentBands): BandPoint[][] {
   const [first] = bands.lanes
   if (first === undefined) return []
+  if (bands.separated) return bands.lanes.flatMap((lane) => [lane.lo, lane.hi])
   return [first.lo, ...bands.lanes.map((lane) => lane.hi)]
 }

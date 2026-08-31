@@ -51,6 +51,7 @@ interface ElevatedSegment {
     heightAt(t: number): number   // t ∈ [0,1], 세그먼트 로컬 상대 높이(중심선). 곡면 메시 생성용
     slopeAt(t: number): number    // 이음매 접선 검증(±1°, REQ-F-002)·카메라 피치(FEAT-007) 파생용
     surfaceHeightAt?(point: { x: number; y: number }): number   // FEAT-017. 판 구간(bankTransition·plane)에서만 정의 — 편집기 2D 좌표 → 절대 고도. 렌더러가 레인 가장자리 높이를 이 함수로 정해 횡경사가 생긴다. 중심선에서는 absoluteElevationStart + heightAt(t)와 일치(불변식)
+    // FEAT-018 · D-049 — 씬 세그먼트(`SceneSegment`, widgets/track-canvas)에는 선택 필드 `lanePaths?: SceneSample[][]`가 있다: 레인별 명시 경로 표본(주행 레인 인덱스 순). 레인보우 체인저(Lan2)처럼 레인이 서로 다른 중심의 원호를 도는 피스만 채우며, 있으면 레인 면·추종 카메라·바운딩박스가 "중심선 + 가로 오프셋" 대신 이것을 쓴다. 중심선 `points`는 그대로 마커·목록·스트립 거리축의 기준이다. 함께 `laneSurfaces?: ((x, z, t) => number)[]`가 레인별 노면 높이 함수를 실어(올라가는 레인의 판, D-049 ⑦) 레인 가장자리 높이를 `surfaceHeightAt`과 같은 방식으로 그 자리에서 정한다 — 중심선 높이를 좌우로 복사하면 면이 비틀린다.
   }
   absoluteElevationStart: number   // 경로 누적 절대 고도(세그먼트 시작점). FEAT-004 Z 폐합·FEAT-012 프로파일 스트립 소비
   absoluteElevationEnd: number     // 세그먼트 종료점의 누적 절대 고도

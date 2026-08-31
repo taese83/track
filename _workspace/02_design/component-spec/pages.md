@@ -22,7 +22,9 @@ type ViewState =
   | { kind: 'error'; reason: 'network' | 'parse' | 'not-closed-fatal' | 'timeout' }
 ```
 
-전이: `input` →(제출)→ `loading` →(ASSUMPTION-007 임계 초과)→ `loading-slow` →(성공, WebGL 미지원 감지)→ `webgl-unsupported` │→(성공, WebGL 지원 + 폐곡선)→ `3d` │→(성공, 비폐곡선)→ `partial-failure` │→(fetch/파싱/순서복원 실패)→ `error` →(재시도)→ `loading`.
+전이: `input` →(제출)→ `loading` →(ASSUMPTION-007 임계 초과)→ `loading-slow` →(성공, WebGL 미지원 감지)→ `webgl-unsupported` │→(성공, WebGL 지원 + 폐곡선)→ `3d` │→(성공, 비폐곡선 — 복원이 열린 고리를 잇거나 **끝점을 잇다 막힌** 경우 모두)→ `partial-failure` │→(fetch/파싱/START 부재 실패)→ `error` →(재시도)→ `loading`.
+
+- **순서 복원 실패의 갈림(D-048)**: `start-piece-missing`만 `error`다(출발점이 없어 접두부가 정의되지 않는다). `traversal-incomplete`·`search-budget-exceeded`는 START부터 이어지는 연결 접두부(`ClosureValidation.connectedPieceIds`, `brokenAt.reason='order-restore-failed'`)까지 렌더하는 `partial-failure`다 — TC-004-2. `not-closed-fatal` 문구는 계약상 남아 있으나 현재 생산자가 없다.
 
 - `webgl-unsupported` 감지는 `loading` 진입 이전에도 가능(마운트 즉시 게이트, FEAT-014) — 이 경우 `loading`을 건너뛰고 바로 `webgl-unsupported`로 갈 수 있다(데이터 fetch와 독립).
 - `TrackCursorProvider`(shared.md)는 `kind`가 `3d`/`partial-failure`/`webgl-unsupported`일 때만 마운트.

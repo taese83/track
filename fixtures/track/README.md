@@ -25,6 +25,7 @@
 | `PARSEFAIL.js.txt` | synthetic | 피스 문자열 중간 파괴 + 말미 절단 | 200 (파싱 실패 판정은 FEAT-002) |
 | `EMPTY1.js.txt` | synthetic | `text`가 `'#'` 한 글자, 피스 0개 | 200 (0피스 판정은 FEAT-002) |
 | `BADJS.js.txt` | synthetic | JS 래퍼 자체가 깨짐(`text` 변수 없음) | **502 `UPSTREAM_RESPONSE_UNRECOGNIZED`** |
+| `R84APY.js.txt` | measured (2026-09-01 실측 원문) | 112피스, START 있음, Lan2(레인보우 체인저) 포함. 이음새 하나(Lan2 뒤 직선 p60 ↔ 코너 p0)가 16px 벌어져 있고 p0의 그 끝이 세로 직선 이음새(p70↔p71 정확 일치)에 0.285px 붙어 있는 **끼어든 끝**(D-051). 종전 규칙으로는 매달린 끝이 하나라 복원 실패(접두부 6피스)였고, D-051 이후 112피스 폐곡선으로 복원된다 | 200, `compat=false` (D-051·FEAT-018 실데이터) |
 
 `COMPAT1`은 실제 compat=true 트랙 코드를 확보하지 못해 원문의 저장 버전만 바꾼 합성본이다 —
 compat 분기 로직은 검증하지만 "실제 구버전 트랙의 좌표"를 재현하지는 않는다(FEAT-002/006이

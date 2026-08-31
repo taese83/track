@@ -154,12 +154,12 @@ test('TC-007-6(부분) · 스트립에 포커스를 두고 키보드로 옮기�
 })
 
 /**
- * **정직 표기 — OPENLOOP은 여기서 쓰지 못한다.** 그 fixture는 복원이
- * `traversal-incomplete`로 실패해 `TrackViewerPage`가 3D가 아니라 **에러 화면**으로
- * 착지한다(실측: `track-canvas`가 마운트되지 않는다). 3D에 도달하면서 `truncated`인
- * fixture는 `UNSUPP`다 — 복원은 성공하고 미지원 피스 2개가 `connectedPieceIds`에서
- * 빠져 배치가 전체를 덮지 못한다. 비폐곡선 자체의 추종은 순수 축이 OPENLOOP의 연결
- * 접두부(131구간)로 잰다.
+ * `UNSUPP`는 복원이 성공하고 미지원 피스 2개가 `connectedPieceIds`에서 빠져 배치가 전체를
+ * 덮지 못하는 `truncated`다. OPENLOOP은 복원이 `traversal-incomplete`로 실패하는 쪽의
+ * `truncated`인데(연결 접두부 131구간), 종전에는 `TrackViewerPage`가 그것을 에러 화면에
+ * 태워 여기서 쓸 수 없었다 — D-048이 부분 실패 렌더로 되돌렸고 그 경로의 e2e는
+ * `track-restore.spec`(TC-004-2)이 잰다. 비폐곡선 자체의 추종은 순수 축이 OPENLOOP의
+ * 연결 접두부로 잰다.
  */
 test('TC-007-5 · 배치가 잘린 트랙에서 켜도 오류로 중단되지 않는다', async ({ page }) => {
   await openTrack(page, 'UNSUPP')
