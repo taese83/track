@@ -196,3 +196,91 @@ describe('handleTrackRequest — 업스트림 호출 계약', () => {
     expect(ua).not.toContain('@')
   })
 })
+
+describe('handleTrackRequest — auto 모드 (TRACK_UPSTREAM 미지정, TC-001-9)', () => {
+  const fetchSpy = vi.fn()
+  const OK_RESPONSE = () => new Response("var compat = false;\nvar text = 'Str1;0;0;0;0';", { status: 200 })
+
+  beforeEach(() => {
+    delete process.env.TRACK_UPSTREAM
+    fetchSpy.mockReset()
+    vi.stubGlobal('fetch', fetchSpy)
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    process.env.TRACK_UPSTREAM = 'fixtures'
+  })
+
+  it('녹화본이 있는 코드는 업스트림에 묻지 않는다 — 오프라인 결정성', async () => {
+    const result = await handleTrackRequest('WS67Y2')
+
+    expect(result.status).toBe(200)
+    expect(fetchSpy).not.toHaveBeenCalled()
+  })
+
+  it('예약 코드 ZZZZZZ는 녹화본 판정 그대로 404 TRACK_NOT_FOUND다', async () => {
+    const result = await handleTrackRequest('ZZZZZZ')
+
+    expect(result.status).toBe(404)
+    expect(asError(result.body).code).toBe('TRACK_NOT_FOUND')
+    expect(fetchSpy).not.toHaveBeenCalled()
+  })
+
+  it('녹화본이 없는 코드는 업스트림을 정확히 1회 호출해 200을 돌려준다 (TC-001-9)', async () => {
+    fetchSpy.mockResolvedValue(OK_RESPONSE())
+
+    const result = await handleTrackRequest('https://mini4wd-track-editor.pimentoso.com/view/FTSBH1')
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1)
+    const [url] = fetchSpy.mock.calls[0] as [string, RequestInit]
+    expect(url).toBe('https://mini4wd-track-editor.pimentoso.com/load/FTSBH1.js')
+    expect(result.status).toBe(200)
+    expect(asData(result.body).trackCode).toBe('FTSBH1')
+  })
+
+  it('녹화본이 없고 업스트림도 404면 501이 아니라 TRACK_NOT_FOUND다 (TC-001-9)', async () => {
+    fetchSpy.mockResolvedValue(new Response('', { status: 404 }))
+
+    const result = await handleTrackRequest('FTSBH1')
+
+    expect(result.status).toBe(404)
+    expect(asError(result.body).code).toBe('TRACK_NOT_FOUND')
+  })
+
+  it("TRACK_UPSTREAM='auto' 명시도 미지정과 같다", async () => {
+    process.env.TRACK_UPSTREAM = 'auto'
+    fetchSpy.mockResolvedValue(OK_RESPONSE())
+
+    const result = await handleTrackRequest('FTSBH1')
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1)
+    const [url] = fetchSpy.mock.calls[0] as [string, RequestInit]
+    expect(url).toBe('https://mini4wd-track-editor.pimentoso.com/load/FTSBH1.js')
+    expect(result.status).toBe(200)
+  })
+
+  it('production에서 미지정은 live다 — 녹화본이 있어도 업스트림을 부른다', async () => {
+    const previous = process.env.NODE_ENV
+    process.env.NODE_ENV = 'production'
+    fetchSpy.mockResolvedValue(OK_RESPONSE())
+    try {
+      const result = await handleTrackRequest('WS67Y2')
+
+      expect(fetchSpy).toHaveBeenCalledTimes(1)
+      expect(result.status).toBe(200)
+    } finally {
+      if (previous === undefined) delete process.env.NODE_ENV
+      else process.env.NODE_ENV = previous
+    }
+  })
+
+  it("TRACK_UPSTREAM='fixtures' 명시는 종전대로 501이고 업스트림을 부르지 않는다", async () => {
+    process.env.TRACK_UPSTREAM = 'fixtures'
+
+    const result = await handleTrackRequest('FTSBH1')
+
+    expect(result.status).toBe(501)
+    expect(asError(result.body).code).toBe('FIXTURE_NOT_RECORDED')
+    expect(fetchSpy).not.toHaveBeenCalled()
+  })
+})
