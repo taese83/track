@@ -405,7 +405,7 @@
           },
           {
             "path": "_workspace/01_plan/feature-plan/data-model.md",
-            "sha256": "54200adc50158a78dede751c97649be5a9468c74a9766403865b6480e91c2f8b"
+            "sha256": "2456c05e9d17bae7afd6a923a8d14b14bca6fc296414be13accb785863a8bce0"
           },
           {
             "path": "_workspace/01_plan/feature-plan/feature-list.md",
@@ -428,7 +428,7 @@
             "sha256": "cb7a4d0cf745bdacb000430194d09810d7945f1c9c5c98a1dc7b33b54b74a002"
           }
         ],
-        "sha256": "ea5a0e421894e43003edfa31f5689ce922294d3255a5143f0b9332bf3a1a0224"
+        "sha256": "c6ed29e78c69a8ffa98008652574d45eeade9562660a7fc1707701337d5605f6"
       },
       {
         "path": "_workspace/01_plan/tech-stack.md",
@@ -507,6 +507,6 @@
         "sha256": "e0922521f66702801115ed646127671f644a2da6957a8cd86c8709d74eafa76a"
       }
     ],
-    "combined": "14e2f190918de5a772f05d5a25b0de162f394281ed00488fe6734ec79c9d0627"
+    "combined": "2cf6669c1ff36983a4ae9fe76aed66606b42418b3d8edfd676d9925b22376c07"
   }
 }

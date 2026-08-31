@@ -47,9 +47,10 @@ interface ElevatedSegment {
   order: number                // RestoredPath 상의 위치, 0-based
   laneOffset: number           // 레인체인지 수평 오프셋(FEAT-008). 고도와 독립적인 필드로 분리
   elevationProfile: {
-    kind: 'flat' | 'sCurve' | 'logCurve'   // Str1.c5 마커 직선은 'flat'
-    heightAt(t: number): number   // t ∈ [0,1], 세그먼트 로컬 상대 높이. 곡면 메시 생성용
+    kind: 'flat' | 'sCurve' | 'bankTransition' | 'plane'   // Str1.c5 마커 직선은 'flat'. 'logCurve'(D-029 로그 곡선)는 D-041이 대체 — 뱅크는 전이 곡선(bankTransition), 그 사이는 기운 평면(plane)
+    heightAt(t: number): number   // t ∈ [0,1], 세그먼트 로컬 상대 높이(중심선). 곡면 메시 생성용
     slopeAt(t: number): number    // 이음매 접선 검증(±1°, REQ-F-002)·카메라 피치(FEAT-007) 파생용
+    surfaceHeightAt?(point: { x: number; y: number }): number   // FEAT-017. 판 구간(bankTransition·plane)에서만 정의 — 편집기 2D 좌표 → 절대 고도. 렌더러가 레인 가장자리 높이를 이 함수로 정해 횡경사가 생긴다. 중심선에서는 absoluteElevationStart + heightAt(t)와 일치(불변식)
   }
   absoluteElevationStart: number   // 경로 누적 절대 고도(세그먼트 시작점). FEAT-004 Z 폐합·FEAT-012 프로파일 스트립 소비
   absoluteElevationEnd: number     // 세그먼트 종료점의 누적 절대 고도

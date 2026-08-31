@@ -1,6 +1,25 @@
 # change-scope — FEAT-017
 
-티켓 38 픽업으로 발급. ALLOWED_PATHS는 확인 후 확정(needsConfirmation).
+티켓 38 픽업으로 발급(2026-08-31, `/team-flow pickup`). ALLOWED_PATHS는 **선언 그대로** 확정
+(`src/entities/track/lib/elevation`, `src/widgets/track-canvas`) — TC-017은 전부 수치 축이라 e2e를 더하지 않는다
+(FEAT-008·011이 같은 판단을 했다).
+
+**결정 1 — 계약은 "점 → 절대 고도" 함수 하나로 넓힌다.** 스펙이 지목한 원인은 `ElevationProfile`이 중심선
+스칼라(`heightAt(t)`)만 실어 나른다는 것이다. 판의 `origin·up·gradient·lift·k`를 필드로 내보내면 렌더러가
+판 공식을 **두 번째로** 구현하게 된다(계약이 두 벌). 대신 `surfaceHeightAt?(point: Point): number`(편집기 2D
+좌표 → 절대 고도)를 판 구간(`bankTransition`·`plane`)에서만 채운다 — 프리뷰가 레인마다 `d = (px − origin)·up`로
+높이를 구하는 것과 같은 질문을 같은 함수에 던지는 것이다. 중심선에서는 `absoluteElevationStart + heightAt(t)`와
+일치해야 한다(불변식).
+
+**결정 2 — 전이 피스의 판 밖 좌표는 클램프가 아니라 판 공식이다.** 프리뷰는 `u = clamp01(d/dEnd)`로 자르는데,
+전이 피스의 진출점에서 바깥 가장자리는 `d > dEnd`가 되므로 클램프하면 그 가장자리가 판보다 낮아 다음
+판 피스와 **이음새에 노치**가 생긴다. `d ≥ dEnd`는 판 공식(`gradient·(d − lift)`), `d ≤ 0`은 진입 높이,
+사이만 전이 곡선으로 두면 세 구간이 C0·C1로 붙는다(`lift = dEnd·k/(k+1)`이라 `dEnd`에서 두 공식이 같다).
+
+**결정 3 — 렌더러는 씬 좌표 클로저로 받는다.** `SceneSegment.surfaceHeightAt?(x, z)`를 `scene-layout`이
+compat 보정을 되감아 감싸고, `lane-bands`의 `offsetPoint`가 가장자리 (x,z)를 만든 뒤 그 함수로 y를 정한다.
+`riseCm`(육교)은 그 위에 더한다 — 레인체인지는 판 밖이라 실제로는 겹치지 않는다.
+
 스키마 정본: minimal-change-contract.md · 아래 JSON이 기계 정본(STALE 대조 입력).
 
 ```json change-scope
@@ -24,6 +43,6 @@
   "NON_GOALS": [],
   "CHANGE_BUDGET": null,
   "sourceDigest": "c2e66f2450b2f807a59b6ecbe38e150966aea10b76086e0b4d1a3d4b720f389c",
-  "needsConfirmation": true
+  "needsConfirmation": false
 }
 ```
