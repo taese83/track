@@ -302,14 +302,19 @@ function TrackMesh({ layout, elevated }: TrackCanvasProps) {
 function FlythroughRig({
   path,
   stateRef,
-  onOrderChange,
+  publishProgress,
+  onCursorChange,
 }: {
   path: FlythroughPath
   stateRef: { current: FlythroughState }
-  onOrderChange: (order: number, distance: number) => void
+  /** 진행 상태를 DOM에 드러낸다(검증용). 커서와 달리 seek 중에도 발행한다 */
+  publishProgress: (order: number, distance: number) => void
+  /** 추종 중 공유 커서를 끌고 간다. seek 중에는 부르지 않는다 */
+  onCursorChange: (order: number) => void
 }) {
   const camera = useThree((state) => state.camera)
   const lastOrder = useRef(-1)
+  const lastPublishMs = useRef(0)
 
   useFrame((_, delta) => {
     const next = advanceFlythrough(stateRef.current, delta * 1000, path)
@@ -321,17 +326,35 @@ function FlythroughRig({
     camera.position.set(pose.eye.x, pose.eye.y, pose.eye.z)
     camera.lookAt(pose.target.x, pose.target.y, pose.target.z)
 
+    const order = orderAtDistance(path, next.distance)
+    const changed = order !== lastOrder.current
+
+    // 진행 거리는 **시간으로** 발행한다. 구간 변화에만 걸어 두면 한 구간 안을 달리는
+    // 동안 값이 멈춰 있어 "0.00"이라고 말하면서 카메라는 90cm를 가 있다 — 검증이 그
+    // 값을 읽으면 거짓 통과가 된다(2026-08-31 계측에서 실제로 그랬다). 매 프레임 쓰지
+    // 않는 것은 DOM 쓰기가 FEAT-011이 재는 fps에 얹히기 때문이다.
+    const nowMs = performance.now()
+    if (changed || nowMs - lastPublishMs.current >= PUBLISH_INTERVAL_MS) {
+      lastPublishMs.current = nowMs
+      publishProgress(order, next.distance)
+    }
+
     // 공유 커서는 **구간이 바뀔 때만** 민다 — 매 프레임 밀면 목록·스트립이 60fps로
     // 재렌더된다. 세 표면이 같은 지점을 가리키는 계약은 구간 단위다.
-    const order = orderAtDistance(path, next.distance)
-    if (order !== lastOrder.current) {
+    //
+    // 스크럽으로 **이동하는 중**에는 밀지 않는다. 사용자가 찍은 지점이 커서의 정본이고,
+    // 카메라가 따라가는 중간 위치로 그것을 덮으면 목록·스트립이 뒤로 끌려간다.
+    if (changed) {
       lastOrder.current = order
-      onOrderChange(order, next.distance)
+      if (!next.seeking) onCursorChange(order)
     }
   })
 
   return null
 }
+
+/** 진행 상태 DOM 발행 간격(ms). 매 프레임 쓰지 않되 값이 오래 멈춰 있지도 않게 한다 */
+const PUBLISH_INTERVAL_MS = 100
 
 /** 자동 재생 속도 선택지(cm/초). 탐색 속도 조절이 요구다 — 단일 속도는 조절이 아니다 */
 const SPEED_STEPS = [120, 240, 480] as const
@@ -444,14 +467,13 @@ export function TrackCanvas({ layout, elevated }: TrackCanvasProps) {
     host.dataset.followDistance = distance.toFixed(2)
   }, [])
 
-  const handleFollowOrder = useCallback(
-    (order: number, distance: number) => {
-      publishFollow(order, distance)
+  const handleFollowCursor = useCallback(
+    (order: number) => {
       // 재생이 커서를 끌고 간다 — 목록·스트립이 같은 지점을 가리킨다.
       // 도달 불가 구간은 `setCursor`가 스스로 거른다(부분 실패에서 넘어가지 않는다).
       setCursor(order, 'canvas')
     },
-    [publishFollow, setCursor],
+    [setCursor],
   )
 
   const toggleFollowing = useCallback(() => {
@@ -542,7 +564,8 @@ export function TrackCanvas({ layout, elevated }: TrackCanvasProps) {
           <FlythroughRig
             path={flythroughPath}
             stateRef={flythroughRef}
-            onOrderChange={handleFollowOrder}
+            publishProgress={publishFollow}
+            onCursorChange={handleFollowCursor}
           />
         ) : null}
         <OrbitControls

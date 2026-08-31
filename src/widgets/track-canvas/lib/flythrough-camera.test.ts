@@ -296,6 +296,43 @@ describe('TC-007-5 — 부분 실패 트랙에서 복원 구간까지만 가고 
   })
 })
 
+describe('스크럽 이동 중에는 카메라가 공유 커서를 되쓰지 않는다', () => {
+  it('스크럽하면 도착 전까지 seeking이고 도착하면 내려간다', async () => {
+    const { layout, elevated } = await sceneOf('WS67Y2.js.txt')
+    const flythrough = buildFlythroughPath({ segments: layout.segments, elevated })
+
+    let state = scrubTo(initialFlythroughState(), distanceOfOrder(flythrough, 79))
+    expect(state.seeking).toBe(true)
+
+    // 이동 중에는 계속 seeking — 이 구간에 카메라가 커서를 밀면 사용자가 찍은 79가
+    // 카메라의 현재 위치(1·2·3…)로 덮인다(2026-08-31 브라우저 계측에서 79 → 3으로 되밀림)
+    state = advanceFlythrough(state, 16, flythrough)
+    expect(state.seeking).toBe(true)
+    expect(state.distance).toBeLessThan(state.goal)
+
+    for (let frame = 0; frame < 200; frame += 1) state = advanceFlythrough(state, 16, flythrough)
+    expect(state.distance).toBe(state.goal)
+    expect(state.seeking).toBe(false)
+  })
+
+  it('재생은 seek이 아니다 — 추종 중에는 커서를 끌고 간다', async () => {
+    const { layout, elevated } = await sceneOf('WS67Y2.js.txt')
+    const flythrough = buildFlythroughPath({ segments: layout.segments, elevated })
+
+    let state = setPlaying(initialFlythroughState(), true)
+    expect(state.seeking).toBe(false)
+    for (let frame = 0; frame < 60; frame += 1) state = advanceFlythrough(state, 16, flythrough)
+    // 재생 중에는 목표가 매 프레임 앞서 거리가 정확히 같아지지 않지만 seek은 아니다
+    expect(state.distance).not.toBe(state.goal)
+    expect(state.seeking).toBe(false)
+  })
+
+  it('제자리 스크럽은 seek이 아니다 — 움직이지 않으므로 되쓸 것도 없다', () => {
+    const state = scrubTo(initialFlythroughState(), 0)
+    expect(state.seeking).toBe(false)
+  })
+})
+
 describe('공유 커서 ↔ 경로 거리 왕복', () => {
   it('구간 인덱스로 옮긴 거리에서 되읽으면 같은 구간이다', async () => {
     const { layout, elevated } = await sceneOf('WS67Y2.js.txt')

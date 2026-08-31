@@ -231,13 +231,23 @@ export interface FlythroughState {
   playing: boolean
   /** 자동 재생 속도(cm/초) */
   speed: number
+  /**
+   * 스크럽 목표로 **이동하는 중**인가. 도착하면 스스로 내려간다.
+   *
+   * 이 플래그가 필요한 이유: 카메라는 재생 중 공유 커서를 밀지만, 스크럽으로 이동하는
+   * 동안에는 밀면 안 된다. 사용자가 79번 구간을 찍었는데 카메라가 따라가며 1·2·3…을
+   * 커서에 되쓰면 목록·스트립이 **뒤로 끌려갔다가** 다시 올라온다 — 사용자의 의도를
+   * 카메라의 현재 위치가 덮어쓰는 것이다(2026-08-31 브라우저 계측: 클릭 직후 커서가
+   * 79에서 3으로 되밀렸다).
+   */
+  seeking: boolean
 }
 
 /** 기본 재생 속도(cm/초). 참조 트랙(약 1,900cm)을 한 바퀴 도는 데 대략 8초다 */
 export const DEFAULT_SPEED = 240
 
 export function initialFlythroughState(speed: number = DEFAULT_SPEED): FlythroughState {
-  return { distance: 0, goal: 0, playing: false, speed }
+  return { distance: 0, goal: 0, playing: false, speed, seeking: false }
 }
 
 /**
@@ -272,7 +282,10 @@ export function advanceFlythrough(
   const goal = state.playing
     ? Math.min(state.goal + (state.speed * deltaMs) / 1000, path.length)
     : state.goal
-  return { ...state, goal, distance: easeToward(state.distance, goal, deltaMs) }
+  const distance = easeToward(state.distance, goal, deltaMs)
+  // 목표에 닿으면 seek이 끝난다. 재생 중에는 목표가 매 프레임 앞서므로 정확히 같아지지
+  // 않는데, 그 상태는 seek이 아니라 **추종**이다 — 재생이 켜지는 순간 내려 둔다.
+  return { ...state, goal, distance, seeking: state.seeking && distance !== goal }
 }
 
 /**
@@ -281,11 +294,17 @@ export function advanceFlythrough(
  * 성립하지 않는다. 누르고도 카메라가 조금 더 흘러가는 것은 멈춘 것이 아니다.
  */
 export function setPlaying(state: FlythroughState, playing: boolean): FlythroughState {
-  if (playing) return { ...state, playing: true }
-  return { ...state, playing: false, goal: state.distance }
+  // 재생을 켜면 seek이 아니다 — 이후의 진행은 사용자가 지정한 한 지점으로의 이동이 아니라
+  // 트랙을 따라가는 추종이고, 그때는 카메라가 공유 커서를 끌고 가는 것이 맞다.
+  if (playing) return { ...state, playing: true, seeking: false }
+  return { ...state, playing: false, goal: state.distance, seeking: false }
 }
 
-/** 스크럽 — 목표만 옮긴다. 현재 위치는 이징이 따라간다(즉시 컷 금지) */
+/**
+ * 스크럽 — 목표만 옮긴다. 현재 위치는 이징이 따라간다(즉시 컷 금지).
+ * 도착할 때까지 `seeking`이라 카메라가 공유 커서를 되쓰지 않는다.
+ */
 export function scrubTo(state: FlythroughState, distance: number): FlythroughState {
-  return { ...state, goal: distance }
+  if (distance === state.distance) return { ...state, goal: distance, seeking: false }
+  return { ...state, goal: distance, seeking: true }
 }
