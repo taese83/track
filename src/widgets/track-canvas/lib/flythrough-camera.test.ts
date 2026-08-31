@@ -23,6 +23,7 @@ import {
   initialFlythroughState,
   orderAtDistance,
   poseAt,
+  jumpTo,
   scrubTo,
   setPlaying,
 } from './flythrough-camera'
@@ -159,6 +160,19 @@ describe('TC-007-2 — 스크럽은 즉시 컷이 아니라 easing이다', () =>
     const once = easeToward(0, 100, 32)
     const twice = easeToward(easeToward(0, 100, 16), 100, 16)
     expect(once).toBeCloseTo(twice, 9)
+  })
+
+  it('reduced-motion의 jumpTo는 즉시 컷이다 — 다음 프레임이 좁힐 거리가 없다', async () => {
+    const { layout, elevated } = await sceneOf('WS67Y2.js.txt')
+    const flythrough = buildFlythroughPath({ segments: layout.segments, elevated })
+
+    const goal = distanceOfOrder(flythrough, 60)
+    const jumped = jumpTo(initialFlythroughState(), goal)
+    expect(jumped.distance).toBe(goal)
+    expect(jumped.goal).toBe(goal)
+    // seek 구간이 없으므로 이동 중 커서 되쓰기 문제도 성립하지 않는다
+    expect(jumped.seeking).toBe(false)
+    expect(advanceFlythrough(jumped, 16, flythrough).distance).toBe(goal)
   })
 })
 

@@ -308,3 +308,12 @@ export function scrubTo(state: FlythroughState, distance: number): FlythroughSta
   if (distance === state.distance) return { ...state, goal: distance, seeking: false }
   return { ...state, goal: distance, seeking: true }
 }
+
+/**
+ * 즉시 컷 — `prefers-reduced-motion`용이다(component-spec §TrackCanvas "카메라 전환 즉시
+ * 컷"). 이징 자체가 모션이므로 줄이는 게 아니라 **건너뛴다** — 목표와 위치를 함께 옮기면
+ * 다음 프레임의 이징이 좁힐 거리가 없다. seek 구간이 없으므로 커서 되쓰기 문제도 없다.
+ */
+export function jumpTo(state: FlythroughState, distance: number): FlythroughState {
+  return { ...state, distance, goal: distance, seeking: false }
+}
