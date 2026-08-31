@@ -5,11 +5,12 @@
 // 구면 좌표이고, 추종은 경로 위의 **누적 거리 하나**다. 거리를 축으로 두면 스크럽·자동
 // 재생·일시정지가 전부 같은 값 하나를 옮기는 일이 되어 세 조작이 서로 어긋나지 않는다.
 //
-// 경로는 좌표를 새로 만들지 않는다. `buildSceneLayout`이 이미 배치한 표본을 그대로 잇고,
-// 피치만 고도 프로파일에서 가져온다 — 여기서 높이를 다시 계산하면 화면의 노면과 카메라가
-// 서로 다른 트랙 위에 있게 된다.
+// 경로는 좌표를 새로 만들지 않는다. `buildSceneLayout`이 이미 배치한 표본에 레인 오프셋만
+// 얹고(FEAT-008 · D-047), 피치는 고도 프로파일에서 가져온다 — 여기서 높이나 가로 프레임을
+// 따로 정의하면 화면의 노면과 카메라가 서로 다른 트랙 위에 있게 된다.
 import type { ElevatedSegment } from '@/entities/track/lib/elevation'
 
+import { LANE_COUNT, isLaneChangeClass, laneOffsetAt } from './lane-model'
 import type { SceneSegment } from './scene-layout'
 
 export interface FlythroughWaypoint {
@@ -32,6 +33,8 @@ export interface FlythroughWaypoint {
   pitchRad: number
   /** 경로 시작점부터의 누적 거리 */
   distance: number
+  /** 이 지점에서 카메라가 달리는 레인 인덱스 */
+  lane: number
 }
 
 export interface FlythroughPath {
@@ -53,6 +56,8 @@ export interface FlythroughPathInput {
    * `reachableCount`와 같은 축). 생략하면 전부 도달 가능으로 본다.
    */
   reachableCount?: number
+  /** 카메라가 출발하는 레인 인덱스. 생략하면 가운데 레인(D-047) */
+  startLane?: number
 }
 
 /**
@@ -66,10 +71,34 @@ function headingOf(from: FlythroughWaypoint, to: FlythroughWaypoint): number {
   return Math.atan2(to.z - from.z, to.x - from.x)
 }
 
+/** 카메라가 출발하는 레인(가운데) */
+export const CAMERA_START_LANE = 1
+
+/**
+ * 표본의 수평 접선. 끝 표본은 이웃 표본이 한쪽밖에 없으므로 세그먼트가 선언한 진입·진출
+ * 접선을 쓴다(`lane-bands.localTangentRad`와 같은 규약).
+ */
+function tangentAt(segment: SceneSegment, index: number): number {
+  const { points } = segment
+  if (index <= 0) return segment.entryTangentRad
+  if (index >= points.length - 1) return segment.exitTangentRad
+  const prev = points[index - 1]
+  const next = points[index + 1]
+  if (prev === undefined || next === undefined) return segment.entryTangentRad
+  const dx = next.x - prev.x
+  const dz = next.z - prev.z
+  if (dx === 0 && dz === 0) return segment.entryTangentRad
+  return Math.atan2(dz, dx)
+}
+
 /**
  * 복원된 순서를 따라 카메라가 지날 경로를 만든다. 표본 순서가 곧 주행 순서이며
  * `points[0]`이 진입점이라는 `SceneSegment` 계약을 그대로 따른다 — 여기서 순서를 다시
  * 정하지 않는다.
+ *
+ * 카메라는 중심선이 아니라 **레인 위**를 달린다(TC-008-2). `Lan*`을 하나 지날 때마다
+ * 레인이 한 칸 순환하는 것은 `laneShiftsCm()`(0→1, 1→2, 2→0)과 같은 순환이라, 세그먼트
+ * 끝의 레인 위치가 다음 피스에서 그 레인의 중심과 같은 자리가 된다 — 이음새가 이어진다.
  */
 export function buildFlythroughPath(input: FlythroughPathInput): FlythroughPath {
   const elevatedByOrder = new Map(input.elevated.map((segment) => [segment.order, segment]))
@@ -79,38 +108,53 @@ export function buildFlythroughPath(input: FlythroughPathInput): FlythroughPath 
 
   const waypoints: FlythroughWaypoint[] = []
   let distance = 0
+  let lane = ((input.startLane ?? CAMERA_START_LANE) % LANE_COUNT + LANE_COUNT) % LANE_COUNT
 
   for (const segment of usable) {
     const profile = elevatedByOrder.get(segment.order)?.elevationProfile
-    for (const point of segment.points) {
+    for (let index = 0; index < segment.points.length; index += 1) {
+      const point = segment.points[index]!
+      const offset = laneOffsetAt(segment.pieceClass, lane, point.t)
+      const tangentRad = tangentAt(segment, index)
+      const nx = -Math.sin(tangentRad)
+      const nz = Math.cos(tangentRad)
+      const x = point.x + nx * offset.lateralCm
+      const z = point.z + nz * offset.lateralCm
+      // 가로로 옮기면 그 자리의 노면이 중심선과 다르다(FEAT-017 · D-029). 옮기지 않았을
+      // 때 노면 함수를 다시 부르지 않는 것은 같은 자리에서 미세하게 다른 y가 나와 종전
+      // 경로와 어긋나기 때문이다.
+      let surfaceY = point.y
+      if (offset.lateralCm !== 0 && segment.surfaceHeightAt !== undefined) {
+        surfaceY = segment.surfaceHeightAt(x, z)
+      }
+      const y = surfaceY + offset.riseCm
+
       const previous = waypoints[waypoints.length - 1]
       // 이음새의 중복 점은 버린다 — 남기면 진행 방향이 없는 구간이 생긴다.
       if (
         previous !== undefined &&
-        Math.hypot(point.x - previous.x, point.y - previous.y, point.z - previous.z) < SEAM_EPSILON
+        Math.hypot(x - previous.x, y - previous.y, z - previous.z) < SEAM_EPSILON
       ) {
         continue
       }
       if (previous !== undefined) {
-        distance += Math.hypot(
-          point.x - previous.x,
-          point.y - previous.y,
-          point.z - previous.z,
-        )
+        distance += Math.hypot(x - previous.x, y - previous.y, z - previous.z)
       }
       waypoints.push({
         order: segment.order,
         t: point.t,
-        x: point.x,
-        y: point.y,
-        z: point.z,
+        x,
+        y,
+        z,
         headingRad: 0,
         // 프로파일이 없는 세그먼트(미지원 등)는 기울기를 **모른다** — 0으로 두는 것은
         // 평지라는 주장이 아니라 "말할 근거가 없다"는 뜻이며, 화면에서는 수평이 된다.
         pitchRad: Math.atan(profile?.slopeAt(point.t) ?? 0),
         distance,
+        lane,
       })
     }
+    if (isLaneChangeClass(segment.pieceClass)) lane = (lane + 1) % LANE_COUNT
   }
 
   // 진행 방향은 **다음 지점**을 향한다. 마지막 지점만 앞 구간의 방향을 물려받는다 —
