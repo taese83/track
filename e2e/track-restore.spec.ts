@@ -68,6 +68,43 @@ test('TC-003-5 · START 후보가 둘이면 최초 등장을 고르고 그 근�
   expect(await start.textContent()).toMatch(/^p\d+ ·/)
 })
 
+/**
+ * TC-004-2 — 순서 복원이 끝점을 잇다 막혀도(START는 있음) 에러 화면이 아니라 연결 접두부까지
+ * 렌더한다. 종전에는 `traversal-incomplete`가 "심각하게 손상" 에러로 갔다(D-048, 실측 R84APY).
+ */
+test('TC-004-2 · 끝점이 어긋난 비폐곡선(OPENLOOP)은 연결 구간까지 렌더되고 렌더링이 중단되지 않는다', async ({
+  page,
+}) => {
+  await submit(page, 'OPENLOOP')
+
+  await expect(page.getByTestId('track-screen')).toBeVisible()
+  await expect(page.getByTestId('error-retry')).toHaveCount(0)
+  await expect(page.getByTestId('canvas-truncated')).toBeVisible()
+  await expect(page.getByTestId('alert-slot')).toContainText('연결이 끊긴 지점까지만 표시했습니다 — 131/132피스')
+
+  await expect(page.getByTestId('piece-count')).toHaveText('132')
+  await expect(page.getByTestId('ordered-count')).toHaveText('131')
+  const start = page.getByTestId('start-selection')
+  await expect(start).toContainText('순서 복원 실패')
+  await expect(start).toContainText('뒤에서 끊김')
+})
+
+test('TC-004-2 · 실측 R84APY(3갈래 분기 + 매달린 끝)는 START 화살표 방향 6피스까지 렌더한다', async ({
+  page,
+}) => {
+  await submit(page, 'R84APY')
+
+  await expect(page.getByTestId('track-screen')).toBeVisible()
+  await expect(page.getByRole('alert')).toHaveCount(0)
+  await expect(page.getByTestId('alert-slot')).toContainText('6/112피스')
+  await expect(page.getByTestId('track-canvas')).toHaveAttribute('data-render-state', 'ready')
+
+  await expect(page.getByTestId('piece-count')).toHaveText('112')
+  await expect(page.getByTestId('ordered-count')).toHaveText('6')
+  // 끊긴 자리(Lan2 뒤 직선 p60)가 요약에 남아 사용자가 편집기에서 찾을 수 있다
+  await expect(page.getByTestId('start-selection')).toContainText('p60 뒤에서 끊김')
+})
+
 test('회귀 · 손상된 원문은 복원 실패가 아니라 여전히 파싱 실패다', async ({ page }) => {
   await submit(page, 'PARSEFAIL')
 

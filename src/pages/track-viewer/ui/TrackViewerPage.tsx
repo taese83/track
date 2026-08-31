@@ -9,7 +9,7 @@ import type { ParseTrackStringResult } from '@/entities/track/lib/parse'
 import { restoreOrder } from '@/entities/track/lib/restore'
 import type {
   RestoreOrderFailureReason,
-  RestoreOrderSuccess,
+  RestoreOrderResult,
   StartSelection,
 } from '@/entities/track/lib/restore'
 import { SOURCE_EDITOR_URL } from '@/entities/track/model/schema'
@@ -54,16 +54,17 @@ function buildParseSnippet(rawData: string, failure: ParseFailure): string {
 }
 
 /**
- * `traversal-incomplete`·`search-budget-exceeded`는 START가 없는 것이 아니라 끝점을 잇다 막힌
- * 경우다. START 부재 문구로 뭉개면 화면이 없는 원인을 지목하므로, 뜻이 맞는 기존 축인
- * `not-closed-fatal`("데이터가 심각하게 손상되어 표시할 수 없습니다")에 태운다.
+ * 순서 복원 실패는 두 갈래다. START가 없으면(TC-003-4) 출발점이 없어 어떤 접두부도 정의되지
+ * 않으므로 에러 화면이다. 반면 `traversal-incomplete`·`search-budget-exceeded`는 START에서
+ * 출발해 **끝점을 잇다 막힌** 것이라 FEAT-004가 START부터 이어지는 연결 접두부를 낸다
+ * (`walkConnectedPrefix`, `brokenAt.reason = 'order-restore-failed'`) — TC-004-2가 요구하는
+ * 부분 실패 렌더("연결 가능한 구간은 정상 렌더, 렌더링은 중단되지 않는다")의 입력이다.
+ *
+ * 종전에는 이 둘을 `not-closed-fatal` 에러 화면에 태워 폐합 판정에 닿지 못했다. 실측(R84APY,
+ * 2026-09-01): 편집기 원본이 3갈래 분기 + 매달린 끝 하나인 "고리 + 꼬리"라 START 화살표
+ * 방향으로 6/112피스만 이어지는데, 화면은 아무것도 그리지 않고 "심각하게 손상"이라고만 했다.
+ * OPENLOOP 픽스처도 같은 경로로 에러였다 — TC-004-2의 구현 회귀(D-048).
  */
-const RESTORE_ERROR_REASON: Record<RestoreOrderFailureReason, LoadErrorReason> = {
-  'start-piece-missing': 'start-piece-missing',
-  'traversal-incomplete': 'not-closed-fatal',
-  'search-budget-exceeded': 'not-closed-fatal',
-}
-
 const RESTORE_FAILURE_DETAIL: Record<RestoreOrderFailureReason, string> = {
   'start-piece-missing': '피스 목록에 START(Str2)가 없어 시작 지점을 정하지 못했습니다.',
   'traversal-incomplete': '끝점을 이어도 모든 피스를 한 줄로 꿰지 못했습니다.',
@@ -85,10 +86,20 @@ function describeStart(start: StartSelection): string {
     : `${start.pieceId} · START 후보 ${start.candidatePieceIds.length}개 중 원문에 처음 나온 것`
 }
 
+/**
+ * 복원이 막힌 화면의 요약 — 어디까지 이어졌고 어느 피스 뒤에서 끊겼는지가 남아야 사용자가
+ * 편집기에서 그 자리를 찾는다(제품 계약 §5 "조용히 숨기지 않는다").
+ */
+function describeRestoreFailure(reason: RestoreOrderFailureReason, closure: ClosureValidation): string {
+  const startId = closure.connectedPieceIds[0] ?? '—'
+  const brokenAfter = closure.brokenAt === null ? '' : ` ${closure.brokenAt.afterPieceId} 뒤에서 끊김.`
+  return `${startId} · 순서 복원 실패 — ${RESTORE_FAILURE_DETAIL[reason]}${brokenAfter}`
+}
+
 type ViewOutcome =
   | {
       kind: 'restored'
-      restored: RestoreOrderSuccess
+      restored: RestoreOrderResult
       closure: ClosureValidation
       layout: SceneLayout
       elevated: readonly ElevatedSegment[]
@@ -170,25 +181,32 @@ export function TrackViewerPage() {
     }
 
     const restored = restoreOrder(parsed.pieces)
-    if (!restored.ok) {
+    if (!restored.ok && restored.reason === 'start-piece-missing') {
       return {
         kind: 'failure',
-        reason: RESTORE_ERROR_REASON[restored.reason],
+        reason: 'start-piece-missing',
         rawSnippet: buildRestoreSnippet(track.rawData, restored.reason, parsed.pieces.length),
       }
     }
 
     // 고도 프로파일을 폐합 판정에 주입한다 — FEAT-004가 열어 둔 구멍이고, 넣지 않으면
-    // 현 규칙 근사가 화면의 Z 폐합 판정을 대신한다.
-    const oriented = orientPath(
-      restored.orderedPieceIds
-        .map((pieceId) => parsed.pieces.find((piece) => piece.pieceId === pieceId))
-        .filter((piece): piece is ParsedPiece => piece !== undefined),
-    )
+    // 현 규칙 근사가 화면의 Z 폐합 판정을 대신한다. 복원이 막힌 경로는 XY가 열려 있어
+    // Z 폐합이 정의되지 않으므로(validate-closure) 주입할 것이 없다 — 접두부는 폐합 판정이 낸다.
+    const elevationDeltas = restored.ok
+      ? elevationDeltasOf(
+          buildElevatedSegments(
+            orientPath(
+              restored.orderedPieceIds
+                .map((pieceId) => parsed.pieces.find((piece) => piece.pieceId === pieceId))
+                .filter((piece): piece is ParsedPiece => piece !== undefined),
+            ),
+          ),
+        )
+      : undefined
     const closure = validateClosure({
       pieces: parsed.pieces,
       restored,
-      elevationDeltas: elevationDeltasOf(buildElevatedSegments(oriented)),
+      ...(elevationDeltas === undefined ? {} : { elevationDeltas }),
     })
     const scene = buildScene(parsed.pieces, closure)
 
@@ -330,10 +348,16 @@ export function TrackViewerPage() {
                     </dd>
                     <dt style={{ color: 'var(--color-text-secondary)' }}>복원된 순서</dt>
                     <dd className="tabular" data-testid="ordered-count">
-                      {outcome.restored.orderedPieceIds.length}
+                      {outcome.restored.ok
+                        ? outcome.restored.orderedPieceIds.length
+                        : outcome.closure.connectedPieceIds.length}
                     </dd>
                     <dt style={{ color: 'var(--color-text-secondary)' }}>시작 피스</dt>
-                    <dd data-testid="start-selection">{describeStart(outcome.restored.start)}</dd>
+                    <dd data-testid="start-selection">
+                      {outcome.restored.ok
+                        ? describeStart(outcome.restored.start)
+                        : describeRestoreFailure(outcome.restored.reason, outcome.closure)}
+                    </dd>
                   </dl>
                   <p className="mt-3 text-[12px]" style={{ color: 'var(--color-text-secondary)' }}>
                     구간 목록(FEAT-013)과 근거 등급 배지(FEAT-010)가 들어오면 이 요약을 대신합니다.

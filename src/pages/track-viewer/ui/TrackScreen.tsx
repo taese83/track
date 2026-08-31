@@ -149,10 +149,12 @@ export function TrackScreen({
     () => buildScreenProfileModel({ elevated, items, closure }),
     [elevated, items, closure],
   )
+  // XY가 열려 있으면 "끊김"이다 — `truncated`만으로 가르면 복원이 막혔는데 진단 걷기가 전
+  // 피스를 덮은 경우(D-048 경로)에 "XY 폐곡선"이라고 거짓말한다(code-reviewer 2026-09-01).
   const banner =
     closure.isClosedLoop && closure.isZClosed !== false
       ? null
-      : layout.truncated
+      : layout.truncated || !closure.isClosedLoop
         ? `연결이 끊긴 지점까지만 표시했습니다 — ${rendered}/${totalPieceCount}피스`
         : 'XY 폐곡선이지만 고도가 시작점으로 돌아오지 않았습니다'
 
