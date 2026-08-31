@@ -29,8 +29,14 @@ TEST_EVIDENCE (2026-08-31 · D:\Project\track · Node v22.11.0(`engines >=22.12.
     비포커스 / End 키 → 131행 가시·tabindex=0, 보이는 129행 클릭 시 scrollTop 변화 ≤1
   - 전체 `pnpm e2e` **81 통과 · 7 실패(총 88)** → 단일 워커 재실행 **6 통과**(병렬 부하 flake: 배지·axe·휠·fps — 전부 ≤2.2s) ·
     남은 1건 `track-evidence` 범례 패널 폭(311.6 > 304px)은 기준 소스에서도 동일 실패(기존 결함). 목록 스펙 10/10.
-  - 미검증(정직 표기): `prefers-reduced-motion` 분기와 자동재생(canvas source) 중 목록 추종은 e2e로 재지 않았다 —
-    같은 effect·같은 `followCursor` 경로(lastSource 'canvas' ≠ 'list')이며 브라우저 수동 확인 대상으로 남긴다.
+  - code-reviewer(2026-08-31) **WARN → 수정 반영**: [medium] 스크롤이 포커스 게이트 밖이라 자동재생 중 목록에서 탐색·클릭한
+    행이 매 구간 밀려남 → 스크롤·onFocusMove를 같은 게이트(`listOwnsFocus`)로 묶고 두 effect의 중복 계산을 헬퍼로 통합
+    (리뷰 제안 1 채택) · [medium] 자동재생(canvas) 경로 e2e 부재 → TC-013-6 3번째 케이스 추가(재생 중 목록 추종 + 목록
+    포커스 보유 시 비추종, 10.8s 통과) · [low] e2e flake 3곳(슬라이더 가시성 대기·valuenow 확정 후 읽기·scrollTop 안정
+    poll) 보강 · [low] 연속 소스에서 smooth 재타게팅(PLAUSIBLE) — 미조치: nearest는 행이 보이는 동안 no-op이고 자동재생은
+    행 단위 이동이라 실측(재생 중 행 가시 poll 통과)으로 반증, 프로파일 근거 없어 보류. reduced-motion 공통화 제안 2는
+    리뷰어 판단대로 보류.
+  - 미검증(정직 표기): `prefers-reduced-motion` 분기는 e2e로 재지 않았다(브라우저 수동 확인 대상).
 CAPABILITY_ESCALATION: none
 DOCS_TO_UPDATE: component-spec/widgets.md §SectionList(followCursor·커서 따라가기) · pages.md 상호작용 표 —
   **이 라운드에서 개정 완료(2026-08-31)**. 계획: specs-surfaces.md TC-013-6 · traceability.md · PC-013(plan-delta PASS —
