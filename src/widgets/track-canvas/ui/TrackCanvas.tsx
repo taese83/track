@@ -28,6 +28,7 @@ import {
   buildFlythroughPath,
   distanceOfOrder,
   initialFlythroughState,
+  jumpTo,
   orderAtDistance,
   poseAt,
   scrubTo,
@@ -412,6 +413,10 @@ export function TrackCanvas({ layout, elevated }: TrackCanvasProps) {
    */
   const handleKeyDown = useCallback(
     (event: KeyboardEvent<HTMLDivElement>) => {
+      // 추종 중에는 오빗 키가 죽는다 — 리그가 매 프레임 카메라를 소유하므로 여기서 쓴
+      // 위치는 다음 프레임에 덮인다. 효과 없는 쓰기가 orbiting 플래그만 올려 fps 측정
+      // (FEAT-011)을 오염시킨다.
+      if (following) return
       const controls = controlsRef.current
       if (controls === null) return
 
@@ -432,7 +437,7 @@ export function TrackCanvas({ layout, elevated }: TrackCanvasProps) {
       )
       controls.update()
     },
-    [limits],
+    [limits, following],
   )
 
   /**
@@ -445,16 +450,31 @@ export function TrackCanvas({ layout, elevated }: TrackCanvasProps) {
   )
 
   /**
+   * `prefers-reduced-motion` — 이징 이동을 즉시 컷으로 바꾼다(component-spec §TrackCanvas
+   * "카메라 전환 즉시 컷" 승계). 마운트 시 한 번 읽는다 — 설정을 세션 중에 바꾸는 경우까지
+   * 실시간 추적하는 것은 이 티켓의 요구가 아니다.
+   */
+  const reduceMotion = useMemo(
+    () =>
+      typeof window !== 'undefined' &&
+      (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false),
+    [],
+  )
+
+  /**
    * 스트립·목록이 옮긴 커서를 추종 카메라의 목표로 삼는다. **즉시 컷이 아니라 목표만**
-   * 옮기고 위치는 이징이 따라간다(TC-007-2).
+   * 옮기고 위치는 이징이 따라간다(TC-007-2). 단 reduced-motion에서는 즉시 컷이 요구다.
    *
    * `lastSource === 'canvas'`면 되받지 않는다 — 재생 중 카메라가 민 커서를 다시 목표로
    * 삼으면 자기 출력을 입력으로 먹는 되먹임이 된다.
    */
   useEffect(() => {
     if (!following || lastSource === 'canvas') return
-    flythroughRef.current = scrubTo(flythroughRef.current, distanceOfOrder(flythroughPath, currentIndex))
-  }, [following, currentIndex, lastSource, flythroughPath])
+    const goal = distanceOfOrder(flythroughPath, currentIndex)
+    flythroughRef.current = reduceMotion
+      ? jumpTo(flythroughRef.current, goal)
+      : scrubTo(flythroughRef.current, goal)
+  }, [following, currentIndex, lastSource, flythroughPath, reduceMotion])
 
   /**
    * 추종 상태를 DOM에 드러낸다. 3D 캔버스는 픽셀만 남기므로 브라우저 검증이 "따라가고
@@ -590,10 +610,16 @@ export function TrackCanvas({ layout, elevated }: TrackCanvasProps) {
         왼쪽 위에 두는 것은 오른쪽 위(완화 배지)·오른쪽 아래(잘림 안내)가 이미 찼기 때문이다.
       */}
       <div className="absolute top-3 left-3 flex items-center gap-2">
+        {/*
+          즉시 적용 토글은 switch다(component-spec §ControlCluster — interaction-controls
+          "즉시 적용=switch" 규칙). aria-pressed 토글 버튼이면 "눌린 버튼"이지 "켜진
+          모드"가 아니다 — 보조기술이 상태를 다르게 읽는다.
+        */}
         <button
           type="button"
+          role="switch"
           onClick={toggleFollowing}
-          aria-pressed={following}
+          aria-checked={following}
           disabled={flythroughPath.waypoints.length === 0}
           data-testid="follow-toggle"
           className="rounded-[4px] px-2 py-1 text-[12px] disabled:cursor-not-allowed disabled:opacity-50"
@@ -624,33 +650,63 @@ export function TrackCanvas({ layout, elevated }: TrackCanvasProps) {
             </button>
 
             {/*
-              탐색 속도 조절이 요구다(TC-007-3의 "자동 재생 옵션"). 단일 속도는 조절이
-              아니므로 선택지를 낸다 — 라디오 그룹이 아니라 select인 것은 값이 셋이고
-              캔버스 위 공간이 좁기 때문이다.
+              탐색 속도 조절이 요구다(TC-007-3의 "자동 재생 옵션"). 옵션이 3개 고정이므로
+              slider가 아니라 **segmented control**이다(component-spec §ControlCluster —
+              radiogroup + 옵션별 role=radio, 원칙 12). select는 현재 값 하나만 보이지만
+              segmented는 선택지 전체가 한눈에 보인다 — 옵션 셋에 클릭 두 번은 과하다.
+              키보드는 APG 라디오 패턴대로 roving tabindex + 방향키다.
             */}
-            <label
-              className="flex items-center gap-1 rounded-[4px] px-2 py-1 text-[12px]"
+            <div
+              role="radiogroup"
+              aria-label="탐색 속도"
+              data-testid="follow-speed"
+              className="flex items-center gap-1 rounded-[4px] px-1.5 py-1 text-[12px]"
               style={{
                 background: 'rgb(26 29 33 / 0.92)',
-                color: 'var(--color-text-secondary)',
                 border: '1px solid var(--color-border)',
               }}
+              onKeyDown={(event) => {
+                const delta =
+                  event.key === 'ArrowRight' || event.key === 'ArrowDown'
+                    ? 1
+                    : event.key === 'ArrowLeft' || event.key === 'ArrowUp'
+                      ? -1
+                      : 0
+                if (delta === 0) return
+                event.preventDefault()
+                // 방향키가 캔버스 컨테이너의 오빗 키 핸들러로 새지 않게 여기서 끊는다
+                event.stopPropagation()
+                const at = SPEED_STEPS.findIndex((step) => step === speed)
+                const next =
+                  SPEED_STEPS[Math.min(Math.max(at + delta, 0), SPEED_STEPS.length - 1)]
+                if (next === undefined || next === speed) return
+                changeSpeed(next)
+                event.currentTarget
+                  .querySelector<HTMLButtonElement>(`[data-speed="${next}"]`)
+                  ?.focus()
+              }}
             >
-              속도
-              <select
-                value={speed}
-                onChange={(event) => changeSpeed(Number(event.target.value))}
-                data-testid="follow-speed"
-                className="bg-transparent text-[12px]"
-                style={{ color: 'var(--color-text-primary)' }}
-              >
-                {SPEED_STEPS.map((step, index) => (
-                  <option key={step} value={step} style={{ color: '#101214' }}>
-                    {['느리게', '보통', '빠르게'][index]}
-                  </option>
-                ))}
-              </select>
-            </label>
+              {SPEED_STEPS.map((step, index) => (
+                <button
+                  key={step}
+                  type="button"
+                  role="radio"
+                  aria-checked={speed === step}
+                  tabIndex={speed === step ? 0 : -1}
+                  data-speed={step}
+                  data-testid={`follow-speed-${['slow', 'normal', 'fast'][index]}`}
+                  onClick={() => changeSpeed(step)}
+                  className="rounded-[3px] px-1.5 py-0.5"
+                  style={
+                    speed === step
+                      ? { background: 'var(--color-primary)', color: 'var(--color-on-primary)' }
+                      : { color: 'var(--color-text-secondary)' }
+                  }
+                >
+                  {['느리게', '보통', '빠르게'][index]}
+                </button>
+              ))}
+            </div>
           </>
         ) : null}
       </div>

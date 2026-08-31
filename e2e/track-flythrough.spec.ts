@@ -113,17 +113,19 @@ test('TC-007-3 · 일시정지하면 즉시 멈추고 위치를 유지한다', a
 })
 
 test('TC-007-3 · 속도를 올리면 같은 시간에 더 멀리 간다', async ({ page }) => {
-  const runAt = async (label: string) => {
+  // 속도는 segmented radiogroup이다(§ControlCluster) — 옵션 radio를 직접 누른다
+  const runAt = async (id: 'slow' | 'fast') => {
     await openTrack(page)
     await page.getByTestId('follow-toggle').click()
-    await page.getByTestId('follow-speed').selectOption({ label })
+    await page.getByTestId(`follow-speed-${id}`).click()
+    await expect(page.getByTestId(`follow-speed-${id}`)).toHaveAttribute('aria-checked', 'true')
     await page.getByTestId('follow-play').click()
     await page.waitForTimeout(1_000)
     return distanceOf(page)
   }
 
-  const slow = await runAt('느리게')
-  const fast = await runAt('빠르게')
+  const slow = await runAt('slow')
+  const fast = await runAt('fast')
   console.log(`TC-007-3 느리게 ${slow.toFixed(0)} · 빠르게 ${fast.toFixed(0)}`)
 
   // 느린 쪽도 **실제로 움직였어야** 한다. 0과 비교하면 진행이 아예 발행되지 않아도
@@ -190,16 +192,24 @@ test('추종 조작이 키보드만으로 도달·조작된다', async ({ page }
   await openTrack(page)
   const toggle = page.getByTestId('follow-toggle')
 
+  // 즉시 적용 토글은 switch다 — 상태는 aria-checked로 읽힌다(§ControlCluster)
   await toggle.focus()
   await expect(toggle).toBeFocused()
-  await expect(toggle).toHaveAttribute('aria-pressed', 'false')
+  await expect(toggle).toHaveAttribute('aria-checked', 'false')
 
   await page.keyboard.press('Enter')
-  await expect(toggle).toHaveAttribute('aria-pressed', 'true')
+  await expect(toggle).toHaveAttribute('aria-checked', 'true')
 
   await page.keyboard.press('Tab')
   const play = page.getByTestId('follow-play')
   await expect(play).toBeFocused()
   await page.keyboard.press('Enter')
   await expect(play).toHaveAttribute('aria-pressed', 'true')
+
+  // 속도 radiogroup — Tab 한 번에 그룹으로 들어가고(roving tabindex), 방향키로 고른다
+  await page.keyboard.press('Tab')
+  await expect(page.getByTestId('follow-speed-normal')).toBeFocused()
+  await page.keyboard.press('ArrowRight')
+  await expect(page.getByTestId('follow-speed-fast')).toHaveAttribute('aria-checked', 'true')
+  await expect(page.getByTestId('follow-speed-fast')).toBeFocused()
 })
