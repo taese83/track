@@ -137,28 +137,46 @@ describe('TC-018-2 — U턴 중심·반지름이 도면 실측과 같다', () =>
   })
 })
 
-describe('TC-018-8 — 레인 2는 곡면을 따라 대각선으로 올랐다 내려오는 산이다', () => {
-  it('램프 시작 0 → U턴 꼭짓점 12cm → 램프 끝 0으로 호 길이에 선형이다', () => {
+describe('TC-018-8 — 레인 2는 뱅크와 뱅크 사이 구간과 같은 판 모델로 오른다', () => {
+  const GRADIENT = Math.tan((20 * Math.PI) / 180)
+  const D_IN = 38.5 // 진입 전이의 판축 거리 = 진입 직선 길이
+  const LIFT = D_IN / 2
+
+  it('전이 g(d)=gradient·dEnd/2·(d/dEnd)² → 판 gradient·(d − lift), 꼭짓점 ≈ 26.7cm, 대칭', () => {
     const routes = laneRoutesOf(oriented(pieceOf('Lan2')))!
     const lane2 = routes[2]!
     const arc = 54 * Math.PI
     const length = 38.5 * 2 + arc
     const at = (s: number) => lane2.riseAt(s / length)
-    const rampStart = 38.5 - 30
-    const peak = 38.5 + arc / 2
-    const rampEnd = 38.5 + arc + 30
 
     expect(at(0)).toBe(0)
-    expect(at(rampStart)).toBe(0)
-    expect(at((rampStart + peak) / 2)).toBeCloseTo(6, 6) // 오르막 중앙 — 선형
-    expect(at(38.5)).toBeCloseTo((12 * 30) / (peak - rampStart), 6) // 원호 시작
-    expect(at(peak)).toBeCloseTo(12, 6)
-    expect(at((peak + rampEnd) / 2)).toBeCloseTo(6, 6) // 내리막 중앙 — 선형
-    expect(at(rampEnd)).toBeCloseTo(0, 6)
-    expect(at(length)).toBe(0)
+    // 전이 중앙(d = 19.25): k = 1 → gradient·(38.5/2)·0.25
+    expect(at(D_IN / 2)).toBeCloseTo(GRADIENT * (D_IN / 2) * 0.25, 6)
+    // 원호 시작(d = 38.5): 전이 끝 = 판 시작 = gradient·(38.5 − 19.25)
+    expect(at(D_IN)).toBeCloseTo(GRADIENT * (D_IN - LIFT), 6)
+    // 꼭짓점(d = 38.5 + 54)
+    expect(at(D_IN + arc / 2)).toBeCloseTo(GRADIENT * (D_IN + 54 - LIFT), 6)
+    expect(at(D_IN + arc / 2)).toBeCloseTo(26.66, 1)
+    // 원호 끝과 진출 전이 — 대칭
+    expect(at(D_IN + arc)).toBeCloseTo(at(D_IN), 6)
+    expect(at(length - D_IN / 2)).toBeCloseTo(at(D_IN / 2), 6)
+    expect(at(length)).toBeCloseTo(0, 9)
 
     expect(routes[0]!.riseAt(0.5)).toBe(0)
     expect(routes[1]!.riseAt(0.5)).toBe(0)
+  })
+
+  it('기울기가 이음새(전이↔판)와 꼭짓점에서 연속이다 — 꺾임이 없다', () => {
+    const lane2 = laneRoutesOf(oriented(pieceOf('Lan2')))![2]!
+    const length = 38.5 * 2 + 54 * Math.PI
+    const slope = (s: number) => (lane2.riseAt((s + 0.05) / length) - lane2.riseAt((s - 0.05) / length)) / 0.1
+    // 전이 끝 = 판 기울기(진입 팔 방향으로 달리므로 d 증가율 1)
+    expect(slope(D_IN - 0.5)).toBeCloseTo(GRADIENT, 2)
+    expect(slope(D_IN + 0.5)).toBeCloseTo(GRADIENT, 2)
+    // 꼭짓점에서 0(코사인 마루) — 선형 산이면 ±gradient로 뛴다
+    expect(Math.abs(slope(D_IN + (54 * Math.PI) / 2))).toBeLessThan(0.01)
+    // 진입에서 0(평지와 접선 연속)
+    expect(Math.abs(slope(0.5))).toBeLessThan(0.02)
   })
 
   it('뒤집힌 주행에서도 같은 자리에서 같은 높이다', () => {

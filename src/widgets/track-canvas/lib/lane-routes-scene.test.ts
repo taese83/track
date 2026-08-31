@@ -102,10 +102,10 @@ describe('TC-018-4 — Lan2의 레인 면', () => {
     // 양 끝은 평지로 돌아온다 — 이웃 직선과 같은 높이
     expect(paths[2]![0]!.y).toBeCloseTo(0, 9)
     expect(paths[2]![paths[2]!.length - 1]!.y).toBeCloseTo(0, 9)
-    // 표본이 꼭짓점을 정확히 밟지 않으므로(3cm 간격, 오르막 기울기 12/114.8) 한 칸의 여유를 둔다
+    // 꼭짓점 = gradient·(38.5 + 54 − 19.25) ≈ 26.66 — 코사인 마루라 표본이 살짝 비껴도 거의 같다
     const peakY = Math.max(...paths[2]!.map((s) => s.y))
-    expect(peakY).toBeGreaterThan(12 - 0.5)
-    expect(peakY).toBeLessThanOrEqual(12)
+    expect(peakY).toBeGreaterThan(26.5)
+    expect(peakY).toBeLessThanOrEqual(26.67)
     expect(Math.max(...paths[0]!.map((s) => s.y), ...paths[1]!.map((s) => s.y))).toBe(0)
     console.log(`TC-018-4 레인0·1 최근접 ${closest01.toFixed(3)}cm · 레인2 교차 표본쌍 ${crossings}`)
     expect(crossings).toBeGreaterThan(0)
@@ -183,29 +183,26 @@ describe('TC-018-5 — 추종 카메라는 자기 레인의 명시 경로를 탄
   })
 })
 
-describe('TC-018-10 — 올라가는 레인은 곡면을 따라 대각선으로 올랐다 내려오는 산이다', () => {
-  it('레인 2의 높이가 U턴 꼭짓점에서 최고(12cm)이고 그 앞뒤로 호 길이에 선형이며, 면은 좌우 평평하다', () => {
+describe('TC-018-10 — 올라가는 레인은 판 위를 돌며 꺾임 없이 올랐다 내려온다', () => {
+  it('최고점이 U턴 꼭짓점이고, 오르막·내리막이 단조이며, 높이의 2차 차분이 작아 꺾임이 없다(면은 좌우 평평)', () => {
     const { layout } = layoutOf()
     const samples = layout.segments[1]!.lanePaths![2]!
     const peakIndex = samples.reduce((best, s, i) => (s.y > samples[best]!.y ? i : best), 0)
     const peak = samples[peakIndex]!
-    expect(peak.y).toBeGreaterThan(12 - 0.5)
-    expect(peak.y).toBeLessThanOrEqual(12)
+    expect(peak.y).toBeGreaterThan(26.5)
     // 꼭짓점 = 작은 U턴의 오른쪽 끝 (2.5, 12)
     expect(Math.hypot(peak.x - 2.5, peak.z - 12)).toBeLessThan(3.1)
-    // 올라가는 쪽은 단조 증가, 내려오는 쪽은 단조 감소 — 고원이 없다
     for (let i = 1; i <= peakIndex; i += 1) expect(samples[i]!.y).toBeGreaterThanOrEqual(samples[i - 1]!.y - 1e-9)
     for (let i = peakIndex + 1; i < samples.length; i += 1) expect(samples[i]!.y).toBeLessThanOrEqual(samples[i - 1]!.y + 1e-9)
-    // 선형: 원호 안에서 이웃 표본의 높이차가 일정하다(꼭짓점 앞·뒤 각각)
-    const stepsUp = new Set<string>()
-    for (let i = 2; i < peakIndex - 1; i += 1) {
-      const a = samples[i]!
-      const b = samples[i - 1]!
-      if (Math.abs(Math.hypot(a.x + 51.5, a.z - 12) - 54) < 0.5 && Math.abs(Math.hypot(b.x + 51.5, b.z - 12) - 54) < 0.5) {
-        stepsUp.add((a.y - b.y).toFixed(4))
-      }
+    // 꺾임 판정: 이웃 표본 높이차의 변화(2차 차분)가 판 위 코사인의 이론값(gradient·r·Δθ² ≈ 0.06)을 넘지 않는다
+    let worstSecond = 0
+    for (let i = 2; i < samples.length; i += 1) {
+      const d1 = samples[i - 1]!.y - samples[i - 2]!.y
+      const d2 = samples[i]!.y - samples[i - 1]!.y
+      worstSecond = Math.max(worstSecond, Math.abs(d2 - d1))
     }
-    expect(stepsUp.size).toBeLessThanOrEqual(2) // 부동소수 반올림 경계 하나만 허용
+    console.log(`TC-018-10 높이 2차 차분 최대 ${worstSecond.toFixed(4)}cm (표본 ${samples.length})`)
+    expect(worstSecond).toBeLessThan(0.15)
     const bands = buildLaneBands(layout.segments)
     for (const band of bands[1]!.lanes) band.lo.forEach((lo, at) => expect(lo.y).toBeCloseTo(band.hi[at]!.y, 9))
   })
@@ -247,7 +244,7 @@ describe('TC-018-6 — 바운딩박스가 큰 U턴을 포함한다', () => {
     expect(layout.bounds.max.x).toBeGreaterThanOrEqual(15 + 54 - 1)
     expect(layout.bounds.max.z).toBeGreaterThanOrEqual(66 - 1e-6)
     expect(layout.bounds.min.z).toBeLessThanOrEqual(-66 + 1e-6)
-    expect(layout.bounds.max.y).toBeGreaterThan(12 - 0.5)
-    expect(layout.bounds.max.y).toBeLessThanOrEqual(12)
+    expect(layout.bounds.max.y).toBeGreaterThan(26.5)
+    expect(layout.bounds.max.y).toBeLessThanOrEqual(26.67)
   })
 })

@@ -39,13 +39,18 @@ const HALF_TURN_TO_DEG = 90
 /**
  * 레인 2는 **올라가는 레인**이다(D-035의 "두 칸 건너뛰는 레인" — 진입 자리 2에서 진출 자리 0으로).
  * 작은 U턴이 진출 팔의 레인 0·1(y=54·42)을 가로지르므로 같은 높이면 서로 통과해 버린다.
- * 형상은 사용자 지정(2026-09-01, D-049 ⑥)대로 **곡면을 따라 대각선으로 올라갔다가 내려오는
- * 산**이다 — 진입 직선의 램프 시작에서 0, U턴 꼭짓점(원호 중앙)에서 최고, 진출 직선의 램프 끝에서
- * 0으로 직선(대각선) 오르내림. 도면의 진회색 그라데이션 밴드가 그 경사면 음영이다.
- * 최고 높이 12cm는 교차 구간(원호 후반)에서 아래 레인 위에 남도록 잡은 값이다(ASSUMPTION).
+ *
+ * 형상은 **뱅크와 뱅크 사이 구간과 같은 방법**(D-029·D-041, `build-elevation.ts`)이다(사용자
+ * 지정 2026-09-01, D-049 ⑦): 진입 직선이 진입 전이 곡선, 원호가 20°(D-042)로 기운 **판**, 진출
+ * 직선이 진출 전이 곡선이다. 판축은 진입점과 진출점을 잇는 선의 법선(= 진입 팔 방향 +x)이라
+ * 높이는 U턴 위 **위치**의 함수 `gradient·(d − lift)`이고, 반원을 돌면 코사인 모양으로 부드럽게
+ * 올랐다 내려온다 — 호 길이에 선형인 산은 꼭짓점에서 꺾였다(사용자 지적 "곡지점에 꺾여있잖아").
+ * 전이 `g(d) = gradient·dEnd/(k+1)·(d/dEnd)^(k+1)`는 양 끝에서 평지·판과 접선 연속이며,
+ * `lift = min(dIn, dOut)/2`, `k = lift/(dEnd − lift)`는 `build-elevation.ts`와 같은 식이다.
+ * 도면의 진회색 그라데이션 밴드는 `Ban1` 스프라이트와 같은 경사면 음영이다.
  */
-const CLIMB_PEAK_HEIGHT = 12
-const CLIMB_RAMP_LENGTH = 30
+const BANK_ANGLE_DEG = 20
+const BANK_GRADIENT = Math.tan((BANK_ANGLE_DEG * Math.PI) / 180)
 
 /** 로컬 경로 + 호 길이 `s`에서의 상승(cm). 없으면 0 */
 interface LaneRouteDefinition {
@@ -54,14 +59,28 @@ interface LaneRouteDefinition {
 }
 
 /**
- * [rampStart, peak]에서 직선으로 오르고 [peak, rampEnd]에서 직선으로 내리는 산 프로파일.
- * 램프가 경로 안에 들어오도록 호출자가 길이를 보장한다.
+ * 판 구간 프로파일. `d`는 판축(진입 팔 진행 방향) 위 거리이며 진입점에서 0이다.
+ * 전이 구간은 판축 거리 `dEnd`까지, 그 뒤가 판이다 — 대칭이라 진출 전이도 같은 식이다.
  */
-function hillRise(rampStart: number, peak: number, rampEnd: number): (s: number) => number {
+function plateSectionRise(
+  path: LocalPath,
+  entryX: number,
+  transitionEnd: number,
+  plateEnd: number,
+  dEnd: number,
+): (s: number) => number {
+  const lift = dEnd / 2
+  const k = lift / (dEnd - lift)
+  const transition = (d: number): number => {
+    const u = d / dEnd
+    if (u <= 0) return 0
+    if (u >= 1) return BANK_GRADIENT * (d - lift)
+    return BANK_GRADIENT * (dEnd / (k + 1)) * Math.pow(u, k + 1)
+  }
   return (s) => {
-    if (s <= rampStart || s >= rampEnd) return 0
-    if (s <= peak) return (CLIMB_PEAK_HEIGHT * (s - rampStart)) / (peak - rampStart)
-    return (CLIMB_PEAK_HEIGHT * (rampEnd - s)) / (rampEnd - peak)
+    const d = path.pointAt(s / path.length).x - entryX
+    if (s < transitionEnd || s > plateEnd) return transition(d)
+    return BANK_GRADIENT * (d - lift)
   }
 }
 
@@ -95,15 +114,17 @@ function lan2InnerLane(): LaneRouteDefinition {
   const approach = line({ x: ENTRY_X, y: entryY }, { x: INNER_CENTER.x, y: entryY })
   const turn = arc(INNER_CENTER, INNER_RADIUS, HALF_TURN_FROM_DEG, HALF_TURN_TO_DEG)
   const departure = line({ x: INNER_CENTER.x, y: exitY }, { x: ENTRY_X, y: exitY })
-  const arcStart = approach.length
-  const arcEnd = approach.length + turn.length
+  const path = composite([approach, turn, departure])
   return {
-    path: composite([approach, turn, departure]),
-    // 램프 30cm는 직선 38.5cm 안에 들어온다(양 끝에서 0으로 돌아온다). 최고점 = 원호 중앙(U턴 꼭짓점)
-    riseAtLength: hillRise(
-      arcStart - CLIMB_RAMP_LENGTH,
-      arcStart + turn.length / 2,
-      arcEnd + CLIMB_RAMP_LENGTH,
+    path,
+    // 진입 직선 전체가 전이(판축 거리 38.5), 원호가 판, 진출 직선이 전이. 꼭짓점 높이는
+    // gradient·(38.5 + 54 − lift) ≈ 26.7cm — 각도(D-042)의 귀결이지 지정값이 아니다.
+    riseAtLength: plateSectionRise(
+      path,
+      ENTRY_X,
+      approach.length,
+      approach.length + turn.length,
+      INNER_CENTER.x - ENTRY_X,
     ),
   }
 }
