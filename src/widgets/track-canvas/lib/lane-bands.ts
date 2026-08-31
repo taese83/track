@@ -156,12 +156,14 @@ function tangentBetween(from: SceneSample, to: SceneSample): number {
 
 /**
  * FEAT-018 — 명시 경로 레인의 면. 폭은 그 레인 **자신의** 접선에 수직으로 ±6cm다. 양 끝은
- * 두 팔이 직선이라 이웃 피스의 절단선과 같은 방향이 되므로 공통 절단선을 따로 만들지 않는다
- * (D-036 ④가 필요한 것은 접선이 꺾이는 코너 이음새다).
+ * 이웃 피스와 **공유하는 절단선**(`framesFor`의 entry/exit — 중심선 접선 기준)을 쓴다: 두 팔이
+ * 직선이라 레인 접선과 중심선 접선이 같으므로, 이웃이 코너여도 D-036 ④의 미터링이 그대로
+ * 성립한다(code-reviewer 2026-09-01).
  */
 function routeBand(
   route: readonly SceneSample[],
   lane: number,
+  seams: { entry: LateralFrame | undefined; exit: LateralFrame | undefined },
   surface: ((x: number, z: number) => number) | undefined,
 ): LaneBand {
   const half = LANE_PITCH_CM / 2
@@ -169,13 +171,12 @@ function routeBand(
   const lo: BandPoint[] = []
   const hi: BandPoint[] = []
   route.forEach((sample, at) => {
-    const tangentRad =
+    const frame =
       at === 0
-        ? tangentBetween(sample, route[1] ?? sample)
+        ? (seams.entry ?? frameOf(tangentBetween(sample, route[1] ?? sample)))
         : at === last
-          ? tangentBetween(route[last - 1] ?? sample, sample)
-          : localTangentRad(route, at)
-    const frame = frameOf(tangentRad)
+          ? (seams.exit ?? frameOf(tangentBetween(route[last - 1] ?? sample, sample)))
+          : frameOf(localTangentRad(route, at))
     lo.push(offsetPoint(sample, frame, -half, 0, surface))
     hi.push(offsetPoint(sample, frame, half, 0, surface))
   })
@@ -196,7 +197,14 @@ export function buildLaneBands(segments: readonly SceneSegment[]): SegmentBands[
     const lanes: LaneBand[] = !usable
       ? []
       : routes !== undefined
-        ? routes.map((route, lane) => routeBand(route, lane, segment.surfaceHeightAt))
+        ? routes.map((route, lane) =>
+            routeBand(
+              route,
+              lane,
+              { entry: frames[0], exit: frames[frames.length - 1] },
+              segment.surfaceHeightAt,
+            ),
+          )
         : Array.from({ length: LANE_COUNT }, (_, lane) => {
           const lo: BandPoint[] = []
           const hi: BandPoint[] = []

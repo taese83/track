@@ -137,23 +137,25 @@ describe('TC-018-2 — U턴 중심·반지름이 도면 실측과 같다', () =>
   })
 })
 
-describe('TC-018-8 — 레인 2는 8cm 육교다', () => {
-  it('원호 전체가 8cm 고원이고 양쪽 직선의 30cm 램프로 0에서 오르내린다', () => {
+describe('TC-018-8 — 레인 2는 곡면을 따라 대각선으로 올랐다 내려오는 산이다', () => {
+  it('램프 시작 0 → U턴 꼭짓점 12cm → 램프 끝 0으로 호 길이에 선형이다', () => {
     const routes = laneRoutesOf(oriented(pieceOf('Lan2')))!
     const lane2 = routes[2]!
-    const length = 38.5 * 2 + 54 * Math.PI
+    const arc = 54 * Math.PI
+    const length = 38.5 * 2 + arc
     const at = (s: number) => lane2.riseAt(s / length)
+    const rampStart = 38.5 - 30
+    const peak = 38.5 + arc / 2
+    const rampEnd = 38.5 + arc + 30
 
     expect(at(0)).toBe(0)
-    expect(at(8)).toBe(0) // 램프 시작(38.5 − 30 = 8.5) 전
-    expect(at(23.5)).toBeCloseTo(4, 6) // 램프 중앙 — sin²(π/4)·8
-    expect(at(38.5)).toBeCloseTo(8, 6) // 원호 시작
-    expect(at(length / 2)).toBeCloseTo(8, 6)
-    expect(at(38.5 + 54 * Math.PI)).toBeCloseTo(8, 6) // 원호 끝
-    expect(at(38.5 + 54 * Math.PI + 30)).toBeCloseTo(0, 6)
+    expect(at(rampStart)).toBe(0)
+    expect(at((rampStart + peak) / 2)).toBeCloseTo(6, 6) // 오르막 중앙 — 선형
+    expect(at(38.5)).toBeCloseTo((12 * 30) / (peak - rampStart), 6) // 원호 시작
+    expect(at(peak)).toBeCloseTo(12, 6)
+    expect(at((peak + rampEnd) / 2)).toBeCloseTo(6, 6) // 내리막 중앙 — 선형
+    expect(at(rampEnd)).toBeCloseTo(0, 6)
     expect(at(length)).toBe(0)
-    // 램프 기울기: 8cm/30cm — 양 끝에서 0으로 시작한다(sin² 완화)
-    expect(at(8.5 + 0.5)).toBeLessThan(0.01)
 
     expect(routes[0]!.riseAt(0.5)).toBe(0)
     expect(routes[1]!.riseAt(0.5)).toBe(0)

@@ -68,10 +68,14 @@ describe('TC-018-4 — Lan2의 레인 면', () => {
     expect(boundaryLinesOf(bands[0]!)).toHaveLength(LANE_COUNT + 1)
   })
 
-  it('레인마다 폭이 12cm이고, 레인 0·1은 평면에서 겹치지 않으며, 레인 2는 그 둘을 8cm 육교로 넘는다', () => {
+  it('레인마다 폭이 12cm이고, 레인 0·1은 평면에서 겹치지 않으며, 레인 2는 그 둘을 위로 넘는다', () => {
     const paths = layout.segments[1]!.lanePaths!
     for (const lane of lan2.lanes) {
-      lane.lo.forEach((lo, at) => expect(gap(lo, lane.hi[at]!)).toBeCloseTo(LANE_PITCH_CM, 6))
+      // 폭은 수평으로 잰다 — 레인 2는 뱅크라 가장자리 높이가 다르다(TC-018-10)
+      lane.lo.forEach((lo, at) => {
+        const hi = lane.hi[at]!
+        expect(Math.hypot(lo.x - hi.x, lo.z - hi.z)).toBeCloseTo(LANE_PITCH_CM, 6)
+      })
     }
 
     // 안쪽 이동 구간(기울기 12/36)에서 두 레인은 **수직으로** 12 떨어진 평행 사선이라 수직
@@ -82,19 +86,26 @@ describe('TC-018-4 — Lan2의 레인 면', () => {
     for (const p of paths[0]!) for (const q of paths[1]!) closest01 = Math.min(closest01, Math.hypot(p.x - q.x, p.z - q.z))
     expect(closest01).toBeGreaterThanOrEqual(diagonalPitch - 1e-6)
 
-    // 레인 2가 레인 0·1 위를 지나는 곳(평면 거리 < 12)에서는 항상 8cm 위에 있다(TC-018-8)
+    // 레인 2가 레인 0·1 위를 지나는 곳(평면 거리 < 12)에서는 항상 위에 있다(TC-018-8) — 산 모양이라
+    // 교차 구간 후반으로 갈수록 낮아지지만 0보다 크다. 최솟값을 기록해 형상 변경 시 드러나게 한다.
     let crossings = 0
+    let lowest = Number.POSITIVE_INFINITY
     for (const p of paths[2]!) {
       for (const q of [...paths[0]!, ...paths[1]!]) {
         if (Math.hypot(p.x - q.x, p.z - q.z) >= LANE_PITCH_CM) continue
         crossings += 1
-        expect(p.y - q.y).toBeGreaterThanOrEqual(8 - 1e-6)
+        lowest = Math.min(lowest, p.y - q.y)
+        expect(p.y - q.y).toBeGreaterThan(0)
       }
     }
+    console.log(`TC-018-8 교차 구간 최소 여유 ${lowest.toFixed(2)}cm`)
     // 양 끝은 평지로 돌아온다 — 이웃 직선과 같은 높이
     expect(paths[2]![0]!.y).toBeCloseTo(0, 9)
     expect(paths[2]![paths[2]!.length - 1]!.y).toBeCloseTo(0, 9)
-    expect(Math.max(...paths[2]!.map((s) => s.y))).toBeCloseTo(8, 9)
+    // 표본이 꼭짓점을 정확히 밟지 않으므로(3cm 간격, 오르막 기울기 12/114.8) 한 칸의 여유를 둔다
+    const peakY = Math.max(...paths[2]!.map((s) => s.y))
+    expect(peakY).toBeGreaterThan(12 - 0.5)
+    expect(peakY).toBeLessThanOrEqual(12)
     expect(Math.max(...paths[0]!.map((s) => s.y), ...paths[1]!.map((s) => s.y))).toBe(0)
     console.log(`TC-018-4 레인0·1 최근접 ${closest01.toFixed(3)}cm · 레인2 교차 표본쌍 ${crossings}`)
     expect(crossings).toBeGreaterThan(0)
@@ -154,6 +165,49 @@ describe('TC-018-5 — 추종 카메라는 자기 레인의 명시 경로를 탄
     }
     console.log(`TC-018-5 Lan2 구간 카메라 최대 표본 간격 ${worst.toFixed(2)}cm (상한 ${limit.toFixed(2)})`)
     expect(worst).toBeLessThan(limit)
+
+    // 이음새 — 끊김이 생길 수 있는 유일한 자리(code-reviewer 2026-09-01). 진입: 앞 직선의 마지막
+    // 지점(레인 2 = y −42)에서 Lan2의 첫 남은 표본까지가 레인 표본 간격 안이다. 진출: Lan2의 마지막
+    // 지점이 정확히 (−90, 66)이고, 다음 직선의 t=0 표본이 같은 점이라 걷어내져 t=1만 남는다.
+    const first1 = path.waypoints.findIndex((w) => w.order === 1)
+    const entryBefore = path.waypoints[first1 - 1]!
+    const entryAfter = path.waypoints[first1]!
+    expect(entryBefore.order).toBe(0)
+    expect(Math.hypot(entryBefore.x - entryAfter.x, entryBefore.z - entryAfter.z)).toBeLessThan(limit)
+    const last1 = path.waypoints.map((w) => w.order).lastIndexOf(1)
+    const exitBefore = path.waypoints[last1]!
+    const exitAfter = path.waypoints[last1 + 1]!
+    expect(Math.hypot(exitBefore.x + 90, exitBefore.z - 66)).toBeLessThan(1e-6)
+    expect(exitAfter.order).toBe(2)
+    expect(exitAfter.t).toBe(1)
+  })
+})
+
+describe('TC-018-10 — 올라가는 레인은 곡면을 따라 대각선으로 올랐다 내려오는 산이다', () => {
+  it('레인 2의 높이가 U턴 꼭짓점에서 최고(12cm)이고 그 앞뒤로 호 길이에 선형이며, 면은 좌우 평평하다', () => {
+    const { layout } = layoutOf()
+    const samples = layout.segments[1]!.lanePaths![2]!
+    const peakIndex = samples.reduce((best, s, i) => (s.y > samples[best]!.y ? i : best), 0)
+    const peak = samples[peakIndex]!
+    expect(peak.y).toBeGreaterThan(12 - 0.5)
+    expect(peak.y).toBeLessThanOrEqual(12)
+    // 꼭짓점 = 작은 U턴의 오른쪽 끝 (2.5, 12)
+    expect(Math.hypot(peak.x - 2.5, peak.z - 12)).toBeLessThan(3.1)
+    // 올라가는 쪽은 단조 증가, 내려오는 쪽은 단조 감소 — 고원이 없다
+    for (let i = 1; i <= peakIndex; i += 1) expect(samples[i]!.y).toBeGreaterThanOrEqual(samples[i - 1]!.y - 1e-9)
+    for (let i = peakIndex + 1; i < samples.length; i += 1) expect(samples[i]!.y).toBeLessThanOrEqual(samples[i - 1]!.y + 1e-9)
+    // 선형: 원호 안에서 이웃 표본의 높이차가 일정하다(꼭짓점 앞·뒤 각각)
+    const stepsUp = new Set<string>()
+    for (let i = 2; i < peakIndex - 1; i += 1) {
+      const a = samples[i]!
+      const b = samples[i - 1]!
+      if (Math.abs(Math.hypot(a.x + 51.5, a.z - 12) - 54) < 0.5 && Math.abs(Math.hypot(b.x + 51.5, b.z - 12) - 54) < 0.5) {
+        stepsUp.add((a.y - b.y).toFixed(4))
+      }
+    }
+    expect(stepsUp.size).toBeLessThanOrEqual(2) // 부동소수 반올림 경계 하나만 허용
+    const bands = buildLaneBands(layout.segments)
+    for (const band of bands[1]!.lanes) band.lo.forEach((lo, at) => expect(lo.y).toBeCloseTo(band.hi[at]!.y, 9))
   })
 })
 
@@ -187,12 +241,13 @@ describe('TC-018-9 — 반원이 매끄럽다(표본 3cm 간격, 꺾임 5° 미�
 })
 
 describe('TC-018-6 — 바운딩박스가 큰 U턴을 포함한다', () => {
-  it('레인 0 중심선의 꼭짓점 (69, 0)·레인 2의 진출 자리·육교 높이가 상자 안이다', () => {
+  it('레인 0 중심선의 꼭짓점 (69, 0)·레인 2의 진출 자리·상승 높이가 상자 안이다', () => {
     const { layout } = layoutOf()
-    // 표본이 θ=0에 정확히 놓이지 않으므로 표본 간격(≈8cm)만큼의 여유를 둔다
+    // 표본이 θ=0·꼭짓점에 정확히 놓이지 않으므로 표본 간격(3cm)만큼의 여유를 둔다
     expect(layout.bounds.max.x).toBeGreaterThanOrEqual(15 + 54 - 1)
     expect(layout.bounds.max.z).toBeGreaterThanOrEqual(66 - 1e-6)
     expect(layout.bounds.min.z).toBeLessThanOrEqual(-66 + 1e-6)
-    expect(layout.bounds.max.y).toBeCloseTo(8, 9)
+    expect(layout.bounds.max.y).toBeGreaterThan(12 - 0.5)
+    expect(layout.bounds.max.y).toBeLessThanOrEqual(12)
   })
 })

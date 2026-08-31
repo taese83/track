@@ -78,9 +78,10 @@ OBSERVED_BASELINE: 프로젝트 내 Lan2 정보는 끝점(`piece-catalog.ts`·`p
   (`00_source/track-editor-data-model.md`: 180×144, 9.81m)뿐. `buildPiecePath`에 `Lan*` 선회 모델이 없어 108cm 직선 현 +
   `laneOffsetAt` 자리바꿈으로 그려진다(R84APY 6피스 렌더에서 실측). Lan1 도면(162×36)은 기존 모델(가운데 45% 직선 이동)과
   일치 — 결함은 Lan2 전용이다.
-TARGET_BEHAVIOR: TC-018-1~8 — 레인별 명시 경로(레인 0·1: [−28,8] 12cm 안쪽 이동 → 중심 (15,0) r54/42 U턴, 레인 2: 중심
-  (−51.5,12) r54 U턴 **+8cm 육교**(원호 고원, 30cm 램프)), 중심선 = 105+54π+105, 레인 면·카메라가 명시 경로를 소비,
-  바운딩박스 포함. 순환은 D-033과 동일.
+TARGET_BEHAVIOR: TC-018-1~10 — 레인별 명시 경로(레인 0·1: [−28,8] 12cm 안쪽 이동 → 중심 (15,0) r54/42 U턴, 레인 2: 중심
+  (−51.5,12) r54 U턴을 **곡면 따라 대각선으로 올라갔다 내려오는 산**(램프 시작 0 → 꼭짓점 12cm → 램프 끝 0, 선형)),
+  중심선 = 105+54π+105, 레인 면·카메라가 명시 경로를 소비(표본 호 길이 3cm 간격), 바운딩박스 포함. 순환은 D-033과 동일.
+  이력: 8cm 고원 → 뱅크 횡경사 20° 추가 → 사용자 지시로 횡경사 제거·산 형상 확정(D-049 ⑥).
 ALLOWED_PATHS: src/entities/track/lib/elevation (piece-path.ts 분기 + 신규 local-path.ts·lane-routes.ts + 테스트) ·
   src/widgets/track-canvas (scene-layout.ts lanePaths·bounds · lane-bands.ts 명시 레인 · flythrough-camera.ts 명시 레인 + 테스트) ·
   _workspace (기획·결정·정본)
@@ -101,8 +102,12 @@ TEST_EVIDENCE (2026-09-01 · D:\Project\track · Node v22.11.0(`engines >=22.12.
   - 1차 실측 실패(TC-018-4: 레인 중심선 최근접 2.26cm)가 레인 2의 **교차**를 드러내 육교 프로파일을 추가했다(D-049 ④). 2차
     실측 실패(레인 0·1 최근접 11.48)는 사선 이동 구간의 평행선 수직 간격(12·cos(atan 1/3) = 11.38) — 기하의 귀결로 TC 정정.
     카메라 "54cm 점프"는 직선 피스의 표본 2개(54cm)였다 — 테스트 가정 오류, Lan2 안으로 범위 한정.
-  - 게이트: `tsc --noEmit` 0 · `eslint src e2e` 0 · unit **365/365**(+17: lane-routes 10 · lane-routes-scene 7; 기존 348 무변경 통과 =
+  - 게이트: `tsc --noEmit` 0 · `eslint src e2e` 0 · unit **367/367**(+19: lane-routes 10 · lane-routes-scene 9; 기존 348 무변경 통과 =
     비-Lan2 피스 좌표 보존의 증거) · `pnpm build` 0
+  - 후속 3회(같은 라운드, 사용자 지시): ① "매끄러운 곡선" → 표본 호 길이 3cm 간격(TC-018-9, 원호 꺾임 <5° 실측) ② "뱅크처럼"
+    → 횡경사 20° 추가 ③ "이전으로 되돌리고 곡면 따라 대각선으로 올랐다 내려오는 형태" → 횡경사 제거, 산 프로파일(꼭짓점 12cm,
+    선형, TC-018-8·10). 교차 구간 최소 여유 실측 **3.46cm**(>0). code-reviewer(PASS, low 6) 중 3건 반영(미터링 프레임·t 주석·
+    이음새 단언), 3건 기록.
   - e2e 대상 4스펙(restore·flythrough·lane-change·scene) 단일 워커 **29/29** · 전체 `pnpm e2e --workers=1` **90 통과 · 1 실패** —
     실패 1건 `track-evidence "캔버스 컬럼이 좁아져도…"`(범례 패널 311.6 > 304px)는 기준 소스에서도 동일 실패(기존 결함, 무관).
   - 미검증(정직 표기): Lan2가 뒤집혀(vertex2 진입) 놓인 실데이터는 없어 뒤집힘은 단위 테스트(TC-018-3·8)로만 확인했다. 육교

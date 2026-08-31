@@ -37,38 +37,31 @@ const HALF_TURN_FROM_DEG = -90
 const HALF_TURN_TO_DEG = 90
 
 /**
- * 레인 2는 **육교**다(D-035의 "두 칸 건너뛰는 레인" — 진입 자리 2에서 진출 자리 0으로).
+ * 레인 2는 **올라가는 레인**이다(D-035의 "두 칸 건너뛰는 레인" — 진입 자리 2에서 진출 자리 0으로).
  * 작은 U턴이 진출 팔의 레인 0·1(y=54·42)을 가로지르므로 같은 높이면 서로 통과해 버린다.
- * 도면의 진회색 그라데이션 밴드가 그 오버패스 음영이다. 높이는 D-035와 같은 8cm이고,
- * 원호 전체가 고원이며 양쪽 직선에서 30cm 램프(`sin²` 완화, 양 끝 기울기 0)로 오르내린다.
+ * 형상은 사용자 지정(2026-09-01, D-049 ⑥)대로 **곡면을 따라 대각선으로 올라갔다가 내려오는
+ * 산**이다 — 진입 직선의 램프 시작에서 0, U턴 꼭짓점(원호 중앙)에서 최고, 진출 직선의 램프 끝에서
+ * 0으로 직선(대각선) 오르내림. 도면의 진회색 그라데이션 밴드가 그 경사면 음영이다.
+ * 최고 높이 12cm는 교차 구간(원호 후반)에서 아래 레인 위에 남도록 잡은 값이다(ASSUMPTION).
  */
-const OVERPASS_HEIGHT = 8
-const OVERPASS_RAMP_LENGTH = 30
+const CLIMB_PEAK_HEIGHT = 12
+const CLIMB_RAMP_LENGTH = 30
 
-/** 로컬 경로 + 호 길이 `s`에서의 육교 상승(cm). 없으면 0 */
+/** 로컬 경로 + 호 길이 `s`에서의 상승(cm). 없으면 0 */
 interface LaneRouteDefinition {
   path: LocalPath
   riseAtLength?: (s: number) => number
 }
 
-/** 매끄러운 램프: u ∈ [0,1] → 0..1, 양 끝 기울기 0 */
-function easeRamp(u: number): number {
-  const clamped = Math.min(Math.max(u, 0), 1)
-  return Math.sin((Math.PI / 2) * clamped) ** 2
-}
-
 /**
- * [rampStart, plateauStart]에서 오르고 [plateauEnd, plateauEnd + ramp]에서 내리는 고원 프로파일.
+ * [rampStart, peak]에서 직선으로 오르고 [peak, rampEnd]에서 직선으로 내리는 산 프로파일.
  * 램프가 경로 안에 들어오도록 호출자가 길이를 보장한다.
  */
-function plateauRise(plateauStart: number, plateauEnd: number): (s: number) => number {
-  const rampStart = plateauStart - OVERPASS_RAMP_LENGTH
-  const rampEnd = plateauEnd + OVERPASS_RAMP_LENGTH
+function hillRise(rampStart: number, peak: number, rampEnd: number): (s: number) => number {
   return (s) => {
     if (s <= rampStart || s >= rampEnd) return 0
-    if (s < plateauStart) return OVERPASS_HEIGHT * easeRamp((s - rampStart) / OVERPASS_RAMP_LENGTH)
-    if (s <= plateauEnd) return OVERPASS_HEIGHT
-    return OVERPASS_HEIGHT * easeRamp((rampEnd - s) / OVERPASS_RAMP_LENGTH)
+    if (s <= peak) return (CLIMB_PEAK_HEIGHT * (s - rampStart)) / (peak - rampStart)
+    return (CLIMB_PEAK_HEIGHT * (rampEnd - s)) / (rampEnd - peak)
   }
 }
 
@@ -102,10 +95,16 @@ function lan2InnerLane(): LaneRouteDefinition {
   const approach = line({ x: ENTRY_X, y: entryY }, { x: INNER_CENTER.x, y: entryY })
   const turn = arc(INNER_CENTER, INNER_RADIUS, HALF_TURN_FROM_DEG, HALF_TURN_TO_DEG)
   const departure = line({ x: INNER_CENTER.x, y: exitY }, { x: ENTRY_X, y: exitY })
+  const arcStart = approach.length
+  const arcEnd = approach.length + turn.length
   return {
     path: composite([approach, turn, departure]),
-    // 고원 = 원호 전체. 램프 30cm는 직선 38.5cm 안에 들어온다(양 끝에서 0으로 돌아온다)
-    riseAtLength: plateauRise(approach.length, approach.length + turn.length),
+    // 램프 30cm는 직선 38.5cm 안에 들어온다(양 끝에서 0으로 돌아온다). 최고점 = 원호 중앙(U턴 꼭짓점)
+    riseAtLength: hillRise(
+      arcStart - CLIMB_RAMP_LENGTH,
+      arcStart + turn.length / 2,
+      arcEnd + CLIMB_RAMP_LENGTH,
+    ),
   }
 }
 
@@ -122,7 +121,7 @@ const ROUTE_SETS: Readonly<Record<string, RouteSet>> = {
   },
 }
 
-/** 절대 좌표 레인 경로. `riseAt`은 육교 상승(cm) — 고도 프로파일과 독립인 레인 면의 추가 높이다 */
+/** 절대 좌표 레인 경로. `riseAt`은 상승(cm) — 고도 프로파일과 독립인 레인 면의 추가 높이다 */
 export interface LaneRoute extends PiecePath {
   riseAt(t: number): number
 }

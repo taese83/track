@@ -68,6 +68,11 @@ export interface SceneSegment {
    * `[0]`이 그 레인의 진입점이다. 있으면 레인 면(`lane-bands`)과 추종 카메라
    * (`flythrough-camera`)가 "중심선 + 가로 오프셋" 대신 이것을 쓴다 — 레인보우 체인저처럼
    * 레인이 서로 다른 중심의 원호를 도는 피스는 오프셋으로 만들 수 없다.
+   *
+   * **이 표본의 `t`는 그 레인 경로 고유의 호 길이 비율**이지 중심선 `points`의 `t`가 아니다
+   * (레인 2의 `t=0.5`는 작은 U턴 꼭짓점, 중심선의 `t=0.5`는 큰 U턴 꼭짓점). 지금은 명시 경로
+   * 피스가 전부 평지(`Lan*`)라 `heightAt(t)`·`slopeAt(t)`가 0이지만, 고도가 있는 명시 경로
+   * 피스가 생기면 중심선 `t`로 환산해 넘겨야 한다(code-reviewer 2026-09-01).
    */
   lanePaths?: SceneSample[][]
 }
@@ -192,7 +197,7 @@ function sampleRoute(
     samples.push({
       t,
       x: flat.x + correction.x,
-      // 육교 상승은 고도 프로파일이 아니라 레인 면의 추가 높이다(D-035·D-049) — 여기서 더한다
+      // 레인 상승은 고도 프로파일이 아니라 레인 면의 추가 높이다(D-035·D-049) — 여기서 더한다
       y: base + (elevated?.elevationProfile.heightAt(t) ?? 0) + route.riseAt(t),
       z: flat.y + correction.y,
     })
