@@ -24,6 +24,8 @@ type TrackErrorCode =
 
 - production(`NODE_ENV=production` 또는 `TRACK_UPSTREAM=live`)에서는 **발생하지 않는다**.
   실제 fetch 경로는 업스트림 404만 `TRACK_NOT_FOUND`로 옮긴다.
+- `TRACK_UPSTREAM` 미지정 로컬 서버(`auto`, D-046)에서도 **발생하지 않는다** — 녹화본이 없으면
+  업스트림을 1회 부른다. 이 코드가 나오는 것은 `TRACK_UPSTREAM=fixtures`를 **명시**한 환경뿐이다.
 - "존재하지 않는 코드"는 §9가 규정한 대로 **예약 fixture 1종**(`ZZZZZZ`)이 담당한다.
 - 501을 쓴 이유: 이 조회는 요청이 잘못돼서가 아니라 **이 환경이 그 기능을 갖추지 않아서**
   수행되지 않았다. 4xx는 요청 탓으로 읽히고, 502/504는 업스트림과 대화했다는 뜻이 된다.

@@ -14,6 +14,7 @@
 - TC-001-6: Given 같은 탭에서 이미 한 번 불러온 트랙 코드, When 같은 코드를 다시 제출하면, Then 클라이언트 세션 캐시에서 즉시 복원되고 `/api/track` 네트워크 요청이 0건이다.
 - TC-001-8: Given 동일 트랙 코드를 캐시 TTL(s-maxage=3600) 내에 다른 탭에서 조회, When 제출하면, Then 응답의 `x-vercel-cache` 헤더가 HIT 또는 STALE이다. 콜드 캐시에서의 재fetch는 결함으로 보지 않는다.
 - TC-001-7: Given 3D 표시 화면이 로드된 상태, When 화면을 확인하면, Then 원본 편집기(mini4wd-track-editor.pimentoso.com)로의 출처 링크가 상시 노출된다(PAGE-000 공통 책임).
+- TC-001-9: Given 로컬 서버(`pnpm dev`·`pnpm preview`, `TRACK_UPSTREAM` 미지정), When 녹화본이 없는 실재 트랙 코드의 공유 링크를 제출하면, Then 서버가 업스트림을 정확히 1회 fetch해 200으로 원문을 돌려주고 파싱 단계로 전달된다. 녹화본이 있는 코드와 예약 코드는 여전히 녹화본으로 응답하며(오프라인 결정성 유지), `TRACK_UPSTREAM=fixtures`가 명시된 테스트 환경에서는 종전대로 501 `FIXTURE_NOT_RECORDED`다(D-046).
 
 
 ### FEAT-002 — 트랙 문자열 파싱 → 피스 목록

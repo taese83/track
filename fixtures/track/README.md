@@ -1,12 +1,17 @@
 # fixtures/track — 녹화된 업스트림 원문
 
 `GET https://mini4wd-track-editor.pimentoso.com/load/{CODE}.js`의 응답 본문을 그대로 녹화한
-파일이다. 로컬 개발·테스트는 실제 사이트를 호출하지 않고 이 파일들을 읽는다 —
-api-schema §2 "사용자 요청 1회당 업스트림 fetch 정확히 1회, 크롤링 금지" 계약을 개발 중에도
-지키기 위함이다(BLOCKER-001 완화 장치).
+파일이다. 파일명은 `{TRACK_CODE}.js.txt`. `api/track.ts`가 이 디렉터리를 언제 읽는지는
+`TRACK_UPSTREAM`이 정한다(api-schema §9, D-046):
 
-`api/track.ts`는 `TRACK_UPSTREAM=fixtures`일 때(개발·테스트 기본값) 이 디렉터리를 업스트림
-대신 읽는다. 파일명은 `{TRACK_CODE}.js.txt`이고, 여기 없는 코드는 `TRACK_NOT_FOUND`(404)다.
+| `TRACK_UPSTREAM` | 동작 |
+|---|---|
+| `fixtures` | 녹화본 전용. 실제 사이트를 호출하지 않는다. 여기 없는 코드는 `FIXTURE_NOT_RECORDED`(501) — vitest·playwright 기본 |
+| `live` | 항상 실제 사이트 |
+| 미지정 | production → `live` · 그 외(`pnpm dev`·`pnpm preview`) → **`auto`**: 여기 있거나 예약 코드면 녹화본, 아니면 실제 사이트 1회 |
+
+어느 모드든 api-schema §2 "사용자 요청 1회당 업스트림 fetch 정확히 1회, 크롤링 금지" 계약은
+그대로다(BLOCKER-001 완화 장치). PowerShell에서 모드를 바꾸려면 `$env:TRACK_UPSTREAM='live'; pnpm dev`.
 
 | 파일 | 성격 | rawData 특징 | API 응답 |
 |---|---|---|---|
