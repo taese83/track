@@ -56,7 +56,7 @@ interface ErrorScreenProps {
 | 3D 표시 | 목록 정상 행 클릭 | `SectionList.onSelect` | `setCursor(i,'list')` → 캔버스 카메라 이동, 스트립 인디케이터 동기 이동 | TC-013-2 |
 | 3D 표시 | 목록에서 ↑↓ 이동 후 Enter | `SectionList.onFocusMove`→`onSelect` | 화살표 중엔 로컬 포커스만 이동, Enter에서만 커서 갱신 | TC-013-4 |
 | 부분 실패 | 실패 구간 행 클릭 | `SectionList` (aria-disabled) | `onSelect` 미호출(1차 방어) + `isReachable=false`(2차 방어) → 커서 불변 | TC-012-3 상응(목록 측) |
-| 3D 표시 | 스트립 드래그 스크럽 | `ProfileStrip.onScrub` | `setCursor(i,'strip')` → 목록 해당 행 강조, 캔버스 이동 | TC-012-2 |
+| 3D 표시 | 스트립 드래그 스크럽 | `ProfileStrip.onScrub` | `setCursor(i,'strip')` → 목록 해당 행 강조 + **그 행으로 스크롤(nearest)·roving 포커스 동기**(PC-013, 목록이 DOM 포커스를 갖지 않을 때만), 캔버스 이동 | TC-012-2 · TC-013-6 |
 | 부분 실패 | 스트립 회색 구간 드래그 | `ProfileStrip` | `onScrub` 미호출 → 카메라 불변 | TC-012-3 |
 | 3D 표시 | 스트립 화살표 경계에서 추가 이동 | `ProfileStrip.onScrub` | 도달 가능 최대/최소 인덱스에서 멈춤(실패 구간 진입 없음) | — |
 | 3D 표시 | 캔버스 자유 오빗 후 정지 | `TrackCanvas.onOrbitDepart` (debounce ≥250ms) | `setCursor(i,'canvas')` → 목록·스트립 동기화 | — |

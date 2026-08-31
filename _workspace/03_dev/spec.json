@@ -421,14 +421,14 @@
           },
           {
             "path": "_workspace/01_plan/feature-plan/specs-surfaces.md",
-            "sha256": "3edc8b9f0270566fe5ae8fc933608baf3915d5b9740146f2e2b7cb19f0d7eb95"
+            "sha256": "f901adbd052c8368ddee46606fcaa811df22e518ea91b8a8e9db3ce3fd173c5d"
           },
           {
             "path": "_workspace/01_plan/feature-plan/traceability.md",
-            "sha256": "cb7a4d0cf745bdacb000430194d09810d7945f1c9c5c98a1dc7b33b54b74a002"
+            "sha256": "38594d26535e1bfab49f86eaeb0a006f33131790b8875c01527f4ab68bd93a22"
           }
         ],
-        "sha256": "c6ed29e78c69a8ffa98008652574d45eeade9562660a7fc1707701337d5605f6"
+        "sha256": "c14fb1197f7d21fa285356da8f01370760db358b543ca8fc589b040bb017572d"
       },
       {
         "path": "_workspace/01_plan/tech-stack.md",
@@ -479,7 +479,7 @@
           },
           {
             "path": "_workspace/02_design/component-spec/pages.md",
-            "sha256": "644ed3f49b9bd8bcc93feaae0a24b1b40454e2d5f08f767764c017137b1722d4"
+            "sha256": "e9bc7e5cb2dcc5545f8611c21262dc46fe4f065a4b3fc588aeafbd109c8eb240"
           },
           {
             "path": "_workspace/02_design/component-spec/shared.md",
@@ -487,10 +487,10 @@
           },
           {
             "path": "_workspace/02_design/component-spec/widgets.md",
-            "sha256": "c2d5a279bf6719000039a5e7386d1a520e094e26e3f4515233cde3c75bfe88b0"
+            "sha256": "ad9d1001ee260d1e8ddf536b6923f414879f49d8509e4a5dbda881533adea678"
           }
         ],
-        "sha256": "0cbd073cdab90668ca81a3cc267790650f74816a2b39f40656fdb7728c494a68"
+        "sha256": "2fcf506d38ced2d3b5e96ee1097ab5f1932f0906adddaef165f3d6ad51808899"
       },
       {
         "path": "_workspace/02_design/state-contract.md",
@@ -507,6 +507,6 @@
         "sha256": "e0922521f66702801115ed646127671f644a2da6957a8cd86c8709d74eafa76a"
       }
     ],
-    "combined": "2cf6669c1ff36983a4ae9fe76aed66606b42418b3d8edfd676d9925b22376c07"
+    "combined": "ed7d6c4e4076d8010e16e176abe562880c7a66706e906a9f9bd45a1b115cbadf"
   }
 }
