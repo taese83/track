@@ -43,6 +43,12 @@ export const SECTION_LIST_RAIL_WIDTH_PX = 56
 const LIST_ID = 'section-list-box'
 const HEADING_ID = 'section-list-h'
 
+/** 행이 속한 listbox가 DOM 포커스를 갖고 있는가 — 사용자가 목록 안에서 탐색 중이라는 뜻이다 */
+function listOwnsFocus(row: HTMLLIElement): boolean {
+  const list = row.closest('[role="listbox"]')
+  return list !== null && list.contains(document.activeElement)
+}
+
 function rowLabel(item: SectionListItem, total: number): string {
   const position = `${item.index + 1}/${total}`
   const kind = segmentKindLabel(item.segmentKind)
@@ -69,24 +75,24 @@ export function SectionList({
     if (!expanded || loading) return
     const row = rowRefs.current[focusedIndex]
     if (row !== null && row !== undefined && document.activeElement !== row) {
-      const list = row.closest('[role="listbox"]')
-      if (list !== null && list.contains(document.activeElement)) row.focus()
+      if (listOwnsFocus(row)) row.focus()
     }
   }, [focusedIndex, expanded, loading])
 
   // PC-013 · TC-013-6 — 목록 밖(스트립·자동 재생)에서 옮겨진 커서를 따라간다.
   // 여기서 setCursor를 부르면 공유 커서가 순환한다 — roving 포커스만 옮긴다.
+  // 사용자가 목록 안에서 탐색 중(목록이 DOM 포커스 보유)이면 스크롤도 포커스도 건드리지
+  // 않는다 — 자동 재생은 구간마다 커서를 밀므로, 스크롤만 따라가면 방금 고른 행이 매 구간
+  // 밀려나고 방향키 탐색이 브라우저 포커스 스크롤과 서로를 되돌린다(code-reviewer 2026-08-31).
   useEffect(() => {
     if (!followCursor || !expanded || loading) return
     const row = rowRefs.current[currentIndex]
-    if (row === null || row === undefined) return
+    if (row === null || row === undefined || listOwnsFocus(row)) return
     const reduce =
       typeof window.matchMedia === 'function' &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches
     row.scrollIntoView({ block: 'nearest', behavior: reduce ? 'auto' : 'smooth' })
-    const list = row.closest('[role="listbox"]')
-    // 사용자가 목록 안에서 방향키로 탐색 중이면 roving 포커스를 덮지 않는다
-    if (list !== null && !list.contains(document.activeElement)) onFocusMove(currentIndex)
+    onFocusMove(currentIndex)
   }, [currentIndex, followCursor, expanded, loading, onFocusMove])
 
   const handleKeyDown = useCallback(

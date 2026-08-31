@@ -180,9 +180,12 @@ test('TC-013-6 · 스트립을 클릭하면 목록이 그 행으로 스크롤되
   await openTrack(page)
 
   const slider = page.getByTestId('profile-strip-slider')
+  await expect(slider).toBeVisible()
   const box = (await slider.boundingBox())!
   await page.mouse.click(box.x + box.width * 0.9, box.y + box.height / 2)
 
+  // 클릭이 커서에 반영된 뒤에 읽는다 — 1회 읽기는 실패 시 원인이 보이지 않는다
+  await expect(slider).not.toHaveAttribute('aria-valuenow', '0')
   const n = Number(await slider.getAttribute('aria-valuenow'))
   expect(n).toBeGreaterThan(60)
 
@@ -212,13 +215,59 @@ test('TC-013-6 · 스트립 End 키로 끝까지 가면 마지막 행이 보이�
   await expect(page.getByTestId('section-row-131')).toHaveAttribute('tabindex', '0')
   await expect.poll(() => rowIsInView(page, 131)).toBe(true)
 
-  // 목록에서 직접 고르면(source `list`) 사용자의 스크롤 위치를 건드리지 않는다
+  // 목록에서 직접 고르면(source `list`) 사용자의 스크롤 위치를 건드리지 않는다.
+  // smooth 스크롤이 끝난 뒤의 값을 기준으로 삼는다 — 두 번 연속 같으면 멈춘 것이다
   const listBox = page.getByTestId('section-list-box')
-  const before = await listBox.evaluate((node) => node.scrollTop)
+  const settledScrollTop = () =>
+    listBox.evaluate(
+      (node) =>
+        new Promise<number>((resolve) => {
+          const first = node.scrollTop
+          requestAnimationFrame(() => resolve(node.scrollTop === first ? first : Number.NaN))
+        }),
+    )
+  await expect.poll(settledScrollTop).not.toBeNaN()
+  const before = await settledScrollTop()
   await page.getByTestId('section-row-129').click()
   await expect(page.getByTestId('section-row-129')).toHaveAttribute('aria-selected', 'true')
   const after = await listBox.evaluate((node) => node.scrollTop)
   expect(Math.abs(after - before)).toBeLessThanOrEqual(1)
+})
+
+test('TC-013-6 · 자동 재생이 미는 커서를 목록이 따라가되, 목록 안에서 탐색 중이면 밀어내지 않는다', async ({
+  page,
+}) => {
+  await openTrack(page)
+  const canvas = page.getByTestId('track-canvas')
+  await expect(canvas).toHaveAttribute('data-render-state', 'ready')
+
+  await page.getByTestId('follow-toggle').click()
+  await page.getByTestId('follow-play').click()
+  await expect(canvas).toHaveAttribute('data-follow-playing', 'true')
+
+  // 재생이 커서를 목록 밖까지 밀면 그 행이 보이고 roving 포커스도 따라온다(source `canvas`)
+  await expect
+    .poll(async () => Number(await canvas.getAttribute('data-follow-order')), { timeout: 15_000 })
+    .toBeGreaterThan(40)
+  const reached = Number(await canvas.getAttribute('data-follow-order'))
+  await expect(page.getByTestId(`section-row-${reached}`)).toHaveAttribute('tabindex', '0')
+  await expect.poll(() => rowIsInView(page, reached)).toBe(true)
+
+  // 사용자가 목록 안에서 탐색을 시작하면(목록이 DOM 포커스 보유) 재생이 계속 커서를 밀어도
+  // 그 행은 밀려나지 않는다 — code-reviewer 2026-08-31 지적의 회귀 테스트
+  const anchor = Math.max(reached - 8, 0)
+  await page.getByTestId(`section-row-${anchor}`).focus()
+  await expect(page.getByTestId(`section-row-${anchor}`)).toBeFocused()
+  const orderBefore = Number(await canvas.getAttribute('data-follow-order'))
+  await expect
+    .poll(async () => Number(await canvas.getAttribute('data-follow-order')), { timeout: 15_000 })
+    .toBeGreaterThan(orderBefore + 3)
+  await expect(page.getByTestId(`section-row-${anchor}`)).toBeFocused()
+  await expect(page.getByTestId(`section-row-${anchor}`)).toHaveAttribute('tabindex', '0')
+  expect(await rowIsInView(page, anchor)).toBe(true)
+
+  await page.getByTestId('follow-play').click()
+  await expect(canvas).toHaveAttribute('data-follow-playing', 'false')
 })
 
 test('구간 목록 화면에 접근성 위반이 없다', async ({ page }) => {

@@ -60,10 +60,12 @@ interface SectionListProps {
 ```
 
 - **커서 따라가기**(2026-08-31 PC-013, TC-013-6): `followCursor`가 true이고 목록이 펼쳐진 비로딩
-  상태에서 `currentIndex`가 바뀌면 그 행을 `scrollIntoView({block: 'nearest'})`로 보이게 하고
-  (이미 보이면 움직이지 않는다 · `prefers-reduced-motion`이면 즉시, 아니면 smooth), 목록이 DOM
-  포커스를 **갖고 있지 않을 때만** `onFocusMove(currentIndex)`로 roving 포커스를 맞춘다 — 사용자가
-  목록 안에서 방향키로 탐색 중이면 방해하지 않는다. 페이지는 `followCursor = lastSource !== 'list'`로
+  상태에서 `currentIndex`가 바뀌면 — **목록이 DOM 포커스를 갖고 있지 않을 때만** — 그 행을
+  `scrollIntoView({block: 'nearest'})`로 보이게 하고(이미 보이면 움직이지 않는다 ·
+  `prefers-reduced-motion`이면 즉시, 아니면 smooth) `onFocusMove(currentIndex)`로 roving 포커스를
+  맞춘다. 스크롤과 포커스는 **같은 게이트**를 쓴다(2026-08-31 code-reviewer 정정 — 스크롤만 무조건이면
+  자동 재생이 구간마다 커서를 밀 때 사용자가 방금 고른 행이 매 구간 밀려나고 방향키 탐색이 브라우저
+  포커스 스크롤과 서로를 되돌린다). 사용자가 목록 안에서 탐색 중이면 방해하지 않는다. 페이지는 `followCursor = lastSource !== 'list'`로
   준다(스트립·캔버스가 옮긴 커서만 따라가고, 목록에서 고른 경우는 사용자의 스크롤을 건드리지 않는다).
   이 effect는 커서를 **쓰지 않으므로** §공유 커서 계약의 순환 금지와 충돌하지 않는다. DOM 포커스를
   스트립에서 빼앗지 않는다(기존 규칙 — 포커스 이동은 목록이 이미 포커스를 가질 때만).
