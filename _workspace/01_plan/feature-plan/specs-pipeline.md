@@ -78,7 +78,7 @@ START가 0개이거나 2개 이상인 비정상 입력도 렌더를 막지 않�
 
 ### FEAT-017 — 판 구간의 횡경사 (뱅크와 뱅크 사이)
 
-<!-- web-harness:unit feat=FEAT-017 dependsOn=FEAT-005,FEAT-006,FEAT-016 paths=src/entities/track/lib/elevation,src/widgets/track-canvas -->
+<!-- web-harness:unit feat=FEAT-017 dependsOn=FEAT-005,FEAT-006,FEAT-016,FEAT-007 paths=src/entities/track/lib/elevation,src/widgets/track-canvas -->
 
 **동작 명세**: 상승 뱅크와 하강 뱅크 **사이 구간**의 노면이 20° 기운 판 위에 놓이도록 렌더한다. 트랙이 그 판 위를 **돌면서** 지나가므로 노면은 진행 방향뿐 아니라 **좌우로도 기운다** — 이것은 별도의 롤 값이 아니라 판의 기하학적 귀결이다(D-029).
 
