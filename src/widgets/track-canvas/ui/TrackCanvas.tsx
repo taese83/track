@@ -1,9 +1,15 @@
 // FEAT-006 — 3D 씬과 오빗 카메라.
 //
 // 소유 범위는 **배치와 카메라**다. `component-spec`의 `TrackCanvasProps`가 함께 적은
-// `currentIndex`/`onOrbitDepart`(공유 커서, FEAT-012·013) · `followMode`(FEAT-007) ·
-// `legendOpen`(FEAT-010)은 여기서 받지 않는다 — 구현 없는 prop을 미리 뚫으면 소비자가
-// 동작한다고 읽는 죽은 표면이 된다. 각 소유자가 자기 티켓에서 더한다.
+// `currentIndex`/`onOrbitDepart`(공유 커서, FEAT-012·013) · `legendOpen`(FEAT-010)은
+// 여기서 받지 않는다 — 구현 없는 prop을 미리 뚫으면 소비자가 동작한다고 읽는 죽은
+// 표면이 된다. 각 소유자가 자기 티켓에서 더한다.
+//
+// `followMode`(FEAT-007)는 **prop이 아니라 위젯의 내부 상태**다. 켜고 끄는 주체가 이
+// 위젯 위의 버튼이고 셸은 그 값을 쓸 데가 없으므로, prop으로 올리면 페이지가 중계만
+// 하는 상태를 하나 더 갖는다. 지점 동기화는 prop이 아니라 공유 커서
+// (`shared/lib/track-cursor`)로 한다 — 목록·스트립·캔버스가 이미 그 축을 쓰고 있어,
+// 여기에 새 채널을 내면 같은 사실이 두 곳에 있게 된다.
 //
 // WebGL 지원 게이트도 여기 없다: `TrackCanvas`는 지원 확인 이후에만 마운트된다
 // (component-spec §TrackCanvas, 게이트는 FEAT-014 소유).
@@ -15,7 +21,20 @@ import { Spherical, Vector3 } from 'three'
 import type { LineSegments } from 'three'
 
 import type { ElevatedSegment } from '@/entities/track/lib/elevation'
+import { useTrackCursor } from '@/shared/lib/track-cursor'
 
+import {
+  advanceFlythrough,
+  buildFlythroughPath,
+  distanceOfOrder,
+  initialFlythroughState,
+  jumpTo,
+  orderAtDistance,
+  poseAt,
+  scrubTo,
+  setPlaying,
+} from '../lib/flythrough-camera'
+import type { FlythroughPath, FlythroughState } from '../lib/flythrough-camera'
 import { markFirstFrame, recordOrbitFrame, resetOrbitFps } from '../lib/perf-stats'
 import { applyOrbitKey, initialOrbitFor, orbitLimitsFor } from '../lib/orbit-camera'
 import type { OrbitState } from '../lib/orbit-camera'
@@ -273,10 +292,87 @@ function TrackMesh({ layout, elevated }: TrackCanvasProps) {
   )
 }
 
+/**
+ * FEAT-007 — 추종 시점의 렌더 루프. 상태 수학은 `flythrough-camera.ts`가 전부 갖고
+ * 여기서는 매 프레임 그 결과를 카메라에 옮기기만 한다.
+ *
+ * 진행 상태를 React state가 아니라 ref에 두는 것은 매 프레임 재렌더를 만들지 않기
+ * 위해서다 — 60fps로 setState를 부르면 추종 시점 자체가 성능 결함이 된다(FEAT-011이
+ * 재는 그 fps를 이 기능이 깎는다).
+ */
+function FlythroughRig({
+  path,
+  stateRef,
+  publishProgress,
+  onCursorChange,
+}: {
+  path: FlythroughPath
+  stateRef: { current: FlythroughState }
+  /** 진행 상태를 DOM에 드러낸다(검증용). 커서와 달리 seek 중에도 발행한다 */
+  publishProgress: (order: number, distance: number) => void
+  /** 추종 중 공유 커서를 끌고 간다. seek 중에는 부르지 않는다 */
+  onCursorChange: (order: number) => void
+}) {
+  const camera = useThree((state) => state.camera)
+  const lastOrder = useRef(-1)
+  const lastPublishMs = useRef(0)
+
+  useFrame((_, delta) => {
+    const next = advanceFlythrough(stateRef.current, delta * 1000, path)
+    stateRef.current = next
+
+    const pose = poseAt(path, next.distance)
+    if (pose === null) return
+
+    camera.position.set(pose.eye.x, pose.eye.y, pose.eye.z)
+    camera.lookAt(pose.target.x, pose.target.y, pose.target.z)
+
+    const order = orderAtDistance(path, next.distance)
+    const changed = order !== lastOrder.current
+
+    // 진행 거리는 **시간으로** 발행한다. 구간 변화에만 걸어 두면 한 구간 안을 달리는
+    // 동안 값이 멈춰 있어 "0.00"이라고 말하면서 카메라는 90cm를 가 있다 — 검증이 그
+    // 값을 읽으면 거짓 통과가 된다(2026-08-31 계측에서 실제로 그랬다). 매 프레임 쓰지
+    // 않는 것은 DOM 쓰기가 FEAT-011이 재는 fps에 얹히기 때문이다.
+    const nowMs = performance.now()
+    if (changed || nowMs - lastPublishMs.current >= PUBLISH_INTERVAL_MS) {
+      lastPublishMs.current = nowMs
+      publishProgress(order, next.distance)
+    }
+
+    // 공유 커서는 **구간이 바뀔 때만** 민다 — 매 프레임 밀면 목록·스트립이 60fps로
+    // 재렌더된다. 세 표면이 같은 지점을 가리키는 계약은 구간 단위다.
+    //
+    // 스크럽으로 **이동하는 중**에는 밀지 않는다. 사용자가 찍은 지점이 커서의 정본이고,
+    // 카메라가 따라가는 중간 위치로 그것을 덮으면 목록·스트립이 뒤로 끌려간다.
+    if (changed) {
+      lastOrder.current = order
+      if (!next.seeking) onCursorChange(order)
+    }
+  })
+
+  return null
+}
+
+/** 진행 상태 DOM 발행 간격(ms). 매 프레임 쓰지 않되 값이 오래 멈춰 있지도 않게 한다 */
+const PUBLISH_INTERVAL_MS = 100
+
+/** 자동 재생 속도 선택지(cm/초). 탐색 속도 조절이 요구다 — 단일 속도는 조절이 아니다 */
+const SPEED_STEPS = [120, 240, 480] as const
+
 export function TrackCanvas({ layout, elevated }: TrackCanvasProps) {
   const controlsRef = useRef<OrbitControlsRef>(null)
   const orbitingRef = useRef(false)
+  const hostRef = useRef<HTMLDivElement>(null)
   const [ready, setReady] = useState(false)
+
+  // FEAT-007 — 추종 시점. 공유 커서는 세 표면의 **유일한** 동기화 축이다(component-spec
+  // §소유권). 스트립이 스크럽하면 여기로 들어오고, 재생 중에는 여기서 나간다.
+  const { currentIndex, lastSource, setCursor } = useTrackCursor()
+  const [following, setFollowing] = useState(false)
+  const [playing, setPlayingUi] = useState(false)
+  const [speed, setSpeed] = useState<number>(SPEED_STEPS[1])
+  const flythroughRef = useRef<FlythroughState>(initialFlythroughState())
 
   const { bounds } = layout
   const limits = useMemo(() => orbitLimitsFor(bounds.diagonal), [bounds.diagonal])
@@ -317,6 +413,10 @@ export function TrackCanvas({ layout, elevated }: TrackCanvasProps) {
    */
   const handleKeyDown = useCallback(
     (event: KeyboardEvent<HTMLDivElement>) => {
+      // 추종 중에는 오빗 키가 죽는다 — 리그가 매 프레임 카메라를 소유하므로 여기서 쓴
+      // 위치는 다음 프레임에 덮인다. 효과 없는 쓰기가 orbiting 플래그만 올려 fps 측정
+      // (FEAT-011)을 오염시킨다.
+      if (following) return
       const controls = controlsRef.current
       if (controls === null) return
 
@@ -337,8 +437,91 @@ export function TrackCanvas({ layout, elevated }: TrackCanvasProps) {
       )
       controls.update()
     },
-    [limits],
+    [limits, following],
   )
+
+  /**
+   * 추종 경로는 배치가 바뀔 때만 다시 만든다. 매 렌더 만들면 132구간의 표본을 프레임마다
+   * 다시 잇게 된다.
+   */
+  const flythroughPath = useMemo(
+    () => buildFlythroughPath({ segments: layout.segments, elevated }),
+    [layout.segments, elevated],
+  )
+
+  /**
+   * `prefers-reduced-motion` — 이징 이동을 즉시 컷으로 바꾼다(component-spec §TrackCanvas
+   * "카메라 전환 즉시 컷" 승계). 마운트 시 한 번 읽는다 — 설정을 세션 중에 바꾸는 경우까지
+   * 실시간 추적하는 것은 이 티켓의 요구가 아니다.
+   */
+  const reduceMotion = useMemo(
+    () =>
+      typeof window !== 'undefined' &&
+      (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false),
+    [],
+  )
+
+  /**
+   * 스트립·목록이 옮긴 커서를 추종 카메라의 목표로 삼는다. **즉시 컷이 아니라 목표만**
+   * 옮기고 위치는 이징이 따라간다(TC-007-2). 단 reduced-motion에서는 즉시 컷이 요구다.
+   *
+   * `lastSource === 'canvas'`면 되받지 않는다 — 재생 중 카메라가 민 커서를 다시 목표로
+   * 삼으면 자기 출력을 입력으로 먹는 되먹임이 된다.
+   */
+  useEffect(() => {
+    if (!following || lastSource === 'canvas') return
+    const goal = distanceOfOrder(flythroughPath, currentIndex)
+    flythroughRef.current = reduceMotion
+      ? jumpTo(flythroughRef.current, goal)
+      : scrubTo(flythroughRef.current, goal)
+  }, [following, currentIndex, lastSource, flythroughPath, reduceMotion])
+
+  /**
+   * 추종 상태를 DOM에 드러낸다. 3D 캔버스는 픽셀만 남기므로 브라우저 검증이 "따라가고
+   * 있다"를 확인할 방법이 없다 — 카메라 상태(`publishCamera`)와 같은 이유·같은 방식이다.
+   */
+  const publishFollow = useCallback((order: number, distance: number) => {
+    const host = hostRef.current
+    if (host === null) return
+    host.dataset.followOrder = String(order)
+    host.dataset.followDistance = distance.toFixed(2)
+  }, [])
+
+  const handleFollowCursor = useCallback(
+    (order: number) => {
+      // 재생이 커서를 끌고 간다 — 목록·스트립이 같은 지점을 가리킨다.
+      // 도달 불가 구간은 `setCursor`가 스스로 거른다(부분 실패에서 넘어가지 않는다).
+      setCursor(order, 'canvas')
+    },
+    [setCursor],
+  )
+
+  const toggleFollowing = useCallback(() => {
+    setFollowing((wasFollowing) => {
+      if (wasFollowing) {
+        setPlayingUi(false)
+        flythroughRef.current = setPlaying(flythroughRef.current, false)
+        return false
+      }
+      // 켤 때는 지금 커서가 가리키는 지점에서 시작한다 — 0으로 되돌리면 사용자가
+      // 목록에서 고른 지점이 조용히 버려진다.
+      const at = distanceOfOrder(flythroughPath, currentIndex)
+      flythroughRef.current = { ...initialFlythroughState(speed), distance: at, goal: at }
+      return true
+    })
+  }, [flythroughPath, currentIndex, speed])
+
+  const togglePlaying = useCallback(() => {
+    setPlayingUi((wasPlaying) => {
+      flythroughRef.current = setPlaying(flythroughRef.current, !wasPlaying)
+      return !wasPlaying
+    })
+  }, [])
+
+  const changeSpeed = useCallback((next: number) => {
+    setSpeed(next)
+    flythroughRef.current = { ...flythroughRef.current, speed: next }
+  }, [])
 
   /**
    * 카메라 상태를 DOM에 드러낸다. 3D 캔버스는 픽셀만 남기고 상태를 남기지 않아
@@ -365,14 +548,21 @@ export function TrackCanvas({ layout, elevated }: TrackCanvasProps) {
 
   return (
     <div
+      ref={hostRef}
       className="relative h-full w-full"
       data-testid="track-canvas"
       data-render-state={ready ? 'ready' : 'pending'}
       data-segment-count={layout.segments.length}
       data-mitigated={layout.mitigation.mitigated}
+      data-follow-mode={following}
+      data-follow-playing={playing}
       tabIndex={0}
       role="application"
-      aria-label="3D 트랙 뷰 — 방향키로 회전, +/- 로 확대·축소"
+      aria-label={
+        following
+          ? '3D 트랙 뷰 — 트랙 따라가기 켜짐'
+          : '3D 트랙 뷰 — 방향키로 회전, +/- 로 확대·축소'
+      }
       onKeyDown={handleKeyDown}
     >
       <Canvas
@@ -386,8 +576,21 @@ export function TrackCanvas({ layout, elevated }: TrackCanvasProps) {
         <directionalLight position={[1, 2, 1]} intensity={1.6} />
         <TrackMesh layout={layout} elevated={elevated} />
         <PerfProbe orbiting={orbitingRef} />
+        {/*
+          FEAT-007 — 추종 중에는 오빗을 끈다. 둘 다 살려 두면 같은 카메라를 두 주체가
+          매 프레임 서로 다른 자리로 옮겨 화면이 떨린다.
+        */}
+        {following ? (
+          <FlythroughRig
+            path={flythroughPath}
+            stateRef={flythroughRef}
+            publishProgress={publishFollow}
+            onCursorChange={handleFollowCursor}
+          />
+        ) : null}
         <OrbitControls
           ref={controlsRef}
+          enabled={!following}
           target={[bounds.center.x, bounds.center.y, bounds.center.z]}
           enablePan={false}
           minDistance={limits.minDistance}
@@ -399,6 +602,114 @@ export function TrackCanvas({ layout, elevated }: TrackCanvasProps) {
           onEnd={handleOrbitEnd}
         />
       </Canvas>
+
+      {/*
+        FEAT-007 — 추종 시점 조작. 프리뷰는 이 조작을 셸의 툴바에 뒀지만 그 슬롯의 소유자는
+        `TrackScreen`(page)이고 ALLOWED_PATHS 밖이다. 같은 파일이 이미 완화 배지·잘림
+        안내를 캔버스 위에 얹는 선례가 있고, TC는 위치를 지정하지 않는다.
+        왼쪽 위에 두는 것은 오른쪽 위(완화 배지)·오른쪽 아래(잘림 안내)가 이미 찼기 때문이다.
+      */}
+      <div className="absolute top-3 left-3 flex items-center gap-2">
+        {/*
+          즉시 적용 토글은 switch다(component-spec §ControlCluster — interaction-controls
+          "즉시 적용=switch" 규칙). aria-pressed 토글 버튼이면 "눌린 버튼"이지 "켜진
+          모드"가 아니다 — 보조기술이 상태를 다르게 읽는다.
+        */}
+        <button
+          type="button"
+          role="switch"
+          onClick={toggleFollowing}
+          aria-checked={following}
+          disabled={flythroughPath.waypoints.length === 0}
+          data-testid="follow-toggle"
+          className="rounded-[4px] px-2 py-1 text-[12px] disabled:cursor-not-allowed disabled:opacity-50"
+          style={{
+            background: following ? 'var(--color-primary)' : 'rgb(26 29 33 / 0.92)',
+            color: following ? 'var(--color-on-primary)' : 'var(--color-text-primary)',
+            border: '1px solid var(--color-border)',
+          }}
+        >
+          트랙 따라가기
+        </button>
+
+        {following ? (
+          <>
+            <button
+              type="button"
+              onClick={togglePlaying}
+              aria-pressed={playing}
+              data-testid="follow-play"
+              className="rounded-[4px] px-2 py-1 text-[12px]"
+              style={{
+                background: 'rgb(26 29 33 / 0.92)',
+                color: 'var(--color-text-primary)',
+                border: '1px solid var(--color-border)',
+              }}
+            >
+              {playing ? '일시정지' : '자동 재생'}
+            </button>
+
+            {/*
+              탐색 속도 조절이 요구다(TC-007-3의 "자동 재생 옵션"). 옵션이 3개 고정이므로
+              slider가 아니라 **segmented control**이다(component-spec §ControlCluster —
+              radiogroup + 옵션별 role=radio, 원칙 12). select는 현재 값 하나만 보이지만
+              segmented는 선택지 전체가 한눈에 보인다 — 옵션 셋에 클릭 두 번은 과하다.
+              키보드는 APG 라디오 패턴대로 roving tabindex + 방향키다.
+            */}
+            <div
+              role="radiogroup"
+              aria-label="탐색 속도"
+              data-testid="follow-speed"
+              className="flex items-center gap-1 rounded-[4px] px-1.5 py-1 text-[12px]"
+              style={{
+                background: 'rgb(26 29 33 / 0.92)',
+                border: '1px solid var(--color-border)',
+              }}
+              onKeyDown={(event) => {
+                const delta =
+                  event.key === 'ArrowRight' || event.key === 'ArrowDown'
+                    ? 1
+                    : event.key === 'ArrowLeft' || event.key === 'ArrowUp'
+                      ? -1
+                      : 0
+                if (delta === 0) return
+                event.preventDefault()
+                // 방향키가 캔버스 컨테이너의 오빗 키 핸들러로 새지 않게 여기서 끊는다
+                event.stopPropagation()
+                const at = SPEED_STEPS.findIndex((step) => step === speed)
+                const next =
+                  SPEED_STEPS[Math.min(Math.max(at + delta, 0), SPEED_STEPS.length - 1)]
+                if (next === undefined || next === speed) return
+                changeSpeed(next)
+                event.currentTarget
+                  .querySelector<HTMLButtonElement>(`[data-speed="${next}"]`)
+                  ?.focus()
+              }}
+            >
+              {SPEED_STEPS.map((step, index) => (
+                <button
+                  key={step}
+                  type="button"
+                  role="radio"
+                  aria-checked={speed === step}
+                  tabIndex={speed === step ? 0 : -1}
+                  data-speed={step}
+                  data-testid={`follow-speed-${['slow', 'normal', 'fast'][index]}`}
+                  onClick={() => changeSpeed(step)}
+                  className="rounded-[3px] px-1.5 py-0.5"
+                  style={
+                    speed === step
+                      ? { background: 'var(--color-primary)', color: 'var(--color-on-primary)' }
+                      : { color: 'var(--color-text-secondary)' }
+                  }
+                >
+                  {['느리게', '보통', '빠르게'][index]}
+                </button>
+              ))}
+            </div>
+          </>
+        ) : null}
+      </div>
 
       {/*
         FEAT-011 — 완화 상태를 화면에 알린다. 프리뷰는 이 안내를 셸의 alert 슬롯에 뒀지만
