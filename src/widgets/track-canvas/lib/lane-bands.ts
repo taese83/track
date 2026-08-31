@@ -164,7 +164,7 @@ function routeBand(
   route: readonly SceneSample[],
   lane: number,
   seams: { entry: LateralFrame | undefined; exit: LateralFrame | undefined },
-  surface: ((x: number, z: number) => number) | undefined,
+  laneSurface: ((x: number, z: number, t: number) => number) | undefined,
 ): LaneBand {
   const half = LANE_PITCH_CM / 2
   const last = route.length - 1
@@ -177,6 +177,8 @@ function routeBand(
         : at === last
           ? (seams.exit ?? frameOf(tangentBetween(route[last - 1] ?? sample, sample)))
           : frameOf(localTangentRad(route, at))
+    // 가장자리 높이는 **그 자리의 노면**(레인별 판 함수)에서 온다 — 올라가는 레인이 판 위에 놓인다
+    const surface = laneSurface === undefined ? undefined : (x: number, z: number) => laneSurface(x, z, sample.t)
     lo.push(offsetPoint(sample, frame, -half, 0, surface))
     hi.push(offsetPoint(sample, frame, half, 0, surface))
   })
@@ -202,7 +204,7 @@ export function buildLaneBands(segments: readonly SceneSegment[]): SegmentBands[
               route,
               lane,
               { entry: frames[0], exit: frames[frames.length - 1] },
-              segment.surfaceHeightAt,
+              segment.laneSurfaces?.[lane],
             ),
           )
         : Array.from({ length: LANE_COUNT }, (_, lane) => {

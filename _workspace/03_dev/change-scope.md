@@ -82,7 +82,8 @@ TARGET_BEHAVIOR: TC-018-1~10 — 레인별 명시 경로(레인 0·1: [−28,8] 
   (−51.5,12) r54 U턴을 **곡면 따라 대각선으로 올라갔다 내려오는 산**(램프 시작 0 → 꼭짓점 12cm → 램프 끝 0, 선형)),
   중심선 = 105+54π+105, 레인 면·카메라가 명시 경로를 소비(표본 호 길이 3cm 간격), 바운딩박스 포함. 순환은 D-033과 동일.
   이력: 8cm 고원 → 뱅크 횡경사 20° 추가 → 횡경사 제거·선형 산(D-049 ⑥) → 꼭짓점 꺾임 지적으로 **뱅크와 뱅크 사이 판 모델**
-  (전이 곡선 + 20° 판, 꼭짓점 ≈26.7cm, D-049 ⑦)로 확정.
+  (전이 곡선 + 20° 판, 꼭짓점 ≈26.7cm, D-049 ⑦)로 확정 → "트랙이 휘지 않아야" 지적으로 가장자리 높이를 판 함수로
+  (`laneSurfaces`, TC-018-11 평면 이탈 < 1e-6) — 비틀림 제거.
 ALLOWED_PATHS: src/entities/track/lib/elevation (piece-path.ts 분기 + 신규 local-path.ts·lane-routes.ts + 테스트) ·
   src/widgets/track-canvas (scene-layout.ts lanePaths·bounds · lane-bands.ts 명시 레인 · flythrough-camera.ts 명시 레인 + 테스트) ·
   _workspace (기획·결정·정본)

@@ -77,6 +77,11 @@ function rotate(point: Point, angleDeg: number): Point {
   return { x: point.x * cos - point.y * sin, y: point.x * sin + point.y * cos }
 }
 
+/** 절대 편집기 좌표 → 피스 로컬 좌표(`toAbsolutePath`의 역변환) */
+export function toLocalPoint(point: Point, piece: Pick<ParsedPiece, 'x' | 'y' | 'angleDeg'>): Point {
+  return rotate({ x: point.x - piece.x, y: point.y - piece.y }, -piece.angleDeg)
+}
+
 /**
  * 로컬 경로를 피스의 위치·각도로 절대 좌표에 놓는다. 형상은 언제나 로컬 정의 방향으로
  * 만들고 주행이 반대면 매개변수만 뒤집는다(`piece-path.ts`와 같은 규약 — 끝점을 맞바꿔

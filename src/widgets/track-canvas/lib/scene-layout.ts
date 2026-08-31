@@ -75,6 +75,13 @@ export interface SceneSegment {
    * 피스가 생기면 중심선 `t`로 환산해 넘겨야 한다(code-reviewer 2026-09-01).
    */
   lanePaths?: SceneSample[][]
+  /**
+   * 레인별 노면 높이 함수(FEAT-018 · D-049 ⑦). 씬 좌표 `(x, z)`와 그 레인 표본의 `t`(전이/판
+   * 구간 판정)를 받아 절대 높이를 낸다. 올라가는 레인은 판 위에 놓이므로 가장자리 높이가
+   * 중심선과 다르다 — `surfaceHeightAt`(FEAT-017)과 같은 이유로, 중심선 높이를 좌우로 복사하면
+   * 면이 비틀린다. `lanePaths`와 같은 인덱스다.
+   */
+  laneSurfaces?: ((x: number, z: number, t: number) => number)[]
 }
 
 export interface SceneBounds {
@@ -296,6 +303,12 @@ export function buildSceneLayout(input: SceneLayoutInput): SceneLayout {
     const lanePaths = routes?.map((route) =>
       sampleRoute(route, routeSampleCount(route.length, mitigation.curvedSamples), elevated, correction),
     )
+    const laneSurfaces = routes?.map(
+      (route) => (x: number, z: number, t: number) =>
+        base +
+        (elevated?.elevationProfile.heightAt(t) ?? 0) +
+        route.riseAtPoint({ x: x - correction.x, y: z - correction.y }, t),
+    )
 
     return {
       pieceId: piece.pieceId,
@@ -315,6 +328,7 @@ export function buildSceneLayout(input: SceneLayoutInput): SceneLayout {
               surface({ x: x - correction.x, y: z - correction.y }),
           }),
       ...(lanePaths === undefined ? {} : { lanePaths }),
+      ...(laneSurfaces === undefined ? {} : { laneSurfaces }),
     }
   })
 

@@ -204,7 +204,38 @@ describe('TC-018-10 — 올라가는 레인은 판 위를 돌며 꺾임 없이 �
     console.log(`TC-018-10 높이 2차 차분 최대 ${worstSecond.toFixed(4)}cm (표본 ${samples.length})`)
     expect(worstSecond).toBeLessThan(0.15)
     const bands = buildLaneBands(layout.segments)
-    for (const band of bands[1]!.lanes) band.lo.forEach((lo, at) => expect(lo.y).toBeCloseTo(band.hi[at]!.y, 9))
+    for (const lane of [0, 1]) {
+      const band = bands[1]!.lanes[lane]!
+      band.lo.forEach((lo, at) => expect(lo.y).toBeCloseTo(band.hi[at]!.y, 9))
+    }
+  })
+
+  it('TC-018-11: 레인 2의 면이 비틀리지 않는다 — 판 구간의 모든 가장자리가 하나의 평면 y = gradient·(x + 90 − 19.25) 위에 있다', () => {
+    const { layout } = layoutOf()
+    const gradient = Math.tan((20 * Math.PI) / 180)
+    const band = buildLaneBands(layout.segments)[1]!.lanes[2]!
+    const samples = layout.segments[1]!.lanePaths![2]!
+    const plane = (x: number) => gradient * (x + 90 - 19.25)
+    let onPlate = 0
+    let worst = 0
+    let maxCrossFall = 0
+    samples.forEach((sample, at) => {
+      const s = sample.t * (38.5 * 2 + 54 * Math.PI)
+      if (s < 38.5 + 0.5 || s > 38.5 + 54 * Math.PI - 0.5) return
+      const lo = band.lo[at]!
+      const hi = band.hi[at]!
+      worst = Math.max(worst, Math.abs(lo.y - plane(lo.x)), Math.abs(hi.y - plane(hi.x)))
+      maxCrossFall = Math.max(maxCrossFall, Math.abs(hi.y - lo.y))
+      onPlate += 1
+    })
+    console.log(`TC-018-11 판 위 표본 ${onPlate} · 평면 최대 이탈 ${worst.toExponential(2)}cm · 최대 횡경사 ${maxCrossFall.toFixed(3)}cm`)
+    expect(onPlate).toBeGreaterThan(20)
+    expect(worst).toBeLessThan(1e-6)
+    // 꼭짓점 근처(진행 방향이 판축에 수직)에서 횡경사가 폭 × gradient에 이른다 — 면이 판 위에 있다는 뜻
+    expect(maxCrossFall).toBeGreaterThan(12 * gradient * 0.95)
+    // 양 끝(진입·진출점)에서는 평지와 같은 높이
+    expect(band.lo[0]!.y).toBeCloseTo(0, 6)
+    expect(band.hi[0]!.y).toBeCloseTo(0, 6)
   })
 })
 

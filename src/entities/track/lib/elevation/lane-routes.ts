@@ -8,7 +8,7 @@
 // 만들 수 없다 — 그래서 레인마다 경로를 따로 둔다. 위상은 D-033의 한 칸 순환과 같다
 // (진입 좌→우 A,B,C → 진출 좌→우 C,A,B).
 import type { PiecePath } from './piece-path'
-import { arc, composite, line, toAbsolutePath } from './local-path'
+import { arc, composite, line, toAbsolutePath, toLocalPoint } from './local-path'
 import type { LocalPath } from './local-path'
 import type { OrientedPiece, Point } from './types'
 
@@ -52,23 +52,27 @@ const HALF_TURN_TO_DEG = 90
 const BANK_ANGLE_DEG = 20
 const BANK_GRADIENT = Math.tan((BANK_ANGLE_DEG * Math.PI) / 180)
 
-/** 로컬 경로 + 호 길이 `s`에서의 상승(cm). 없으면 0 */
+/**
+ * 로컬 경로 + 상승 함수. 없으면 0.
+ * `riseAt(s, local)`은 호 길이 `s`(전이/판 **구간 판정**)와 로컬 좌표 `local`(판축 위 **위치**)로
+ * 높이를 낸다 — 중심선뿐 아니라 레인 가장자리도 같은 식으로 높이를 얻어야 면이 판 위에 놓인다
+ * (FEAT-017과 같은 이유: 중심선 높이를 좌우로 복사하면 오르는 동안 면이 비틀린다).
+ */
 interface LaneRouteDefinition {
   path: LocalPath
-  riseAtLength?: (s: number) => number
+  riseAt?: (s: number, local: Point) => number
 }
 
 /**
- * 판 구간 프로파일. `d`는 판축(진입 팔 진행 방향) 위 거리이며 진입점에서 0이다.
+ * 판 구간 프로파일. `d`는 판축(진입 팔 진행 방향 +x) 위 거리이며 진입점에서 0이다.
  * 전이 구간은 판축 거리 `dEnd`까지, 그 뒤가 판이다 — 대칭이라 진출 전이도 같은 식이다.
  */
 function plateSectionRise(
-  path: LocalPath,
   entryX: number,
   transitionEnd: number,
   plateEnd: number,
   dEnd: number,
-): (s: number) => number {
+): (s: number, local: Point) => number {
   const lift = dEnd / 2
   const k = lift / (dEnd - lift)
   const transition = (d: number): number => {
@@ -77,8 +81,8 @@ function plateSectionRise(
     if (u >= 1) return BANK_GRADIENT * (d - lift)
     return BANK_GRADIENT * (dEnd / (k + 1)) * Math.pow(u, k + 1)
   }
-  return (s) => {
-    const d = path.pointAt(s / path.length).x - entryX
+  return (s, local) => {
+    const d = local.x - entryX
     if (s < transitionEnd || s > plateEnd) return transition(d)
     return BANK_GRADIENT * (d - lift)
   }
@@ -114,13 +118,11 @@ function lan2InnerLane(): LaneRouteDefinition {
   const approach = line({ x: ENTRY_X, y: entryY }, { x: INNER_CENTER.x, y: entryY })
   const turn = arc(INNER_CENTER, INNER_RADIUS, HALF_TURN_FROM_DEG, HALF_TURN_TO_DEG)
   const departure = line({ x: INNER_CENTER.x, y: exitY }, { x: ENTRY_X, y: exitY })
-  const path = composite([approach, turn, departure])
   return {
-    path,
+    path: composite([approach, turn, departure]),
     // 진입 직선 전체가 전이(판축 거리 38.5), 원호가 판, 진출 직선이 전이. 꼭짓점 높이는
     // gradient·(38.5 + 54 − lift) ≈ 26.7cm — 각도(D-042)의 귀결이지 지정값이 아니다.
-    riseAtLength: plateSectionRise(
-      path,
+    riseAt: plateSectionRise(
       ENTRY_X,
       approach.length,
       approach.length + turn.length,
@@ -142,9 +144,16 @@ const ROUTE_SETS: Readonly<Record<string, RouteSet>> = {
   },
 }
 
-/** 절대 좌표 레인 경로. `riseAt`은 상승(cm) — 고도 프로파일과 독립인 레인 면의 추가 높이다 */
+/** 절대 좌표 레인 경로. 상승은 고도 프로파일과 독립인 레인 면의 추가 높이다(cm) */
 export interface LaneRoute extends PiecePath {
+  /** 중심선 위 `t`에서의 상승 */
   riseAt(t: number): number
+  /**
+   * 절대 편집기 좌표 `point`(레인 가장자리 등 중심선 밖)에서의 상승. `t`는 그 점이 속한
+   * 중심선 자리(전이/판 구간 판정)다. 판 위에서는 높이가 위치의 함수라 가장자리도 이 식으로
+   * 정해야 면이 판에 놓인다 — 중심선 높이를 좌우로 복사하면 비틀린다.
+   */
+  riseAtPoint(point: Point, t: number): number
 }
 
 function routeSetOf(pieceClass: string): RouteSet | undefined {
@@ -178,13 +187,18 @@ export function laneRoutesOf(oriented: OrientedPiece): LaneRoute[] | undefined {
     const index = oriented.flipped ? flippedRouteIndex(lane) : lane
     const definition = set.lanes[index]!
     const absolute = toAbsolutePath(definition.path, oriented.piece, oriented.flipped)
-    const rise = definition.riseAtLength
+    const rise = definition.riseAt
+    const localLength = (t: number) => (oriented.flipped ? 1 - t : t) * definition.path.length
+    const localT = (t: number) => (oriented.flipped ? 1 - t : t)
     return {
       ...absolute,
       riseAt(t) {
         if (rise === undefined) return 0
-        const local = oriented.flipped ? 1 - t : t
-        return rise(local * definition.path.length)
+        return rise(localLength(t), definition.path.pointAt(localT(t)))
+      },
+      riseAtPoint(point, t) {
+        if (rise === undefined) return 0
+        return rise(localLength(t), toLocalPoint(point, oriented.piece))
       },
     }
   })
