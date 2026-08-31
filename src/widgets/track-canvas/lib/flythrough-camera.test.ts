@@ -16,6 +16,7 @@ import type { ParsedPiece } from '@/entities/track/model/types'
 import { extractUpstreamVars } from '@/shared/lib/track/extract-upstream-vars'
 
 import {
+  CAMERA_START_LANE,
   advanceFlythrough,
   buildFlythroughPath,
   distanceOfOrder,
@@ -27,8 +28,17 @@ import {
   scrubTo,
   setPlaying,
 } from './flythrough-camera'
+import type { FlythroughPath, FlythroughWaypoint } from './flythrough-camera'
+import {
+  LANE_CENTERS_CM,
+  LANE_COUNT,
+  LANE_PITCH_CM,
+  OVERPASS_HEIGHT_CM,
+  isLaneChangeClass,
+  laneShiftsCm,
+} from './lane-model'
 import { buildSceneLayout } from './scene-layout'
-import type { SceneSegment } from './scene-layout'
+import type { SceneSample, SceneSegment } from './scene-layout'
 
 const RAD = Math.PI / 180
 
@@ -355,5 +365,185 @@ describe('공유 커서 ↔ 경로 거리 왕복', () => {
     for (const order of [0, 1, 17, 64, layout.segments.length - 1]) {
       expect(orderAtDistance(flythrough, distanceOfOrder(flythrough, order))).toBe(order)
     }
+  })
+})
+
+// FEAT-008 · D-047 — 카메라가 중심선이 아니라 레인 위를 달리는가.
+// 가로 변위는 `lane-bands.frameOf`와 **같은 프레임**(좌측 법선)으로 되잰다. 다른 프레임으로
+// 재면 화면의 레인 면과 카메라가 서로 다른 축 위에 있어도 통과한다.
+function tangentRadAt(segment: SceneSegment, index: number): number {
+  const { points } = segment
+  if (index <= 0) return segment.entryTangentRad
+  if (index >= points.length - 1) return segment.exitTangentRad
+  const prev = points[index - 1]!
+  const next = points[index + 1]!
+  const dx = next.x - prev.x
+  const dz = next.z - prev.z
+  if (dx === 0 && dz === 0) return segment.entryTangentRad
+  return Math.atan2(dz, dx)
+}
+
+function sampleIndexOf(segment: SceneSegment, waypoint: FlythroughWaypoint): number {
+  const index = segment.points.findIndex((sample) => sample.t === waypoint.t)
+  if (index < 0) throw new Error(`중심선 표본 없음: order=${waypoint.order} t=${waypoint.t}`)
+  return index
+}
+
+function sampleOf(segment: SceneSegment, waypoint: FlythroughWaypoint): SceneSample {
+  return segment.points[sampleIndexOf(segment, waypoint)]!
+}
+
+/** 중심선 표본에서 좌측 법선 방향으로 얼마나 벗어났는가(cm) */
+function lateralOf(segment: SceneSegment, waypoint: FlythroughWaypoint): number {
+  const index = sampleIndexOf(segment, waypoint)
+  const sample = segment.points[index]!
+  const tangentRad = tangentRadAt(segment, index)
+  const nx = -Math.sin(tangentRad)
+  const nz = Math.cos(tangentRad)
+  return (waypoint.x - sample.x) * nx + (waypoint.z - sample.z) * nz
+}
+
+function waypointsOf(path: FlythroughPath, order: number): FlythroughWaypoint[] {
+  return path.waypoints.filter((waypoint) => waypoint.order === order)
+}
+
+function laneChangesOf(segments: readonly SceneSegment[]): SceneSegment[] {
+  return segments.filter((segment) => isLaneChangeClass(segment.pieceClass))
+}
+
+describe('TC-008-2 — 레인체인지 통과 시 카메라가 레인 오프셋을 따른다', () => {
+  it('레인체인지 이전 구간은 가운데 레인 그대로다 — 종전 경로와 같은 좌표다', async () => {
+    const { layout, elevated } = await sceneOf('WS67Y2.js.txt')
+    const flythrough = buildFlythroughPath({ segments: layout.segments, elevated })
+    const byOrder = new Map(layout.segments.map((segment) => [segment.order, segment]))
+
+    const laneChangeOrder = laneChangesOf(layout.segments)[0]?.order
+    expect(laneChangeOrder).toBeDefined()
+
+    const before = flythrough.waypoints.filter((waypoint) => waypoint.order < laneChangeOrder!)
+    expect(before.length).toBeGreaterThan(0)
+
+    for (const waypoint of before) {
+      const segment = byOrder.get(waypoint.order)!
+      expect(waypoint.lane).toBe(CAMERA_START_LANE)
+      expect(Math.abs(lateralOf(segment, waypoint))).toBeLessThanOrEqual(1e-6)
+      expect(waypoint.y).toBeCloseTo(sampleOf(segment, waypoint).y, 6)
+    }
+  })
+
+  it('TC-008-2: 각 레인체인지에서 가로 위치가 그 레인의 자리바꿈 이동량만큼 옮겨간다', async () => {
+    const { layout, elevated } = await sceneOf('WS67Y2.js.txt')
+    const flythrough = buildFlythroughPath({ segments: layout.segments, elevated })
+
+    const laneChanges = laneChangesOf(layout.segments)
+    // 실측 1개(WS67Y2의 Lan1 — README의 "1→2·2→3·3→1"은 그 한 피스 안의 세 레인 순환이다).
+    // 0이면 아래 단언이 아무것도 재지 않는다
+    console.log(`WS67Y2 레인체인지 세그먼트 수: ${laneChanges.length}`)
+    expect(laneChanges.length).toBeGreaterThanOrEqual(1)
+
+    const shifts = laneShiftsCm()
+    for (const segment of laneChanges) {
+      const points = waypointsOf(flythrough, segment.order)
+      expect(points.length).toBeGreaterThanOrEqual(3)
+
+      const lane = points[0]!.lane
+      const shift = shifts[lane]!
+      const entry = lateralOf(segment, points[0]!)
+      const exit = lateralOf(segment, points[points.length - 1]!)
+      // 진입 표본이 아직 자리바꿈 구간(가운데 45%) 밖이라는 전제 — 표본이 성기면 여기서 깨진다
+      expect(entry).toBeCloseTo(LANE_CENTERS_CM[lane]!, 2)
+      expect(exit - entry).toBeCloseTo(shift, 2)
+
+      let middle = points[0]!
+      for (const waypoint of points) {
+        if (Math.abs(waypoint.t - 0.5) < Math.abs(middle.t - 0.5)) middle = waypoint
+      }
+      // D-036 ② — 가운데 45% 구간을 직선으로 건너므로 중앙은 절반이다
+      expect(Math.abs(lateralOf(segment, middle) - entry - shift / 2)).toBeLessThanOrEqual(0.6)
+    }
+  })
+
+  it('TC-008-2: 레인체인지를 지날 때마다 레인이 한 칸 순환한다', async () => {
+    const { layout, elevated } = await sceneOf('WS67Y2.js.txt')
+    const flythrough = buildFlythroughPath({ segments: layout.segments, elevated })
+
+    const laneChanges = laneChangesOf(layout.segments)
+    for (const segment of laneChanges) {
+      const inside = waypointsOf(flythrough, segment.order)
+      const after = flythrough.waypoints.find((waypoint) => waypoint.order > segment.order)
+      if (after === undefined) continue
+      expect(after.lane).toBe((inside[0]!.lane + 1) % LANE_COUNT)
+    }
+
+    // 경로 끝의 레인은 출발 레인 + 레인체인지 수다. WS67Y2는 레인체인지가 1개라 한 바퀴 뒤
+    // 카메라는 레인 2에 있다 — 경로는 되감지 않으므로(advanceFlythrough) 불연속이 아니다.
+    const last = flythrough.waypoints[flythrough.waypoints.length - 1]!
+    console.log(`레인체인지 ${laneChanges.length}개 · 경로 끝 레인 ${last.lane}`)
+    expect(last.lane).toBe((CAMERA_START_LANE + laneChanges.length) % LANE_COUNT)
+  })
+
+  it('TC-008-2: 두 칸 건너뛰는 레인을 탈 때만 카메라가 육교 높이만큼 뜬다', async () => {
+    const { layout, elevated } = await sceneOf('WS67Y2.js.txt')
+    const shifts = laneShiftsCm()
+    const laneChanges = laneChangesOf(layout.segments)
+    expect(laneChanges.length).toBeGreaterThanOrEqual(1)
+
+    // 같은 실데이터에서 출발 레인만 바꿔 두 경로를 모두 잰다 — WS67Y2는 레인체인지가 하나라
+    // 가운데 레인 출발(기본)은 한 칸 이동(+12cm)이고 육교 레인은 `startLane`으로만 탈 수 있다
+    for (let startLane = 0; startLane < LANE_COUNT; startLane += 1) {
+      const flythrough = buildFlythroughPath({ segments: layout.segments, elevated, startLane })
+      for (const segment of laneChanges) {
+        const points = waypointsOf(flythrough, segment.order)
+        const lane = points[0]!.lane
+        expect(lane).toBe(startLane)
+        const rises = points.map((waypoint) => waypoint.y - sampleOf(segment, waypoint).y)
+        const peak = Math.max(...rises)
+        console.log(`출발 레인 ${startLane} · 레인체인지 shift ${shifts[lane]}cm · 최대 상승 ${peak.toFixed(2)}cm`)
+        if (Math.abs(shifts[lane]!) > LANE_PITCH_CM) {
+          // 실측으로 확인할 값 — 중앙 표본 밀도에 좌우된다(마루는 u=0.5)
+          expect(peak).toBeCloseTo(OVERPASS_HEIGHT_CM, 0)
+        } else {
+          expect(Math.max(...rises.map(Math.abs))).toBeLessThanOrEqual(0.01)
+        }
+      }
+    }
+  })
+
+  it('TC-008-2: 레인체인지 이음새에서 카메라가 점프하지 않는다', async () => {
+    const { layout, elevated } = await sceneOf('WS67Y2.js.txt')
+    const flythrough = buildFlythroughPath({ segments: layout.segments, elevated })
+    const byOrder = new Map(layout.segments.map((segment) => [segment.order, segment]))
+
+    // 자리바꿈 끝의 가로 위치는 다음 피스에서 옮겨간 레인의 **중심**이다(위치 집합 보존).
+    // 표본 밀도와 무관하게 재려고 다음 피스의 진입 프레임에서 그 자리를 직접 계산한다.
+    let seams = 0
+    for (const segment of laneChangesOf(layout.segments)) {
+      const next = byOrder.get(segment.order + 1)
+      if (next === undefined) continue
+      const entry = next.points[0]
+      if (entry === undefined) continue
+
+      const points = waypointsOf(flythrough, segment.order)
+      const nextLane = (points[0]!.lane + 1) % LANE_COUNT
+      const nx = -Math.sin(next.entryTangentRad)
+      const nz = Math.cos(next.entryTangentRad)
+      const x = entry.x + nx * LANE_CENTERS_CM[nextLane]!
+      const z = entry.z + nz * LANE_CENTERS_CM[nextLane]!
+
+      const exit = points[points.length - 1]!
+      seams += 1
+      expect(Math.hypot(exit.x - x, exit.z - z)).toBeLessThan(1)
+    }
+    expect(seams).toBeGreaterThan(0)
+
+    // 어느 한 스텝도 가장 긴 세그먼트의 진입→진출 거리를 넘지 않는다(TC-007-1과 같은 기준) —
+    // 레인 오프셋이 붙어도 직선 피스는 평행 이동이라 스텝 길이가 늘지 않는다
+    let maxGap = 0
+    for (let index = 1; index < flythrough.waypoints.length; index += 1) {
+      const previous = flythrough.waypoints[index - 1]!
+      const current = flythrough.waypoints[index]!
+      maxGap = Math.max(maxGap, current.distance - previous.distance)
+    }
+    expect(maxGap).toBeLessThanOrEqual(Math.max(...layout.segments.map(chordOf)) + 1e-6)
   })
 })
