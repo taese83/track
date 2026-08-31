@@ -143,12 +143,20 @@ async function fetchUpstream(code: string): Promise<UpstreamOutcome> {
   }
 }
 
-/** 로컬 개발·테스트는 실제 사이트를 호출하지 않는다(api-schema §9). 명시적 opt-in으로만 실호출 */
-function useFixtures(): boolean {
+type UpstreamMode = 'fixtures' | 'live' | 'auto'
+
+function resolveUpstreamMode(): UpstreamMode {
   const mode = process.env.TRACK_UPSTREAM
-  if (mode === 'fixtures') return true
-  if (mode === 'live') return false
-  return process.env.NODE_ENV !== 'production'
+  if (mode === 'fixtures' || mode === 'live' || mode === 'auto') return mode
+  return process.env.NODE_ENV === 'production' ? 'live' : 'auto'
+}
+
+// api-schema §9 · D-046
+async function readUpstream(code: string, mode: UpstreamMode): Promise<UpstreamOutcome> {
+  if (mode === 'live') return fetchUpstream(code)
+  const recorded = await readFixture(code)
+  if (mode === 'fixtures' || recorded.kind !== 'not-recorded') return recorded
+  return fetchUpstream(code)
 }
 
 // ---------------------------------------------------------------------------
@@ -168,7 +176,7 @@ export async function handleTrackRequest(urlParam: string | null): Promise<Track
     }
 
     // 사용자 요청 1회당 업스트림 fetch 정확히 1회. 자동 재시도·백오프·프리페치 없음(REQ-F-019 a)
-    const outcome = useFixtures() ? await readFixture(code) : await fetchUpstream(code)
+    const outcome = await readUpstream(code, resolveUpstreamMode())
 
     switch (outcome.kind) {
       case 'not-found':

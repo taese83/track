@@ -256,6 +256,17 @@
       "durationMs": 354503,
       "outcome": "complete",
       "note": "feat-003-restore-wiring (5 outputs). 셸 도구 부재로 자체 확인 미실행 — 오케스트레이터가 게이트 전량 실행. 자기 범위 밖 e2e 충돌 1건을 정확히 사전 보고"
+    },
+    {
+      "run": "2026-08-31T10:40+iterate",
+      "phase": "P3",
+      "agent": "developer",
+      "retry": false,
+      "tokens": 26250,
+      "toolUses": 10,
+      "durationMs": 66653,
+      "outcome": "complete",
+      "note": "FEAT-001 D-046 auto 업스트림 모드 (3 outputs: api/track.ts, api/track.test.ts, ErrorScreen.tsx). 발췌 주입·읽기 3회 상한·즉시 쓰기 계약 적용 — 1회 완주. verify-spawn-completion 18/18 OK. 셸 부재로 게이트는 오케스트레이터가 실행"
     }
   ]
 }

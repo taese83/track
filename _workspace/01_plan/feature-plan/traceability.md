@@ -14,7 +14,7 @@
 | REQ-F-015 | 미배정 | — | 위와 동일 (NEEDS_DECISION) |
 | REQ-F-016 (총 길이 표시, R2 적용) | FEAT-010 | TC-010-5 | 절대 미터 표기 금지 + 등급 배지 |
 | REQ-NFR-001 (총 피스 수 표시, R2 적용) | FEAT-010 | TC-010-5 | |
-| REQ-F-019 (외부 fetch 계약, Should → Must 승격) | FEAT-001 | TC-001-1~8 | 캐시는 CDN s-maxage best-effort, 결정적 보장 아님 |
+| REQ-F-019 (외부 fetch 계약, Should → Must 승격) | FEAT-001 | TC-001-1~9 | 캐시는 CDN s-maxage best-effort, 결정적 보장 아님. TC-001-9(로컬 auto 모드)에서도 요청당 1회 fetch 계약은 그대로다(D-046) |
 | REQ-F-020 (Str1 c=5 마커 직선, 고도 변화 0) | FEAT-005 | TC-005-5 | 상승/하강 판정에서 제외 |
 | REQ-F-021 (compat 플래그 처리) | FEAT-002, FEAT-006 | TC-002-4, TC-002-5 | compat=true 경로는 WS67Y2로 검증 불가, 별도 fixture 필요 |
 | REQ-F-022 (WebGL 미지원 감지·안내·대체 표현) | FEAT-014 | TC-014-1~4 | |
