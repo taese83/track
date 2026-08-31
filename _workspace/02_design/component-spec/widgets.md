@@ -55,9 +55,18 @@ interface SectionListProps {
   onToggleExpanded?: () => void     // 그 외 상태에서만 제공(접이식)
   variant: 'sidebar' | 'full-width'
   loading?: boolean
+  followCursor?: boolean           // 2026-08-31 PC-013 — 다른 표면이 옮긴 커서를 목록이 따라간다(아래 §커서 따라가기)
 }
 ```
 
+- **커서 따라가기**(2026-08-31 PC-013, TC-013-6): `followCursor`가 true이고 목록이 펼쳐진 비로딩
+  상태에서 `currentIndex`가 바뀌면 그 행을 `scrollIntoView({block: 'nearest'})`로 보이게 하고
+  (이미 보이면 움직이지 않는다 · `prefers-reduced-motion`이면 즉시, 아니면 smooth), 목록이 DOM
+  포커스를 **갖고 있지 않을 때만** `onFocusMove(currentIndex)`로 roving 포커스를 맞춘다 — 사용자가
+  목록 안에서 방향키로 탐색 중이면 방해하지 않는다. 페이지는 `followCursor = lastSource !== 'list'`로
+  준다(스트립·캔버스가 옮긴 커서만 따라가고, 목록에서 고른 경우는 사용자의 스크롤을 건드리지 않는다).
+  이 effect는 커서를 **쓰지 않으므로** §공유 커서 계약의 순환 금지와 충돌하지 않는다. DOM 포커스를
+  스트립에서 빼앗지 않는다(기존 규칙 — 포커스 이동은 목록이 이미 포커스를 가질 때만).
 - **웨이브**(2026-08-30 FEAT-013 구현 중 추가): 종전 `SegmentKind`에 웨이브가 없었는데
   카탈로그의 `Chi1`/`Chi2`는 23종 **안**이라 `unsupported`가 아니고, `straight`로 적으면 화면이
   틀린 유형을 말한다. TC-013-1의 유형 열거가 "…등"으로 열려 있어 확장이 계약을 깨지 않는다.

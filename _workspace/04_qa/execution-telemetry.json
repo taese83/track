@@ -289,6 +289,17 @@
       "durationMs": 393582,
       "outcome": "complete",
       "note": "fix #39 TC-008-2 카메라 레인 (2 outputs: flythrough-camera.ts(+test)). 발췌 주입·읽기 4회 상한 — 1회 완주, verify-spawn-completion 28/28 OK. 지시의 이음새 단언(<15cm)이 정상 동작에서도 깨짐을 정확히 짚고 대안으로 교체. 실측에서 WS67Y2 레인체인지 1개(D-047 전제 3개 오류)가 드러나 오케스트레이터가 테스트 전제·D-047 정정, startLane 입력 추가"
+    },
+    {
+      "run": "2026-08-31T13:35+feature-add",
+      "phase": "P3",
+      "agent": "developer",
+      "retry": false,
+      "tokens": 37911,
+      "toolUses": 18,
+      "durationMs": 107484,
+      "outcome": "complete",
+      "note": "PC-013 TC-013-6 목록 커서 따라가기 (4 outputs: SectionList.tsx, TrackScreen.tsx, WebglFallbackScreen.tsx, e2e/track-section-list.spec.ts). 발췌 주입·읽기 5회 상한 — 1회 완주, verify-spawn-completion 34/34 OK. 실측 가정 4건 전부 첫 e2e 실행에서 성립"
     }
   ]
 }

@@ -22,6 +22,8 @@ export interface SectionListProps {
   /** Enter·클릭 — 여기서만 공유 커서가 갱신된다 */
   onSelect: (index: number) => void
   expanded: boolean
+  /** 목록 밖에서 옮긴 커서를 목록이 따라간다 — PC-013 · TC-013-6 */
+  followCursor?: boolean
   /** 접이식이 아닌 상태(WebGL 미지원 대체 화면)에서는 넘기지 않는다 */
   onToggleExpanded?: () => void
   variant: 'sidebar' | 'full-width'
@@ -54,6 +56,7 @@ export function SectionList({
   onFocusMove,
   onSelect,
   expanded,
+  followCursor = false,
   onToggleExpanded,
   variant,
   loading = false,
@@ -70,6 +73,21 @@ export function SectionList({
       if (list !== null && list.contains(document.activeElement)) row.focus()
     }
   }, [focusedIndex, expanded, loading])
+
+  // PC-013 · TC-013-6 — 목록 밖(스트립·자동 재생)에서 옮겨진 커서를 따라간다.
+  // 여기서 setCursor를 부르면 공유 커서가 순환한다 — roving 포커스만 옮긴다.
+  useEffect(() => {
+    if (!followCursor || !expanded || loading) return
+    const row = rowRefs.current[currentIndex]
+    if (row === null || row === undefined) return
+    const reduce =
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    row.scrollIntoView({ block: 'nearest', behavior: reduce ? 'auto' : 'smooth' })
+    const list = row.closest('[role="listbox"]')
+    // 사용자가 목록 안에서 방향키로 탐색 중이면 roving 포커스를 덮지 않는다
+    if (list !== null && !list.contains(document.activeElement)) onFocusMove(currentIndex)
+  }, [currentIndex, followCursor, expanded, loading, onFocusMove])
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent<HTMLUListElement>) => {

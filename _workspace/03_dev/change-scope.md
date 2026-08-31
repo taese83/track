@@ -1,63 +1,67 @@
-# change-scope — fix #39 (FEAT-008 · TC-008-2)
+# change-scope — FEAT-013 개정 (커서 따라가기 · PC-013 · TC-013-6)
 
-이슈 #39 착수(2026-08-31, 사용자 지시 "1"). 계획 단위 밖 fix 티켓이라 `pickup` CLI 대상이 아니며
-`web-orchestrator` bug-fix 라운드로 진행한다. ALLOWED_PATHS는 FEAT-007/008이 공유하는 3D 표면
-`src/widgets/track-canvas`(카메라 코어 `flythrough-camera.ts`가 여기 산다).
+`/feature-add` 라운드(2026-08-31). 티켓 없음 — 사용자 직접 요청("상대 스케일 포커스 시에 동일한 구간 목록으로
+스크롤되고 포커스"). REQUEST_TYPE `feature`(소형, 데이터 계약 변경 없음). 기획·설계 체크포인트 사용자 승인
+(스트립+자동재생 모두 따라감). 스키마 정본: minimal-change-contract.md · 아래 JSON이 기계 정본.
 
 CHANGE_MODE: existing-change
-REQUEST: TC-008-2 — 추종 시점이 레인체인지 구간을 지날 때 카메라 위치가 레인 오프셋을 반영한다.
-OBSERVED_BASELINE: `flythrough-camera.ts` `buildFlythroughPath`가 중심선 표본(`SceneSegment.points`)만 잇는다.
-  `Lan*` 구간에서 레인 3개가 자리바꿈하는 동안 카메라는 직선 중심선을 통과한다. TC-008-2 인용 0건(#39 생성 근거).
-TARGET_BEHAVIOR: D-047 — 카메라는 가운데 레인(1)에서 출발해 `Lan*`마다 한 칸 순환(0→1→2→0)하며,
-  가로 위치 `laneOffsetAt(pieceClass, lane, t).lateralCm`을 좌측 법선(`−sin θ, cos θ`, lane-bands와 동일)으로,
-  육교 레인이면 `riseCm`을 y에 더한다. 높이는 `surfaceHeightAt`(FEAT-017)로 그 자리의 노면. 레인체인지 이전
-  구간은 종전 중심선과 동일(TC-007 보존). 웨이포인트에 `lane`을 실어 관측 가능하게 한다.
-ALLOWED_PATHS: src/widgets/track-canvas
+REQUEST: 스트립(상대 스케일) 스크럽·키보드 또는 자동재생으로 공유 커서가 바뀌면 구간 목록이 그 행으로 스크롤되고
+  그 행이 roving 포커스가 된다.
+OBSERVED_BASELINE: `SectionList`는 `currentIndex`로 행을 강조(aria-selected)만 하고 스크롤하지 않는다. `focusedIndex`는
+  페이지 로컬 상태로 방향키·행 focus에서만 바뀐다. 132행 목록에서 스트립으로 커서를 옮기면 강조 행이 화면 밖에 남는다.
+TARGET_BEHAVIOR: TC-013-6 — `followCursor`가 true이고 목록이 펼쳐진 비로딩 상태에서 `currentIndex`가 바뀌면 해당 행을
+  `scrollIntoView({block:'nearest', behavior: reduced-motion ? 'auto' : 'smooth'})`하고, 목록이 DOM 포커스를 갖고 있지
+  않을 때만 `onFocusMove(currentIndex)`. 페이지는 `followCursor = lastSource !== 'list'`. 스트립의 DOM 포커스는 빼앗지 않는다.
+ALLOWED_PATHS: src/widgets/section-list, src/pages/track-viewer, e2e
 PUBLIC_CONTRACTS_TO_PRESERVE:
-  - `buildFlythroughPath`/`poseAt`/`distanceOfOrder`/`orderAtDistance`/이징·재생 API 시그니처
-  - TC-007-1~6 검증(시작점·순서·연속성·이징·일시정지·부분 실패) — 첫 레인체인지 이전 좌표는 비트 단위 동일
-  - `SceneSegment`·`buildLaneBands`·레인 모델(`lane-model.ts`) 무변경
-NON_GOALS: 레인 선택 UI · 레인 면 위 정확한 눈높이 · e2e 신규(수치 축으로 검증)
-CHANGE_BUDGET: `flythrough-camera.ts` 1개(웨이포인트 생성부) + `flythrough-camera.test.ts` describe 1개. 의존성 0.
+  - 공유 커서 계약(shared.md): 이 effect는 `setCursor`를 부르지 않는다 — 순환 금지 불변
+  - `focusedIndex ≠ currentIndex` 분리: 방향키는 여전히 로컬 포커스만 옮기고 Enter/클릭에서만 커서 갱신(TC-013-4)
+  - 기존 DOM 포커스 규칙: 목록이 포커스를 가질 때만 행에 focus() — 스트립 슬라이더 포커스 보존
+  - SectionList 기존 props·testid·role/aria · 셸 치수(320/56px) · e2e 기존 시나리오 전부
+NON_GOALS: 목록 → 스트립 방향 변경, 접힌 레일 자동 펼침, 목록 정렬/필터, 스크롤 애니메이션 커스텀
+CHANGE_BUDGET: 수정 3파일(SectionList.tsx effect+prop, TrackScreen.tsx·WebglFallbackScreen.tsx prop 배선) + e2e 1파일(2케이스).
+  신규 파일 0 · 의존성 0.
 TEST_EVIDENCE (2026-08-31 · D:\Project\track · Node v22.11.0(`engines >=22.12.0` 미만) · pnpm 9.12.3):
-  - 변경 전: `buildFlythroughPath` 웨이포인트 = 중심선 표본(가로 변위 0, TC-008-2 인용 0건 — #39 생성 근거)
-  - 변경 후 unit `pnpm test` **348/348**(+5 TC-008-2) · typecheck 0 · eslint(track-canvas) 0 · build 0
-  - 실측(WS67Y2): 레인체인지 1개 · 경로 끝 레인 2 · 출발 레인 0·1은 shift +12cm·상승 0, 출발 레인 2는 shift −24cm·
-    최대 상승 7.82cm(육교 8cm) · 진입 가로 = 레인 중심, 진출−진입 = shift, 중앙 = shift/2 ±0.6 · Lan* 진출 ↔ 다음 피스
-    레인 중심 자리 < 1cm · 첫 레인체인지 이전 좌표 종전과 동일(1e-6)
-  - e2e `pnpm e2e` 81 통과 · 5 실패 → 단일 워커 재실행 4 통과(병렬 flake: axe·fps·자동재생) · 남은 1건 `track-evidence`
-    범례 패널 폭(311.6 > 304px)은 기준 소스에서도 동일 실패(기존 결함). 플라이스루 e2e(TC-007-1·2) 통과
-  - 정정 기록: D-047 초안의 "레인체인지 3개·한 바퀴 뒤 제자리" 전제가 실측(1개)으로 틀려 테스트 전제와 D-047 본문을
-    정정했고, 육교 경로 검증을 위해 `startLane` 입력을 열었다(API 추가, 기본값은 D-047 그대로)
-  - 미검증(정직 표기): 브라우저에서 카메라가 레인체인지에서 옆으로 흐르는 모습은 스크린샷으로 확인하지 않았다 —
-    수치 축이 가로·세로 오프셋과 이음새 연속을 재고, 렌더는 `poseAt`이 같은 웨이포인트를 소비한다
+  - 변경 전: 스트립으로 커서를 옮기면 목록 행이 `aria-selected`만 되고 스크롤·roving 포커스 불변(SectionList 효과 없음)
+  - 게이트: typecheck 0 · eslint(section-list, track-viewer, e2e 스펙) 0 · unit **348/348**(무변경 — 이 기능은 DOM 축) · build 0
+  - e2e TC-013-6 2건 **통과**(단일 워커 1.4s·1.5s): 스트립 90% 클릭 → `aria-valuenow` > 60인 행이 `aria-selected`·`tabindex=0`·
+    listbox 뷰포트 안(poll) · 슬라이더가 여전히 포커스(실측: Chromium은 tabIndex=0 슬라이더를 클릭으로 포커스) · 목록 상자는
+    비포커스 / End 키 → 131행 가시·tabindex=0, 보이는 129행 클릭 시 scrollTop 변화 ≤1
+  - 전체 `pnpm e2e` **81 통과 · 7 실패(총 88)** → 단일 워커 재실행 **6 통과**(병렬 부하 flake: 배지·axe·휠·fps — 전부 ≤2.2s) ·
+    남은 1건 `track-evidence` 범례 패널 폭(311.6 > 304px)은 기준 소스에서도 동일 실패(기존 결함). 목록 스펙 10/10.
+  - 미검증(정직 표기): `prefers-reduced-motion` 분기와 자동재생(canvas source) 중 목록 추종은 e2e로 재지 않았다 —
+    같은 effect·같은 `followCursor` 경로(lastSource 'canvas' ≠ 'list')이며 브라우저 수동 확인 대상으로 남긴다.
 CAPABILITY_ESCALATION: none
-DOCS_TO_UPDATE: none — 계획 TC 문구 불변, 결정은 D-047로 기록. component-spec §TrackCanvas 카메라 절은 레인을 언급하지
-  않아 충돌 없음.
+DOCS_TO_UPDATE: component-spec/widgets.md §SectionList(followCursor·커서 따라가기) · pages.md 상호작용 표 —
+  **이 라운드에서 개정 완료(2026-08-31)**. 계획: specs-surfaces.md TC-013-6 · traceability.md · PC-013(plan-delta PASS —
+  검사기는 명세 샤드의 TC ID를 색인하지 않아 declared는 비웠다).
 
 ```json change-scope
 {
-  "ticketKey": 39,
-  "featureId": "FEAT-008",
-  "TARGET_BEHAVIOR": "TC-008-2 — 추종 시점 카메라가 가운데 레인에서 출발해 Lan*마다 한 칸 순환하며 laneOffsetAt의 가로 위치(좌측 법선)·육교 riseCm을 따른다(D-047). 높이는 surfaceHeightAt. 레인체인지 이전 구간은 종전 중심선과 동일.",
-  "requestType": "bug-fix",
+  "ticketKey": null,
+  "featureId": "FEAT-013",
+  "TARGET_BEHAVIOR": "TC-013-6 — followCursor(=lastSource !== 'list')가 true이고 목록이 펼쳐진 비로딩 상태에서 currentIndex가 바뀌면 해당 행을 scrollIntoView(nearest)하고, 목록이 DOM 포커스를 갖지 않을 때만 onFocusMove(currentIndex). 스트립 포커스는 빼앗지 않는다.",
+  "requestType": "feature",
   "testCaseIds": [
-    "TC-008-2"
+    "TC-013-6"
   ],
   "ALLOWED_PATHS": [
-    "src/widgets/track-canvas"
+    "src/widgets/section-list",
+    "src/pages/track-viewer",
+    "e2e"
   ],
   "PUBLIC_CONTRACTS_TO_PRESERVE": [
-    "buildFlythroughPath/poseAt/distanceOfOrder/orderAtDistance 시그니처",
-    "TC-007-1~6 — 첫 레인체인지 이전 좌표 동일",
-    "SceneSegment·buildLaneBands·lane-model 무변경"
+    "공유 커서 계약 — effect가 setCursor를 부르지 않는다",
+    "focusedIndex ≠ currentIndex 분리(TC-013-4)",
+    "목록이 포커스를 가질 때만 행 focus() — 슬라이더 포커스 보존",
+    "SectionList 기존 props·testid·aria · 셸 치수 · 기존 e2e"
   ],
   "NON_GOALS": [
-    "레인 선택 UI",
-    "레인 면 위 정확한 눈높이",
-    "e2e 신규"
+    "목록 → 스트립 방향 변경",
+    "접힌 레일 자동 펼침",
+    "목록 정렬/필터"
   ],
-  "CHANGE_BUDGET": "flythrough-camera.ts 1개 + 테스트 describe 1개 · 의존성 0",
+  "CHANGE_BUDGET": "수정 3파일 + e2e 1파일 · 신규 0 · 의존성 0",
   "sourceDigest": null,
   "needsConfirmation": false
 }
