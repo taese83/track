@@ -122,17 +122,22 @@ function framesFor(segments: readonly SceneSegment[], index: number): LateralFra
   })
 }
 
+// 가장자리 높이는 중심선 높이가 아니라 **가장자리 자리의 노면**에서 온다 — 판 위에서는
+// 그 둘이 다르고, 그 차이가 곧 횡경사다(FEAT-017 · D-029).
 function offsetPoint(
   sample: SceneSample,
   frame: LateralFrame,
   lateralCm: number,
   riseCm: number,
+  surface: ((x: number, z: number) => number) | undefined,
 ): BandPoint {
   const distance = lateralCm * frame.scale
+  const x = sample.x + frame.nx * distance
+  const z = sample.z + frame.nz * distance
   return {
-    x: sample.x + frame.nx * distance,
-    y: sample.y + riseCm,
-    z: sample.z + frame.nz * distance,
+    x,
+    y: (surface === undefined ? sample.y : surface(x, z)) + riseCm,
+    z,
   }
 }
 
@@ -149,12 +154,13 @@ export function buildLaneBands(segments: readonly SceneSegment[]): SegmentBands[
       ? Array.from({ length: LANE_COUNT }, (_, lane) => {
           const lo: BandPoint[] = []
           const hi: BandPoint[] = []
+          const surface = segment.surfaceHeightAt
           segment.points.forEach((sample, at) => {
             const frame = frames[at]
             if (frame === undefined) return
             const band = laneBandAt(segment.pieceClass, lane, sample.t)
-            lo.push(offsetPoint(sample, frame, band.lo.lateralCm, band.lo.riseCm))
-            hi.push(offsetPoint(sample, frame, band.hi.lateralCm, band.hi.riseCm))
+            lo.push(offsetPoint(sample, frame, band.lo.lateralCm, band.lo.riseCm, surface))
+            hi.push(offsetPoint(sample, frame, band.hi.lateralCm, band.hi.riseCm, surface))
           })
           return { lane, lo, hi }
         })

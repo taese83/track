@@ -35,6 +35,12 @@ export interface ElevationProfile {
   heightAt(t: number): number
   /** t ∈ [0,1]. 진행 방향 기울기 dz/ds(무차원). 각도는 atan으로 얻는다 */
   slopeAt(t: number): number
+  /**
+   * 편집기 2D 좌표 → **절대** 고도. 중심선 밖(노면 가장자리)의 높이를 아는 유일한 통로다.
+   * 판 위에서만 정의된다 — `flat`·`sCurve`는 채우지 않는다(FEAT-017 · D-029).
+   * 불변식: `surfaceHeightAt(path.pointAt(t)) === absoluteElevationStart + heightAt(t)`
+   */
+  surfaceHeightAt?(point: Point): number
 }
 
 export interface EvidenceTag {

@@ -322,6 +322,91 @@ describe('뱅크와 기운 평면 — 참조 트랙 (TC-005-2 · TC-005-6)', () 
   })
 })
 
+describe('FEAT-017 — surfaceHeightAt 계약', () => {
+  it('판 위 세그먼트에만 붙는다 — flat·sCurve는 중심선 스칼라로 충분하다', async () => {
+    const { built } = await buildReferenceTrack()
+
+    for (const segment of built.segments) {
+      const { kind, surfaceHeightAt } = segment.elevationProfile
+      const onPlane = kind === 'plane' || kind === 'bankTransition'
+      expect(typeof surfaceHeightAt === 'function').toBe(onPlane)
+    }
+
+    const { segments } = buildElevatedSegments(
+      straightRun([{}, { pieceClass: 'Bri1', colorIndex: 3 }, {}]),
+    )
+    expect(requireSegment(segments, 1).elevationProfile.surfaceHeightAt).toBeUndefined()
+  })
+
+  it('중심선에서 heightAt와 같은 높이를 낸다', async () => {
+    const { built, oriented } = await buildReferenceTrack()
+    let checked = 0
+
+    built.segments.forEach((segment, order) => {
+      const { kind, surfaceHeightAt, heightAt } = segment.elevationProfile
+      if (kind !== 'plane' && kind !== 'bankTransition') return
+      if (surfaceHeightAt === undefined) throw new Error(`순서 ${order}에 노면 함수가 없다`)
+      const target = oriented[order]
+      if (target === undefined) throw new Error(`순서 ${order}의 피스가 없다`)
+      const piecePath = buildPiecePath(target)
+
+      for (const t of [0, 0.25, 0.5, 0.75, 1]) {
+        expect(surfaceHeightAt(piecePath.pointAt(t))).toBeCloseTo(
+          segment.absoluteElevationStart + heightAt(t),
+          9,
+        )
+        checked += 1
+      }
+    })
+
+    expect(checked).toBeGreaterThan(0)
+  })
+
+  it('전이 피스의 판 밖 좌표는 클램프가 아니라 판 공식으로 이어진다', async () => {
+    const { built, oriented } = await buildReferenceTrack()
+    const entryOrder = built.segments.findIndex(
+      (segment, index) =>
+        segment.elevationProfile.kind === 'bankTransition' &&
+        built.segments[index + 1]?.elevationProfile.kind === 'plane',
+    )
+    expect(entryOrder).toBeGreaterThanOrEqual(0)
+
+    const transition = requireSegment(built.segments, entryOrder).elevationProfile.surfaceHeightAt
+    const plane = requireSegment(built.segments, entryOrder + 1).elevationProfile.surfaceHeightAt
+    if (transition === undefined || plane === undefined) throw new Error('판 구간 함수가 없다')
+
+    const target = oriented[entryOrder]
+    if (target === undefined) throw new Error(`순서 ${entryOrder}의 피스가 없다`)
+    const seam = buildPiecePath(target).pointAt(1)
+
+    // 판축(up)은 export되지 않는다 — 판 피스의 높이는 좌표에 대해 선형이므로 그 수치
+    // 기울기 방향이 곧 판축이다
+    const step = 1
+    const on = (x: number, y: number) => plane({ x, y })
+    const gx = (on(seam.x + step, seam.y) - on(seam.x - step, seam.y)) / 2
+    const gy = (on(seam.x, seam.y + step) - on(seam.x, seam.y - step)) / 2
+    const norm = Math.hypot(gx, gy)
+    expect(norm).toBeGreaterThan(0)
+
+    const reach = 18
+    const sides = [1, -1].map((sign) => ({
+      x: seam.x + (sign * reach * gx) / norm,
+      y: seam.y + (sign * reach * gy) / norm,
+    }))
+    const heights = sides.map((point) => ({ plate: plane(point), edge: transition(point) }))
+    expect(heights.every((entry) => Number.isFinite(entry.edge))).toBe(true)
+    expect(Math.abs((heights[0]?.plate ?? 0) - (heights[1]?.plate ?? 0))).toBeGreaterThan(1)
+
+    // 판 안쪽으로 넘어간 가장자리(판 쪽이 더 높다)는 다음 판 피스와 같은 값이라야 노치가 없다
+    const inner = (heights[0]?.plate ?? 0) > (heights[1]?.plate ?? 0) ? heights[0] : heights[1]
+    if (inner === undefined) throw new Error('판 쪽 가장자리를 고르지 못했다')
+    expect(inner.edge).toBeCloseTo(inner.plate, 2)
+    // 클램프였다면 이음새 높이에 그대로 눌렸다
+    const seamHeight = transition(seam)
+    expect(Math.abs(inner.edge - seamHeight)).toBeGreaterThan(1)
+  })
+})
+
 describe('근거 등급 (TC-005-4)', () => {
   it('TC-005-4: 슬로프 각도는 사용자 지정 렌더 규칙이라 confirmed로 태깅된다', () => {
     const { segments } = buildElevatedSegments(

@@ -53,6 +53,11 @@ export interface SceneSegment {
    */
   kind: SegmentKind
   direction: SegmentDirection
+  /**
+   * 씬 좌표(x, z)의 노면 고도. 중심선 표본만으로는 가장자리가 수평이 되어 판 위의
+   * 횡경사가 사라진다(FEAT-017 · D-029). 판 밖 세그먼트에는 없다.
+   */
+  surfaceHeightAt?: (x: number, z: number) => number
 }
 
 export interface SceneBounds {
@@ -228,6 +233,8 @@ export function buildSceneLayout(input: SceneLayoutInput): SceneLayout {
       })
     }
 
+    const surface = elevated?.elevationProfile.surfaceHeightAt
+
     return {
       pieceId: piece.pieceId,
       pieceClass: piece.pieceClass,
@@ -239,6 +246,12 @@ export function buildSceneLayout(input: SceneLayoutInput): SceneLayout {
       compatCorrected: correction.applied,
       kind: kindOf(piece.pieceClass, piece.colorIndex),
       direction: directionOf(piece.pieceClass, piece.colorIndex),
+      ...(surface === undefined
+        ? {}
+        : {
+            surfaceHeightAt: (x: number, z: number) =>
+              surface({ x: x - correction.x, y: z - correction.y }),
+          }),
     }
   })
 
