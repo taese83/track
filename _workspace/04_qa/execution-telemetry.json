@@ -267,6 +267,17 @@
       "durationMs": 66653,
       "outcome": "complete",
       "note": "FEAT-001 D-046 auto 업스트림 모드 (3 outputs: api/track.ts, api/track.test.ts, ErrorScreen.tsx). 발췌 주입·읽기 3회 상한·즉시 쓰기 계약 적용 — 1회 완주. verify-spawn-completion 18/18 OK. 셸 부재로 게이트는 오케스트레이터가 실행"
+    },
+    {
+      "run": "2026-08-31T12:30+iterate",
+      "phase": "P3",
+      "agent": "developer",
+      "retry": false,
+      "tokens": 100548,
+      "toolUses": 31,
+      "durationMs": 628971,
+      "outcome": "complete",
+      "note": "FEAT-017 판 구간 횡경사 (6 outputs: elevation types/build-elevation(+test), track-canvas scene-layout/lane-bands(+test)). 발췌 주입·읽기 6회 상한·즉시 쓰기 — 1회 완주, verify-spawn-completion 41/41 OK. 실측 필요 상수 6건을 정직 표기. TC-017-4는 관측량(가장자리 높이차→판축 방향 기울기)을 오케스트레이터가 정정"
     }
   ]
 }

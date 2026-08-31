@@ -168,13 +168,7 @@ function clamp01(value: number): number {
   return Math.min(1, Math.max(0, value))
 }
 
-function planeElevationAt(
-  section: PlaneSection,
-  path: PiecePath,
-  index: number,
-  t: number,
-): number {
-  const point = path.pointAt(t)
+function planeElevationAtPoint(section: PlaneSection, index: number, point: Point): number {
   const d = dot(point, section.origin, section.up)
   const isEntry = index === section.from
   const isExit = index === section.to
@@ -184,8 +178,12 @@ function planeElevationAt(
     //   g(d) = dEnd/(k+1) · (d/dEnd)^(k+1),  g′(0)=0,  g′(dEnd)=판 기울기
     const dEnd = isEntry ? section.dIn : section.dOut
     const k = isEntry ? section.kIn : section.kOut
-    const u = clamp01(d / dEnd)
-    return section.baseElevation + section.gradient * (dEnd / (k + 1)) * Math.pow(u, k + 1)
+    const u = d / dEnd
+    // 판축 밖(u∉[0,1])은 클램프가 아니라 이웃 구간의 식으로 잇는다 — 클램프하면 전이 피스
+    // 가장자리와 다음 판 피스 사이에 노치가 생긴다. lift 정의상 u=1에서 두 식이 C1로 만난다.
+    if (u <= 0) return section.baseElevation
+    if (u < 1)
+      return section.baseElevation + section.gradient * (dEnd / (k + 1)) * Math.pow(u, k + 1)
   }
   // 전이가 끝난 뒤로는 일정 각도의 평판이다
   return section.baseElevation + section.gradient * (d - section.lift)
@@ -243,13 +241,15 @@ export function buildElevatedSegments(path: readonly OrientedPiece[]): BuildElev
     if (section !== undefined) {
       // 판 위에서는 높이가 **2D 위치**로 정해진다 — 누적기가 아니라 판이 정본이다.
       // 누적기를 그대로 쓰면 구간 안 피스가 전부 진입 높이로 눌려 이음새가 벌어진다.
-      const absolute = (t: number) => planeElevationAt(section, piecePath, index, t)
+      const absoluteAt = (point: Point) => planeElevationAtPoint(section, index, point)
+      const absolute = (t: number) => absoluteAt(piecePath.pointAt(t))
       start = absolute(0)
       end = absolute(1)
       profile = {
         kind: index === section.from || index === section.to ? 'bankTransition' : 'plane',
         heightAt: (t) => absolute(clamp01(t)) - start,
         slopeAt: (t) => numericSlope(absolute, clamp01(t), piecePath.length),
+        surfaceHeightAt: absoluteAt,
       }
     } else if (kind === 'slope' && direction !== 'none') {
       start = elevation
