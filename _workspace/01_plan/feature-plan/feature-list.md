@@ -31,4 +31,5 @@ Page Group을 늘리지 않고 아래 Feature List의 `Screen` 열에 화면 상
 | FEAT-012 | 하단 프로파일 스트립 (표면) | 고도 변화를 한눈에 보고 원하는 지점으로 바로 이동한다 | Must | PAGE-001 | profile-strip | keep |
 | FEAT-013 | 텍스트 구간 목록 (표면) | 전체 구간을 목록으로 훑고 특정 지점으로 점프한다 | Must | PAGE-001 | section-list | keep |
 | FEAT-014 | WebGL 미지원 감지 및 2D 대체 표현 | 3D를 못 봐도 트랙 정보를 확인할 수 있다 | Must | PAGE-001 | webgl-fallback | keep |
+| FEAT-019 | 3D 씬의 현재 구간 하이라이트 | 목록·스트립에서 고른 구간이 실제 트랙 어디인지 3D에서 바로 보인다 | Must | PAGE-001 | 3d-view, section-list, profile-strip | keep (2026-09-02 사용자 요청, PC-015) |
 

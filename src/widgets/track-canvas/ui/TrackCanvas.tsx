@@ -41,6 +41,13 @@ import { applyOrbitKey, initialOrbitFor, orbitLimitsFor } from '../lib/orbit-cam
 import type { OrbitState } from '../lib/orbit-camera'
 import { buildLaneBands } from '../lib/lane-bands'
 import type { SegmentBands } from '../lib/lane-bands'
+import { buildHighlightGeometry, isHighlightable } from '../lib/highlight-geometry'
+import {
+  easeProgress,
+  isPointInView,
+  lerpPoint,
+  TARGET_EASE_MS,
+} from '../lib/highlight-visibility'
 import {
   buildBoundaryGeometry,
   buildDashedOutlineGeometry,
@@ -102,6 +109,24 @@ const MARKER_COLOR = '#F2F4F8'
 /** design-system tokens §2 `warning` — 미지원은 경고이지 트랙이 아니다 */
 const PLACEHOLDER_COLOR = '#E8B339'
 
+/**
+ * design-system tokens §2 `primary`(다크). 그 토큰의 정의 근거가 이미 "액션/포커스/**현재
+ * 위치 마커** — 편집기 피스 팔레트(빨강·파랑·청록·주황)와 겹치지 않는 유일한 안전 hue"다.
+ * CSS 변수를 읽지 않고 hex를 쓰는 것은 three 재질이 `var()`를 모르기 때문이며,
+ * 캔버스 `clearColor`가 이미 다크 하드코딩이라 라이트 모드 분기가 성립하지 않는다.
+ */
+const HIGHLIGHT_COLOR = '#A78BFA'
+
+/**
+ * 면 오버레이 불투명도. design-system에 3D 표면 오버레이 토큰이 없다 — §4의 "캔버스
+ * 오버레이 ≥0.88"은 3D 위에 뜨는 **DOM 패널** 계약이지 표면 덧칠이 아니다. 아래 원본
+ * 편집기색이 비쳐야 대조(사용자 1순위 성공 조건)가 살아 있으므로 낮게 둔다.
+ *
+ * 0.35로 뒀다가 캡처 실측(2026-09-02, WS67Y2 확대)에서 평지 무채색 위 결과가 너무 옅어
+ * 0.45로 올렸다. 하강색 `#004E8F` 위에서도 합성색이 여전히 푸른 보라라 원본 hue가 읽힌다.
+ */
+const HIGHLIGHT_SURFACE_OPACITY = 0.45
+
 /** 세그먼트 가운데 레인의 중간 표본 — 표식과 라벨이 붙는 자리 */
 function anchorOf(band: SegmentBands): { x: number; y: number; z: number } | null {
   const middle = band.lanes[Math.floor(band.lanes.length / 2)]
@@ -113,7 +138,16 @@ function anchorOf(band: SegmentBands): { x: number; y: number; z: number } | nul
   return { x: (lo.x + hi.x) / 2, y: Math.max(lo.y, hi.y), z: (lo.z + hi.z) / 2 }
 }
 
-function TrackMesh({ layout, elevated }: TrackCanvasProps) {
+/**
+ * 레인 밴드는 **위젯 수준에서 한 번만** 만든다. 하이라이트(FEAT-019)가 같은 밴드를 쓰는데,
+ * 여기서 다시 만들면 132구간의 이음새 미터링(`framesFor`가 이웃을 본다)을 두 번 계산하게
+ * 되고 두 결과가 어긋나면 하이라이트가 트랙 위에 얹히지 않는다.
+ */
+function TrackMesh({
+  layout,
+  elevated,
+  bands,
+}: TrackCanvasProps & { bands: readonly SegmentBands[] }) {
   const elevatedByOrder = useMemo(
     () => new Map(elevated.map((segment) => [segment.order, segment])),
     [elevated],
@@ -122,7 +156,6 @@ function TrackMesh({ layout, elevated }: TrackCanvasProps) {
   // 지오메트리 생성만 명령형이다(tech-stack Architecture Decisions §React 통합 방식).
   // layout이 바뀔 때만 다시 만든다 — 매 프레임 만들면 BufferGeometry가 프레임마다 쌓인다.
   const scene = useMemo(() => {
-    const bands = buildLaneBands(layout.segments)
     const byOrder = new Map(layout.segments.map((segment) => [segment.order, segment]))
 
     const surfaces = buildTrackGeometries(bands, (band, lane) =>
@@ -169,7 +202,7 @@ function TrackMesh({ layout, elevated }: TrackCanvasProps) {
       ),
       labels,
     }
-  }, [layout, elevatedByOrder])
+  }, [layout, elevatedByOrder, bands])
 
   // `LineDashedMaterial`은 누적 거리를 읽는다 — 계산하지 않으면 파선이 실선으로 그려진다
   const dashedRef = useRef<LineSegments>(null)
@@ -372,6 +405,128 @@ function FlythroughRig({
   return null
 }
 
+/**
+ * FEAT-019 — 공유 커서가 가리키는 구간의 하이라이트.
+ *
+ * 이 컴포넌트는 커서의 **순수 구독자**다. `setCursor`를 부르지 않으므로 §순환 갱신 방지책의
+ * 1차 게이트("커서를 관찰하는 effect에서 커서를 쓰지 않는다")를 넓히지 않는다.
+ *
+ * 추종 중에는 아예 마운트하지 않는다 — 카메라 자체가 현재 위치이고, 1인칭 시야 바로 앞을
+ * 보라색 면으로 덮으면 FEAT-007이 주려는 주행 감각을 이 기능이 지운다.
+ */
+function CursorHighlight({
+  band,
+  anchor,
+  controlsRef,
+  reduceMotion,
+}: {
+  band: SegmentBands | null
+  /** 화면 안/밖 판정과 타깃 이동의 기준점. `band`와 같은 구간에서 나온다 */
+  anchor: { x: number; y: number; z: number } | null
+  controlsRef: { current: OrbitControlsRef | null }
+  reduceMotion: boolean
+}) {
+  const camera = useThree((state) => state.camera)
+
+  // 커서·배치가 바뀔 때만 만든다. 렌더 루프에서는 0건이다(performance-budget §1).
+  const geometry = useMemo(() => (band === null ? null : buildHighlightGeometry(band)), [band])
+  useEffect(
+    () => () => {
+      geometry?.surface.dispose()
+      geometry?.outline.dispose()
+    },
+    [geometry],
+  )
+
+  const shiftRef = useRef<{
+    from: Vector3
+    to: Vector3
+    startMs: number
+    durationMs: number
+  } | null>(null)
+
+  /**
+   * 마운트 첫 회에는 카메라를 옮기지 않는다. 이 기능이 약속한 것은 "**고르면** 그리로
+   * 보여 준다"이고, 화면에 들어오자마자 카메라가 스스로 움직이는 것은 그 약속이 아니다
+   * (추종을 끄는 순간의 재마운트도 같다 — TC-019-5는 하이라이트만 요구한다).
+   */
+  const settled = useRef(false)
+
+  useEffect(() => {
+    const controls = controlsRef.current
+    if (anchor === null || controls === null) {
+      shiftRef.current = null
+      return
+    }
+    if (!settled.current) {
+      settled.current = true
+      return
+    }
+    // 화면 안이면 **아무것도 하지 않는다** — 사용자가 잡아 둔 시점을 클릭이 빼앗지 않는다.
+    const ndc = new Vector3(anchor.x, anchor.y, anchor.z).project(camera)
+    if (isPointInView(ndc)) {
+      shiftRef.current = null
+      return
+    }
+    shiftRef.current = {
+      from: controls.target.clone(),
+      to: new Vector3(anchor.x, anchor.y, anchor.z),
+      startMs: performance.now(),
+      // reduced-motion은 즉시 컷이다(design-system §4 승계) — 다음 프레임에 진행도 1이 된다
+      durationMs: reduceMotion ? 0 : TARGET_EASE_MS,
+    }
+  }, [anchor, camera, controlsRef, reduceMotion])
+
+  /**
+   * 타깃과 카메라 위치를 **같은 벡터만큼** 함께 민다. 구면 좌표는 둘의 차이로 정의되므로
+   * 방위각·극각·거리가 정의상 보존된다(TC-019-4). 여기서 `onOrbitDepart`는 발행하지
+   * 않는다 — 사용자 조작이 아니라 커서에 대한 반응이고, 발행하면 자기 출력을 입력으로 먹는다.
+   */
+  useFrame(() => {
+    const shift = shiftRef.current
+    const controls = controlsRef.current
+    if (shift === null || controls === null) return
+
+    const t = easeProgress(performance.now() - shift.startMs, shift.durationMs)
+    const next = lerpPoint(shift.from, shift.to, t)
+    const delta = new Vector3(next.x, next.y, next.z).sub(controls.target)
+    controls.target.add(delta)
+    controls.object.position.add(delta)
+    controls.update()
+
+    if (t >= 1) shiftRef.current = null
+  })
+
+  if (geometry === null) return null
+
+  return (
+    <group>
+      {/*
+        면은 깊이 검사를 **그대로 둔다** — 언덕 뒤 구간이 면까지 뚫고 보이면 "가려져 있다"는
+        사실이 화면에서 지워진다. `depthWrite`만 끈다(반투명 오버레이가 뒤 표면을 가리지 않게).
+      */}
+      <mesh geometry={geometry.surface} renderOrder={1}>
+        <meshBasicMaterial
+          color={HIGHLIGHT_COLOR}
+          transparent
+          opacity={HIGHLIGHT_SURFACE_OPACITY}
+          side={2}
+          depthWrite={false}
+        />
+      </mesh>
+
+      {/*
+        윤곽선은 **깊이 검사를 하지 않는다**(TC-019-3) — 가려진 지점을 골랐을 때 "저 뒤에
+        있다"가 보여야 이 기능이 132구간 트랙에서 쓸모가 있다. `renderOrder`를 올려 마지막에
+        그린다: depthTest만 끄고 순서를 두지 않으면 뒤에 그려지는 불투명 면이 덮어 버린다.
+      */}
+      <lineSegments geometry={geometry.outline} renderOrder={2}>
+        <lineBasicMaterial color={HIGHLIGHT_COLOR} depthTest={false} depthWrite={false} />
+      </lineSegments>
+    </group>
+  )
+}
+
 /** 진행 상태 DOM 발행 간격(ms). 매 프레임 쓰지 않되 값이 오래 멈춰 있지도 않게 한다 */
 const PUBLISH_INTERVAL_MS = 100
 
@@ -394,6 +549,27 @@ export function TrackCanvas({ layout, elevated }: TrackCanvasProps) {
   const flythroughRef = useRef<FlythroughState>(initialFlythroughState())
 
   const { bounds } = layout
+
+  // 트랙 면과 하이라이트(FEAT-019)가 **같은 밴드**를 본다. 두 번 만들면 이음새 미터링이
+  // 두 답을 내고 하이라이트가 트랙 위에 정확히 얹히지 않는다.
+  const bands = useMemo(() => buildLaneBands(layout.segments), [layout.segments])
+
+  /**
+   * 하이라이트 대상. 추종 중에는 `null`이다(카메라가 곧 현재 위치 — TC-019-5).
+   * 도달 불가 구간은 애초에 커서가 되지 않으므로(`isReachable` 거부) 여기서 다시 거르지
+   * 않는다 — 거르면 같은 판정이 두 곳에 생긴다. 미지원 피스처럼 면이 없는 구간만 뺀다.
+   */
+  const highlightBand = useMemo(() => {
+    if (following) return null
+    const band = bands.find((candidate) => candidate.order === currentIndex) ?? null
+    return isHighlightable(band) ? band : null
+  }, [bands, currentIndex, following])
+
+  const highlightAnchor = useMemo(
+    () => (highlightBand === null ? null : anchorOf(highlightBand)),
+    [highlightBand],
+  )
+
   const limits = useMemo(() => orbitLimitsFor(bounds.diagonal), [bounds.diagonal])
   const initial = useMemo(
     () => initialOrbitFor(bounds.diagonal, CAMERA_FOV_DEG),
@@ -565,6 +741,10 @@ export function TrackCanvas({ layout, elevated }: TrackCanvasProps) {
     host.dataset.cameraAzimuth = controls.getAzimuthalAngle().toFixed(4)
     host.dataset.cameraPolar = controls.getPolarAngle().toFixed(4)
     host.dataset.cameraDistance = controls.getDistance().toFixed(2)
+    // FEAT-019 — 타깃은 하이라이트가 화면 밖일 때만 움직인다. 방위각·극각·거리가 보존됐다는
+    // 것과 "그런데도 화면이 그리로 갔다"를 함께 재려면 타깃도 관측 표면에 있어야 한다.
+    const { x, y, z } = controls.target
+    host.dataset.cameraTarget = `${x.toFixed(2)},${y.toFixed(2)},${z.toFixed(2)}`
   }, [])
 
   const handleOrbitStart = useCallback(() => {
@@ -586,6 +766,7 @@ export function TrackCanvas({ layout, elevated }: TrackCanvasProps) {
       data-mitigated={layout.mitigation.mitigated}
       data-follow-mode={following}
       data-follow-playing={playing}
+      {...(highlightBand === null ? {} : { 'data-highlight-order': highlightBand.order })}
       tabIndex={0}
       role="application"
       aria-label={
@@ -604,8 +785,17 @@ export function TrackCanvas({ layout, elevated }: TrackCanvasProps) {
       >
         <ambientLight intensity={1.1} />
         <directionalLight position={[1, 2, 1]} intensity={1.6} />
-        <TrackMesh layout={layout} elevated={elevated} />
+        <TrackMesh layout={layout} elevated={elevated} bands={bands} />
         <PerfProbe orbiting={orbitingRef} />
+        {/* FEAT-019 — 목록·스트립이 고른 구간을 씬에서 짚는다. 추종 중에는 마운트하지 않는다 */}
+        {following ? null : (
+          <CursorHighlight
+            band={highlightBand}
+            anchor={highlightAnchor}
+            controlsRef={controlsRef}
+            reduceMotion={reduceMotion}
+          />
+        )}
         {/*
           FEAT-007 — 추종 중에는 오빗을 끈다. 둘 다 살려 두면 같은 카메라를 두 주체가
           매 프레임 서로 다른 자리로 옮겨 화면이 떨린다.

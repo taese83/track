@@ -55,13 +55,13 @@ interface ErrorScreenProps {
 
 | View State | Action | Canonical Target | UI 결과 | Browser Scenario |
 |---|---|---|---|---|
-| 3D 표시 | 목록 정상 행 클릭 | `SectionList.onSelect` | `setCursor(i,'list')` → 캔버스 카메라 이동, 스트립 인디케이터 동기 이동 | TC-013-2 |
+| 3D 표시 | 목록 정상 행 클릭 | `SectionList.onSelect` | `setCursor(i,'list')` → **캔버스에 그 구간 하이라이트**(추종 OFF, 대상이 화면 밖이면 오빗 타깃만 이동) 또는 추종 카메라 목표 이동(추종 ON), 스트립 인디케이터 동기 이동 | TC-013-2 · TC-019-1 · TC-019-4 |
 | 3D 표시 | 목록에서 ↑↓ 이동 후 Enter | `SectionList.onFocusMove`→`onSelect` | 화살표 중엔 로컬 포커스만 이동, Enter에서만 커서 갱신 | TC-013-4 |
-| 부분 실패 | 실패 구간 행 클릭 | `SectionList` (aria-disabled) | `onSelect` 미호출(1차 방어) + `isReachable=false`(2차 방어) → 커서 불변 | TC-012-3 상응(목록 측) |
-| 3D 표시 | 스트립 드래그 스크럽 | `ProfileStrip.onScrub` | `setCursor(i,'strip')` → 목록 해당 행 강조 + **그 행으로 스크롤(nearest)·roving 포커스 동기**(PC-013, 목록이 DOM 포커스를 갖지 않을 때만), 캔버스 이동 | TC-012-2 · TC-013-6 |
+| 부분 실패 | 실패 구간 행 클릭 | `SectionList` (aria-disabled) | `onSelect` 미호출(1차 방어) + `isReachable=false`(2차 방어) → 커서 불변, 하이라이트도 그 구간에 생기지 않는다 | TC-012-3 상응(목록 측) · TC-019-6 |
+| 3D 표시 | 스트립 드래그 스크럽 | `ProfileStrip.onScrub` | `setCursor(i,'strip')` → 목록 해당 행 강조 + **그 행으로 스크롤(nearest)·roving 포커스 동기**(PC-013, 목록이 DOM 포커스를 갖지 않을 때만), **캔버스에 그 구간 하이라이트**(추종 OFF) 또는 추종 카메라 목표 이동(추종 ON) | TC-012-2 · TC-013-6 · TC-019-2 |
 | 부분 실패 | 스트립 회색 구간 드래그 | `ProfileStrip` | `onScrub` 미호출 → 카메라 불변 | TC-012-3 |
 | 3D 표시 | 스트립 화살표 경계에서 추가 이동 | `ProfileStrip.onScrub` | 도달 가능 최대/최소 인덱스에서 멈춤(실패 구간 진입 없음) | — |
-| 3D 표시 | 추종 자동 재생 중(구간 경계 통과) | `TrackCanvas` → `setCursor(i,'canvas')` | 목록 행 강조·스크롤·roving 포커스 동기, 스트립 인디케이터가 그 구간으로 | TC-007-1 · TC-013-6 |
+| 3D 표시 | 추종 자동 재생 중(구간 경계 통과) | `TrackCanvas` → `setCursor(i,'canvas')` | 목록 행 강조·스크롤·roving 포커스 동기, 스트립 인디케이터가 그 구간으로. **하이라이트는 추종 중 미렌더**(카메라가 곧 현재 위치) | TC-007-1 · TC-013-6 · TC-019-5 |
 | 3D 표시 | 추종 자동 재생 중(**한 구간 안 진행**) | `TrackCanvas` → `publishProgress(order+t)` (매 프레임, 커서 불변) | **스트립 인디케이터만** 보간 이동. 목록·`aria-valuenow`·카메라 목표는 불변 | TC-012-6 (PC-014) |
 | 3D 표시 | 스트립·목록으로 찍은 지점으로 카메라가 이동하는 중(seek) | `publishProgress(null)` | 인디케이터는 사용자가 찍은 지점에 그대로 — 카메라 뒤로 끌려가지 않는다 | TC-007-2 |
 | 3D 표시 | 재생 정지 · 추종 해제 | `publishProgress(null)` | 인디케이터가 `currentIndex` 위치로 즉시 복귀 | TC-012-6 |

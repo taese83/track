@@ -186,7 +186,7 @@ FEAT 단위 티켓 14건이 병행될 예정이라 이 경계가 실사용된다
 | `src/features/load-track` | FEAT-001 클라이언트 | 실존 슬라이스 |
 | `src/shared/lib/track-cursor` | 공유 커서 owner | component-spec이 경로까지 고정 |
 | `src/shared/ui` | EvidenceBadge/AlertSlot/Legend/TopBar | component-spec이 경로까지 고정 |
-| `src/widgets/track-canvas` | FEAT-006/007/008/009/011/015/017 3D 표면 | component-spec |
+| `src/widgets/track-canvas` | FEAT-006/007/008/009/011/015/017/019 3D 표면 | component-spec |
 | `src/widgets/profile-strip` | FEAT-012 owner | component-spec |
 | `src/widgets/section-list` | FEAT-013/014 대체 표현 | component-spec |
 | `src/widgets/view-controls` | ControlCluster | component-spec |
@@ -338,7 +338,7 @@ substrate의 두 키는 **하네스 기본값**(eslint/prettier)으로 채워지
     {"scope": "src/features/load-track", "rationale": "FEAT-001 클라이언트 슬라이스(실존)"},
     {"scope": "src/shared/lib/track-cursor", "rationale": "공유 커서. component-spec이 경로까지 고정했고 목록·캔버스·스트립·컨트롤이 모두 구독한다 — FEAT-013이 만들고 나머지는 소비만 한다"},
     {"scope": "src/shared/ui", "rationale": "EvidenceBadge·AlertSlot·Legend·TopBar 공용 프리미티브"},
-    {"scope": "src/widgets/track-canvas", "rationale": "FEAT-006/007/008/009/011/015/017이 공유하는 3D 표면 — 이 일곱은 경계로 갈라지지 않으므로 순차화가 필요하다"},
+    {"scope": "src/widgets/track-canvas", "rationale": "FEAT-006/007/008/009/011/015/017/019가 공유하는 3D 표면 — 이 여덟은 경계로 갈라지지 않으므로 순차화가 필요하다"},
     {"scope": "src/widgets/profile-strip", "rationale": "FEAT-012 owner. FEAT-007은 이벤트 구독자일 뿐이다"},
     {"scope": "src/widgets/section-list", "rationale": "FEAT-013 owner이자 FEAT-014 대체 표현의 주 콘텐츠"},
     {"scope": "src/widgets/view-controls", "rationale": "ControlCluster — 시점·재생·탐색 속도"},
@@ -363,7 +363,9 @@ substrate의 두 키는 **하네스 기본값**(eslint/prettier)으로 채워지
     "TC-011-1", "TC-011-2", "TC-011-3", "TC-011-4",
     "TC-012-1", "TC-012-2", "TC-012-3", "TC-012-4", "TC-012-5", "TC-012-6",
     "TC-013-1", "TC-013-2", "TC-013-3", "TC-013-4", "TC-013-5",
-    "TC-014-1", "TC-014-2", "TC-014-3", "TC-014-4"
+    "TC-014-1", "TC-014-2", "TC-014-3", "TC-014-4",
+    "FEAT-019",
+    "TC-019-1", "TC-019-2", "TC-019-3", "TC-019-4", "TC-019-5", "TC-019-6", "TC-019-7"
   ],
   "nonGoals": [
     "저장소·DB·계정 없음(no-persistence·no-auth) — 영속 캐시(Vercel KV/Upstash)는 D-016에서 폐기됐다",
