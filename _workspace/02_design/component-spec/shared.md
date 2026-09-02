@@ -36,6 +36,40 @@ function useTrackCursor(): TrackCursorApi   // Provider 밖 호출 시 throw —
 2. **리듀서 등가 검사(2차 게이트, 방어 심층화)**: `setCursor`/`stepBy`는 대상 인덱스를 clamp한 뒤 `targetIndex === state.currentIndex`면 **동일 state 참조를 반환**(재렌더 없음). 1차 규칙이 어떤 이유로든 뚫리더라도(예: 리팩터 실수) 같은 값 재발행은 여기서 물리적으로 끊긴다.
 3. **실패 구간 격리**: `isReachable(index)`가 false인 인덱스로의 `setCursor`는 no-op(등가 검사와 같은 경로로 거부). 각 위젯은 UI 레벨에서도 실패 구간을 비활성화(행 `aria-disabled`, 스트립 회색 구간 클릭 무시, 캔버스는 애초에 그 구간을 렌더하지 않으므로 오빗 근접 이벤트가 발생하지 않음)해 1차 방어를 먼저 걸고, 리듀서 거부는 2차 방어다(안전 하한 I6 — 한 경로 누락도 허용하지 않는다).
 
+### 연속 진행 채널 (추종 시점 전용, PC-014)
+
+공유 커서는 **구간 단위**다. 자동 재생 중 인디케이터가 구간 경계에서만 튀는 것을 없애려고 커서를
+소수 인덱스로 승격하면 세 표면이 60fps로 재렌더된다 — 위 순환방지 계약이 막으려는 것과 같은
+비용이다. 그래서 축을 늘리지 않고 **두 번째 채널**을 둔다.
+
+```ts
+// src/shared/lib/track-cursor — 같은 Provider가 소유하되 React state가 아니다
+interface TrackCursorApi {
+  // ...기존 커서 API 그대로
+
+  /** 연속 진행 발행. `null`이면 "연속 진행 없음"(재생 정지·추종 해제·seek 중) */
+  publishProgress: (fractionalIndex: number | null) => void
+  /** 구독. 해제 함수를 돌려준다 */
+  subscribeProgress: (listener: (fractionalIndex: number | null) => void) => () => void
+}
+```
+
+- **React state가 아니다.** 값은 ref에 담기고 구독자에게 직접 통지한다. `publishProgress`는 어떤
+  재렌더도 만들지 않는다 — 그래서 `useFrame` 안에서 부를 수 있고, 위 §순환 갱신 방지책의 1차
+  게이트("`useFrame` 안에서 `setCursor`/`stepBy` 금지")와 충돌하지 않는다. **그 금지는 커서에
+  대한 것이고 이 채널은 커서가 아니다.** 커서 발행 규칙(구간이 바뀔 때 1회)은 그대로 남는다.
+- **발행자는 하나뿐이다** — `TrackCanvas`의 추종 렌더 루프. 목록·스트립은 발행하지 않는다.
+- **구독자는 하나뿐이다** — `ProfileStrip`. 목록이 구독하면 132행 스크롤 계산이 매 프레임 붙는다.
+- **파생값이지 정본이 아니다.** `fractionalIndex`는 `currentIndex`를 대체하지 않는다. 접근성 값
+  (`aria-valuenow`/`aria-valuetext`)·목록 스크롤·roving 포커스(TC-013-6)·카메라 목표는 계속
+  공유 커서만 본다. 보조기술에 프레임 단위 통지를 흘리지 않는 것이 이 분리의 목적이다.
+- **`null` 복귀 의무**: 재생 정지·추종 해제·경로 교체 시 발행자가 `null`을 보낸다. 구독자는
+  즉시 `currentIndex` 위치로 되돌아간다. 마지막 값이 남으면 인디케이터가 커서와 어긋난 자리에
+  멈춘 채 굳는다.
+- **seek 중에는 발행하지 않는다.** 사용자가 찍은 지점이 커서의 정본이고, 카메라가 그리로
+  이동하는 중간 위치를 발행하면 인디케이터가 사용자가 찍은 자리에서 카메라 뒤로 끌려간다
+  (`FlythroughState.seeking`이 이미 커서에 대해 같은 이유로 존재한다).
+
 ### TrackCanvas의 오빗 이탈 특이사항
 
 자유 오빗은 프레임마다 카메라 위치가 바뀌므로 "이벤트"가 연속적이다. `onOrbitDepart`는 **드래그 종료(pointerup) 또는 관성 감쇠 완료 시 1회, debounce ≥250ms**로만 발행한다 — 매 프레임 발행 금지(1차 게이트 위반이자 렌더 스톰 유발).

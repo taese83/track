@@ -53,7 +53,7 @@ function FallbackList({ items }: { items: readonly SectionListItem[] }) {
 
 /** 스트립 열. 3D 셸과 같은 구조다 — 대체 화면이라고 다른 컴포넌트를 쓰지 않는다 */
 function FallbackProfile({ model }: { model: ProfileModel }) {
-  const { currentIndex, setCursor } = useTrackCursor()
+  const { currentIndex, setCursor, subscribeProgress } = useTrackCursor()
   const [collapsed, setCollapsed] = useState(false)
   const handleToggle = useCallback(() => setCollapsed((prev) => !prev), [])
   const handleScrub = useCallback((index: number) => setCursor(index, 'strip'), [setCursor])
@@ -65,6 +65,7 @@ function FallbackProfile({ model }: { model: ProfileModel }) {
       onScrub={handleScrub}
       collapsed={collapsed}
       onToggleCollapsed={handleToggle}
+      subscribeProgress={subscribeProgress}
     />
   )
 }

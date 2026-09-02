@@ -1,184 +1,134 @@
-# change-scope — bug-fix (FEAT-004 · TC-004-2 회귀 · R84APY)
+# change-scope — FEAT-012 / PC-014 · 프로파일 스트립 인디케이터의 연속 진행축
 
-`/web-orchestrator` Iterate 라운드(2026-09-01). 티켓 없음 — 사용자 직접 요청("기능 오류 검토 - R84APY 트랙이
-그려지지 않고 있어"). REQUEST_TYPE `bug-fix`. 스키마 정본: minimal-change-contract.md · 아래 JSON이 기계 정본.
-
-CHANGE_MODE: existing-change
-REQUEST: 공유 코드 R84APY(실재 트랙, 112피스)를 넣으면 3D가 아니라 "트랙 데이터가 심각하게 손상되어 표시할 수
-  없습니다" 에러 화면이 뜬다. 트랙이 그려져야 한다.
-OBSERVED_BASELINE (2026-09-01 실측 · `pnpm dev` localhost:5179 · auto 모드):
-  - 서버 `GET /api/track?url=R84APY` → **200**, rawData 2948자 · compat=false. 파싱 112피스 · 미지원 0 ·
-    클래스 Cor1/Str1/Ban1/Chi1/Bri1/Str2/Lan2. 결함은 클라이언트 파이프라인이다.
-  - `restoreOrder` → `traversal-incomplete`. 원인은 **편집기 원본의 형상**: 세로 직선 위 (271.85,357.10)에 끝점 3개
-    (p70 v2 · p71 v1 · p0 v1)가 모이는 3갈래 분기가 있고, Lan2(레인보우 체인저) 뒤 직선 p60(Str1 283.02,354.461,0°)의
-    왼쪽 끝 (256.02,354.46)은 이웃이 0개(최근접 16.03px)인 **유일한 매달린 끝**이다 — 편집기 화면에서 그 직선이 분기점
-    위에 겹쳐 놓였을 뿐 이어지지 않았다. 매달린 끝이 하나라 D-038 ② 브리지(정확히 둘)가 서지 않고, 그래프가
-    "고리 + 꼬리(START 포함)"라 112피스를 한 줄로 꿰는 순서는 존재하지 않는다.
-  - `validateClosure`는 이 경우를 위해 `walkConnectedPrefix`(START→p57→p58→p59→Lan2(p97)→p60, **6피스**,
-    `brokenAt={afterPieceId:'p60', reason:'order-restore-failed'}`)를 이미 낸다. 그러나 `TrackViewerPage`가
-    `traversal-incomplete`·`search-budget-exceeded`를 `RESTORE_ERROR_REASON`으로 `not-closed-fatal` **에러 화면**에
-    태워 폐합 판정·씬 배치에 닿지 못한다. 같은 이유로 OPENLOOP 픽스처(TC-004-2의 "끝점이 어긋난 비폐곡선")도
-    에러 화면에 착지한다(e2e `track-flythrough.spec` 주석의 실측). TC-004-2 "연결 가능한 구간은 정상 렌더되고 …
-    렌더링은 중단되지 않는다"의 **구현 회귀**이며 e2e 인용 0건이었다.
-  - 별건(사용자 가설 검증): Lan2는 카탈로그에 끝점(`[-90,-54]/[-90,54]`)이 있어 지원 피스로 파싱·복원되지만
-    `buildPiecePath`에 선회 모델이 없어 **U턴이 아니라 두 끝점을 잇는 108cm 직선 현**으로 그려지고 `Lan*` 자리바꿈이
-    적용된다. 순서 복원 실패의 원인은 아니다(끝점은 p59·p60과 정확히 맞물린다). 이 라운드 범위 밖 — 보고에 NEEDS_DECISION.
-TARGET_BEHAVIOR: TC-004-2 — 순서 복원이 `traversal-incomplete`·`search-budget-exceeded`로 실패해도 START가 있으면
-  에러 화면이 아니라 FEAT-004 부분 실패 경로를 탄다: `validateClosure`의 연결 접두부까지 3D·목록·스트립을 렌더하고
-  (`truncated`), 배너 "연결이 끊긴 지점까지만 표시했습니다 — n/총피스"가 상시 노출되며, 나머지 피스는 목록·스트립에서
-  회색(도달 불가)이다. `start-piece-missing`은 종전 그대로 에러 화면. R84APY → 6/112 · OPENLOOP → 131/132 렌더.
-  파이프라인 요약의 `ordered-count`는 자리가 정해진 피스 수, `start-selection`은 복원 실패 사유를 함께 적는다.
-ALLOWED_PATHS: src/pages/track-viewer (TrackViewerPage.tsx 라우팅) · e2e (TC-004-2 회귀 2건 + 주석 정정) ·
-  fixtures/track (R84APY.js.txt 녹화 + README 행) · _workspace (change-scope · pages.md · 결정 D-048)
-PUBLIC_CONTRACTS_TO_PRESERVE:
-  - `restoreOrder`·`validateClosure`·`buildSceneLayout` 시그니처·판정 무변경(entities·widgets 손대지 않음)
-  - `start-piece-missing` 경로(TC-003-4 e2e: 전용 문구·디버그 발췌·재시도) · 파싱 실패 경로(TC-002) 불변
-  - 정상 폐곡선(WS67Y2·MULTISTART)의 `ordered-count`/`start-selection` 문구 비트 단위 동일(TC-003-1/2/5 e2e)
-  - `TrackScreen` 배너 문구·셸 치수·testid · `LoadErrorReason` 타입(`not-closed-fatal` 키는 component-spec 계약이라 유지,
-    생산자만 사라진다)
-NON_GOALS: Lan2/Lan3 U턴 기하 모델(별도 feature) · 순서에 자리를 못 얻은 지원 피스의 3D 회색 배치(현 FEAT-004 구현은
-  목록·스트립 회색 + 배너 + 배지) · START 화살표 반대 방향 탐색(D-038 ① 위반) · 편집기 원본 수정
-CHANGE_BUDGET: `TrackViewerPage.tsx` 1개(outcome 분기 + 요약 2필드) · e2e 1파일(+2 케이스) + 주석 1곳 ·
-  픽스처 1개 + README 1행 · 문서 2곳. 신규 소스 0 · 의존성 0.
-TEST_EVIDENCE (2026-09-01 · D:\Project\track · Node v22.11.0(`engines >=22.12.0` 미만, Vite 8 경고) · pnpm 9.12.3):
-  - 변경 전 재현: `pnpm dev`(localhost:5179, auto 모드) 브라우저에 R84APY 제출 → 서버 200(2948자) → 화면 "트랙 데이터가
-    심각하게 손상되어 표시할 수 없습니다" + 디버그 "끝점을 이어도 모든 피스를 한 줄로 꿰지 못했습니다.(파싱된 피스 112개)".
-    임시 vitest 진단(커밋 안 함): 112피스 · `traversal-incomplete` · 접점 클러스터 이상 = 3갈래 (271.85,357.10) + p60 v1 이웃 0 ·
-    `validateClosure` connected=6, brokenAt p60.
-  - 변경 후 같은 제출 → `track-screen` 렌더, 배너 "연결이 끊긴 지점까지만 표시했습니다 — 6/112피스", 목록 6행 도달 가능 · 106행
-    "연결 실패로 접근 불가", 요약 "복원된 순서 6 · p61 · 순서 복원 실패 — … p60 뒤에서 끊김.", 캔버스 6피스 렌더(스크린샷),
-    콘솔 에러 0(THREE.Clock deprecation 경고만).
-  - 게이트: `tsc --noEmit` 0 · `eslint src e2e` 0 · unit `pnpm test` **348/348**(무변경 — 이 수정은 페이지 라우팅) · `pnpm build` 0
-  - e2e `track-restore.spec` **9/9**(신규 TC-004-2 2건 포함, 단일 워커 10.6s) · 전체 `pnpm e2e` 병렬 82 통과·9 실패 → 해당 3스펙
-    (evidence·flythrough·scene) 단일 워커 재실행은 아래 FEAT-018 라운드의 전체 단일 워커 실행으로 대체(같은 소스 상태에서 함께 기록).
-  - code-reviewer **WARN**(low 2) → 배너 조건 정정 반영(위 후속 반영), 타이브레이크는 기록만. `verify-spawn-completion`은 판정 계열이라
-    `FINDINGS:` 마커로 확인.
-  - 미검증(정직 표기): `search-budget-exceeded`를 내는 실데이터는 없어 그 분기는 타입·코드 경로로만 확인했다.
-CAPABILITY_ESCALATION: none — 서버·의존성·fetch 경로 변화 없음.
-DOCS_TO_UPDATE: `02_design/component-spec/pages.md` §화면 상태 머신 전이 문장("순서복원 실패→error"을 START 부재로
-  한정, traversal 실패는 partial-failure) · 결정 D-048(decision-log) · `fixtures/track/README.md` 행.
-
-**후속 2(2026-09-01, 사용자 "계속 못그려??" · "Lan2 다음에 코너인데 왜 못그려?")**: ① D-050 — 복원 실패 시 START **양방향**
-사슬(`walkConnectedChain`, `orientPath` 첫 피스 비-START 허용, 배너·요약 분기). ② D-051 — **끼어든 끝** 규칙(`restore-order.ts`
-`isDangling`): R84APY는 3갈래 분기가 아니라 이음새 하나가 16px 벌어진 폐곡선이었고, p0의 끝이 p70↔p71 정확 일치 이음새에
-0.285px 붙어 매달린 끝으로 세지 않았던 것이 진짜 원인. 짝수 무리 조건 없이는 참조 트랙 입체교차(p47·p51·p52 + p38)를
-오판해 WS67Y2가 통째로 실패한다(1차 실측). 결과: R84APY **112/112 폐곡선** 복원. ALLOWED_PATHS를
-`src/entities/track/lib/restore`·`closure`·`elevation/orient-path.ts`로 확대(FEAT-003/004 소유 경로, 브리프 갱신 후 편집).
-테스트: `restore-order-intruder.test.ts` 4건(D-051 R84APY 112 · 폐곡선 · D-050 합성 111 · WS67Y2 무변경).
-
-**후속 반영(2026-09-01, code-reviewer WARN 2건 low)**: ① `TrackScreen` 배너 분기를 `layout.truncated || !closure.isClosedLoop`로
-정정 — 복원 실패 + 진단 걷기가 전 피스를 덮은 조합에서 "XY 폐곡선이지만…" 오표기 가능성(문구·testid 불변, 조건 1줄).
-② `walkConnectedPrefix`의 동점 타이브레이크가 사전식(`'p10' < 'p9'`) — 결정성은 유지되며 entities 무변경 계약이라 기록만.
-③ `not-closed-fatal` 존치 권고 채택(계약 유지, 생산자 없음은 pages.md에 기록). `features/load-track/model/types.ts` 주석은
-ALLOWED_PATHS 밖이라 손대지 않았다.
-
----
-
-# change-scope — FEAT-018 레인보우 체인저(Lan2) 기하 (같은 라운드, 사용자 추가 요청)
-
-사용자 메시지(2026-09-01): "레인체인지 렌더링이 잘못되고 있어 … 이번에는 이런식으로 되어야해, 기존 레인체인지와 비교해봐"
-(`Lan2.0` 스프라이트 링크) + "프로젝트에 정보가 있는지도 확인해봐". REQUEST_TYPE `feature`(소형, 데이터 계약 변경 없음 —
-`SceneSegment`에 선택 필드 추가). 기획: `specs-scene.md` FEAT-018 · 결정 D-049 · 정본 `piece-geometry.md` §레인보우 체인저.
+`/wh "프로파일 스트립에 현재 위치 마커 — 플라이스루와 연동"` (2026-09-02). 레인 `change`
+(동작을 새로 정의한다 — `request-type-contract.md`). 1-A 승인 체크포인트 통과 후 착수.
+스키마 정본: `minimal-change-contract.md`.
 
 CHANGE_MODE: existing-change
-REQUEST: Lan2를 편집기 도면대로 U턴형 레인체인지로 그린다.
-OBSERVED_BASELINE: 프로젝트 내 Lan2 정보는 끝점(`piece-catalog.ts`·`piece-geometry.md`·`preview/store.js`)과 치수·편집기 길이
-  (`00_source/track-editor-data-model.md`: 180×144, 9.81m)뿐. `buildPiecePath`에 `Lan*` 선회 모델이 없어 108cm 직선 현 +
-  `laneOffsetAt` 자리바꿈으로 그려진다(R84APY 6피스 렌더에서 실측). Lan1 도면(162×36)은 기존 모델(가운데 45% 직선 이동)과
-  일치 — 결함은 Lan2 전용이다.
-TARGET_BEHAVIOR: TC-018-1~10 — 레인별 명시 경로(레인 0·1: [−28,8] 12cm 안쪽 이동 → 중심 (15,0) r54/42 U턴, 레인 2: 중심
-  (−51.5,12) r54 U턴을 **곡면 따라 대각선으로 올라갔다 내려오는 산**(램프 시작 0 → 꼭짓점 12cm → 램프 끝 0, 선형)),
-  중심선 = 105+54π+105, 레인 면·카메라가 명시 경로를 소비(표본 호 길이 3cm 간격), 바운딩박스 포함. 순환은 D-033과 동일.
-  이력: 8cm 고원 → 뱅크 횡경사 20° 추가 → 횡경사 제거·선형 산(D-049 ⑥) → 꼭짓점 꺾임 지적으로 **뱅크와 뱅크 사이 판 모델**
-  (전이 곡선 + 20° 판, 꼭짓점 ≈26.7cm, D-049 ⑦)로 확정 → "트랙이 휘지 않아야" 지적으로 가장자리 높이를 판 함수로
-  (`laneSurfaces`, TC-018-11 평면 이탈 < 1e-6) — 비틀림 제거.
-ALLOWED_PATHS: src/entities/track/lib/elevation (piece-path.ts 분기 + 신규 local-path.ts·lane-routes.ts + 테스트) ·
-  src/widgets/track-canvas (scene-layout.ts lanePaths·bounds · lane-bands.ts 명시 레인 · flythrough-camera.ts 명시 레인 + 테스트) ·
-  _workspace (기획·결정·정본)
+REQUEST: 프로파일 스트립의 현재 위치 마커가 플라이스루(추종 시점 자동 재생)를 따라 매끄럽게
+  움직이게 한다.
+OBSERVED_BASELINE (2026-09-02 실측 · Playwright + `pnpm build && pnpm preview` · fixtures 업스트림):
+  - **마커와 연동은 이미 있다.** `ProfileStrip`이 `data-testid="profile-indicator"` 세로선을
+    `currentIndex` 위치에 그리고(`ProfileStrip.tsx` xOf), `FlythroughRig`가 재생 중 구간이 바뀔 때마다
+    `setCursor(order,'canvas')`로 공유 커서를 민다(`TrackCanvas.tsx:347` 주변).
+  - **빠진 것은 연속성이다.** 참조 트랙 WS67Y2(132피스) 240cm/s 자동 재생에서 인디케이터 중심 X를
+    125ms 간격 24회 표집: t=127ms x=12px(dist 15.9) · t=345ms x=12px(dist 52.7) · **t=550ms x=12px
+    (dist 110.0)** · t=756ms x=31.2px(order 0→3) · t=967ms x=40.8px. 첫 550ms 동안 카메라는 110cm를
+    갔는데 마커는 한 픽셀도 움직이지 않고 그다음 한 번에 두 칸(19px)을 건너뛴다. 계단폭은 9.59px
+    (구간 1칸)이다.
+  - **검증 공백**: TC-012-2의 본절("추종 시점이 활성화된 상태에서 카메라가 이동하면 인디케이터가
+    실시간으로 함께 이동한다")은 e2e에 없다. `e2e/track-profile-strip.spec.ts`의 두 건은 모두
+    `TC-012-2(부분)`으로 클릭·목록 방향만 잰다. 반대 방향(재생→목록)은 TC-013-6이 덮는다.
+TARGET_BEHAVIOR (TC-012-6, PC-014):
+  - 자동 재생 중 카메라가 **한 구간 안을** 달리는 동안에도 인디케이터가 그 구간의 시작·끝 위치
+    사이를 보간해 이동한다. 판정: `data-follow-order`가 고정된 상태에서 인디케이터 중심 X가 단조
+    증가한다.
+  - 재생 정지·추종 해제 시 인디케이터가 `currentIndex` 위치로 즉시 복귀한다.
+  - seek(사용자가 찍은 지점으로 카메라가 이동하는 중)에는 연속축을 발행하지 않는다 — 인디케이터가
+    사용자가 찍은 자리에 머문다.
+  - `aria-valuenow`/`aria-valuetext`/40px 헤더 요약은 구간 단위 값을 유지한다.
+ALLOWED_PATHS:
+  - `src/shared/lib/track-cursor` — 연속 진행 채널(`publishProgress`/`subscribeProgress`) owner
+  - `src/widgets/track-canvas` — 발행자. `flythrough-camera.ts`에 소수 인덱스 파생 순수 함수 +
+    `TrackCanvas.tsx` 렌더 루프 발행
+  - `src/widgets/profile-strip` — 구독자. 인디케이터 노드 transform 갱신
+  - `src/pages/track-viewer` — `ProfileColumn`이 채널을 스트립에 배선(1~2줄)
+  - `e2e` — TC-012-6 회귀
+  - `_workspace` — 기획·설계·스팩·브리프 문서
 PUBLIC_CONTRACTS_TO_PRESERVE:
-  - `Lan1`·직선·코너·웨이브의 경로·레인·카메라 좌표 **비트 단위 동일**(TC-008-*, TC-016-*, TC-007-*, TC-017-* 기존 단위 테스트 전부)
-  - `buildPiecePath`·`buildSceneLayout`·`buildLaneBands`·`buildFlythroughPath` 시그니처 · `SceneSegment` 기존 필드 · `laneOffsetAt`/`laneShiftsCm` 무변경
-  - 레인 순환(D-033) — Lan2 통과 뒤 카메라 레인 `(lane+1)%3`
-  - WS67Y2 참조 트랙 e2e 전부
-NON_GOALS: Lan3(burning changer) 기하 · r=66 막힌 밴드 렌더 · 편집기 길이 공식 재현 · Lan2 전용 마커/라벨 · 목록 유형명 변경
-CHANGE_BUDGET: 신규 2파일(local-path.ts·lane-routes.ts) + 수정 4파일(piece-path·scene-layout·lane-bands·flythrough-camera) +
-  테스트 3~4파일 · 의존성 0 · 기획 4문서.
-TEST_EVIDENCE (2026-09-01 · D:\Project\track · Node v22.11.0(`engines >=22.12.0` 미만) · pnpm 9.12.3):
-  - 도면 실측: `Lan2.0`(180×144)·`Lan1.0`(162×36)·`Lan3.0`(90×180) 스프라이트를 내려받아 휘도 ASCII 맵으로 좌표를 읽었다
-    (scratchpad, 커밋 안 함). Lan1은 기존 모델(가운데 45% 직선 이동)과 일치 · Lan2는 위 §정본 · Lan3는 범위 밖.
-  - 변경 전(브라우저, R84APY 6피스 렌더): Lan2가 두 끝점을 잇는 세로 직선 현(108cm)에 `Lan*` 자리바꿈이 얹혀 그려짐(스크린샷).
-  - 변경 후 같은 화면: 레인 0·1이 큰 U턴, 레인 2가 안쪽 작은 U턴으로 진출 팔 두 레인 위를 넘는 형상(스크린샷
-    `screenshot-1788190617851-4.png`) · 콘솔 에러 0.
-  - 1차 실측 실패(TC-018-4: 레인 중심선 최근접 2.26cm)가 레인 2의 **교차**를 드러내 육교 프로파일을 추가했다(D-049 ④). 2차
-    실측 실패(레인 0·1 최근접 11.48)는 사선 이동 구간의 평행선 수직 간격(12·cos(atan 1/3) = 11.38) — 기하의 귀결로 TC 정정.
-    카메라 "54cm 점프"는 직선 피스의 표본 2개(54cm)였다 — 테스트 가정 오류, Lan2 안으로 범위 한정.
-  - 게이트: `tsc --noEmit` 0 · `eslint src e2e` 0 · unit **367/367**(+19: lane-routes 10 · lane-routes-scene 9; 기존 348 무변경 통과 =
-    비-Lan2 피스 좌표 보존의 증거) · `pnpm build` 0
-  - 후속 3회(같은 라운드, 사용자 지시): ① "매끄러운 곡선" → 표본 호 길이 3cm 간격(TC-018-9, 원호 꺾임 <5° 실측) ② "뱅크처럼"
-    → 횡경사 20° 추가 ③ "이전으로 되돌리고 곡면 따라 대각선으로 올랐다 내려오는 형태" → 횡경사 제거, 산 프로파일(꼭짓점 12cm,
-    선형, TC-018-8·10). 교차 구간 최소 여유 실측 **3.46cm**(>0). code-reviewer(PASS, low 6) 중 3건 반영(미터링 프레임·t 주석·
-    이음새 단언), 3건 기록.
-  - e2e 대상 4스펙(restore·flythrough·lane-change·scene) 단일 워커 **29/29** · 전체 `pnpm e2e --workers=1` **90 통과 · 1 실패** —
-    실패 1건 `track-evidence "캔버스 컬럼이 좁아져도…"`(범례 패널 311.6 > 304px)는 기준 소스에서도 동일 실패(기존 결함, 무관).
-  - 미검증(정직 표기): Lan2가 뒤집혀(vertex2 진입) 놓인 실데이터는 없어 뒤집힘은 단위 테스트(TC-018-3·8)로만 확인했다. 육교
-    램프 길이 30cm는 도면 음영에서 잡은 ASSUMPTION. e2e에는 Lan2 전용 시나리오를 만들지 않았다(수치 축이 정본, R84APY e2e가
-    렌더 도달을 잰다).
-CAPABILITY_ESCALATION: none
-DOCS_TO_UPDATE: `piece-geometry.md` §레인보우 체인저(신설) · `data-model.md` `SceneSegment.lanePaths` · `specs-scene.md` FEAT-018 ·
-  `feature-list.md`·`INDEX.md` · D-049.
+  - 공유 커서 공개 API(`currentIndex`·`setCursor`·`stepBy`·`isReachable`·`lastSource`)와 **발행
+    빈도(구간 단위)** 불변 — TC-007-1·TC-013-6·TC-012-2(부분) 회귀 금지
+  - `ProfileStrip`의 `role="slider"` · `aria-valuemin/max/now` · `aria-valuetext`는 구간 인덱스 단위
+    유지(layout-spec §포커스 순서가 정본)
+  - 관측 표면 testid 전부: `profile-indicator`·`profile-strip`·`profile-strip-slider`·
+    `profile-strip-summary`·`profile-strip-toggle`·`profile-strip-scale-note`·`profile-curve`·
+    `profile-curve-failed`·`profile-boundary`·`profile-axis-tick`·`profile-closure-gap`,
+    `track-canvas`의 `data-follow-*`·`data-camera-*`·`data-render-state`
+  - 3분할 셸 예약 치수(목록 320px · 스트립 140px · alert 40px)
+  - TC-012-3(실패 구간 클릭 무시) · TC-012-4(상대 스케일 표기 상시) · TC-012-5(폐합 불연속)
+  - 플라이스루 fps ≥30 (`window.__perfStats.flythroughFps`, performance-budget §1)
+NON_GOALS:
+  - 공유 커서를 소수 인덱스로 승격하는 것(PC-014에서 기각 — 세 표면 60fps 재렌더)
+  - `SectionList`가 연속축을 구독하는 것(132행 스크롤 계산이 매 프레임 붙는다)
+  - 스트립 x축을 **거리 균등**으로 바꾸는 것 — 현재는 인덱스 균등이라 등속 주행에서도 마커 속도가
+    구간 길이에 따라 달라진다. 별건으로 보고한다(REQ-F-023 원문은 "거리축"이다)
+  - `--color-accent` 미정의 정정(인디케이터가 하드코딩 `#7AA2F7` 폴백으로 그려진다) — 별건 보고
+  - 접힘 상태에서의 마커 노출(현재 40px 헤더는 텍스트 요약만) — 사용자가 선택하지 않은 범위
+  - 마커 형태 재설계(세로선 유지)
+CHANGE_BUDGET: 소스 5파일(track-cursor 2 · flythrough-camera 1 · TrackCanvas 1 · ProfileStrip 1) +
+  페이지 배선 1 · 유닛 테스트 2파일 · e2e 1파일(+2 케이스) · 문서 6곳. 신규 의존성 0.
+CAPABILITY_ESCALATION: none — 서버 실행 경로·인증·DB·외부 API 키·자체 엔드포인트 fetch 변화 없음.
+DOCS_TO_UPDATE:
+  - `01_plan/feature-plan/specs-surfaces.md` — FEAT-012 동작 명세에 두 위치축 명시 + TC-012-6 신설 ✅
+  - `01_plan/feature-plan/traceability.md` — REQ-F-023 행 TC-012-1~5 → 1~6 ✅
+  - `02_design/component-spec/shared.md` — §연속 진행 채널 신설(발행/구독 각 1개, null 복귀, seek 금지) ✅
+  - `02_design/component-spec/widgets.md` — §ProfileStrip 연속축·접근성 값 분리, §TrackCanvas 발행 규칙 ✅
+  - `02_design/component-spec/pages.md` — Interaction Matrix에 자동 재생 4행 추가 ✅
+  - `02_design/performance-budget/targets.md` — 추종 재생 중 프레임 예산(프레임당 DOM 쓰기 1건) ✅
+  - 대조했으나 무변경: `layout-spec/a11y-responsive.md`(구간 단위 aria가 이미 정본) ·
+    `layout-spec/global-shell.md` · `layout-spec/states.md`(치수 불변) · `design-system/tokens.md`
+    (모션 토큰 미사용 규칙 그대로 — 카메라 축은 3D 소관) · `design-system/accessibility.md` ·
+    `design-system/inventory.md` · `api-schema/*`(데이터 계약 무변경) · `solution-design.md`
+    (아키텍처·layerMap 무변경, acceptanceRefs만 TC-012-6 추가) · `piece-geometry.md`
+TEST_EVIDENCE (2026-09-02 · /Users/ted.chung/Project/track · Node v24.18.1 · pnpm 11.18.0 ·
+`.nvmrc` 없음 — `engines: ^20.19.0 || >=22.12.0` 충족):
+  - **변경 전 재현**(Playwright + `vite build && vite preview`, fixtures 업스트림, WS67Y2 240cm/s,
+    인디케이터 중심 X 125ms×24 표집): `t=127 x=12.0(dist 15.9)` · `t=345 x=12.0(52.7)` ·
+    `t=550 x=12.0(110.0)` · `t=756 x=31.2(154.0, order 0→3)`. **550ms 정지 후 19px 점프.**
+  - **변경 후 같은 표집**: `t=128 x=13.7(11.6)` · `t=343 x=17.2(45.8)` · `t=552 x=21.3(109.6)` ·
+    `t=766 x=40.9(154.1)`. 정지 구간 0건 — 모든 표본에서 x가 자란다. order가 고정된 표본 쌍에서도
+    이동이 관측된다(order 3: 40.9→46.1 · order 15: 156.8→162.5 · order 17: 177.0→181.3).
+  - **fps 회귀**: 재생 중 브라우저 `requestAnimationFrame` 간격 3초 표집. 변경 전(HEAD bbde371
+    worktree 빌드) **82.13fps** → 변경 후 **81.24fps**. 30fps 하한 대비 여유 2.7배, 차이는 −1.1%로
+    표집 잡음 범위다. (§1이 적은 `__perfStats.flythroughFps`는 미구현이라 이 경로로 쟀다 —
+    targets.md에 그 사실을 적어 뒀다.)
+  - 유닛: `vitest run` **383/383**. 신규 — `progress-channel.test.ts` 5건(발행·같은 값 끊기·늦은
+    구독자·`null` 복귀·해제), `flythrough-camera.test.ts` TC-012-6 5건(정수부가 `orderAtDistance`와
+    400개 표본에서 일치 · 800개 표본 단조 증가 · 정수 축이 멈춘 동안 값이 자람 · 경로 밖 절단 ·
+    빈 경로 0).
+  - e2e: `playwright test --workers=1` **94/94**. 신규 3건 — TC-012-2(자동 재생 중 인디케이터가
+    카메라를 따라 이동, x 18.4→121.2 단조) · TC-012-6(같은 `data-follow-order` 안에서 이동 6건/39쌍
+    관측) · TC-012-6(정지 후 인디케이터 40.8 ≡ 커서 구간 경계 40.8, 오차 <1.5px).
+  - 보존 확인: TC-007-1·2·3·5·6, TC-013-1~6, TC-012-1~5, TC-006-*, TC-014-* 전부 통과 —
+    공유 커서의 구간 단위 발행과 목록 동기화가 회귀하지 않았다.
+  - 게이트: `tsc --noEmit` 0 · `eslint src e2e` 0 · `vitest run` 0 · `vite build` 0
+  - Runtime verifiability: **LOCAL_VERIFIABLE** — 전 항목이 정적 preview + 녹화 fixture로 재현됐다.
+    `DEPLOY_ONLY` 항목 없음.
+  - **dev 서버 구동 확인**(2026-09-02, `vite --port 5180`, auto 업스트림, 1440×900): WS67Y2 재생
+    중 320ms 간격 6표본에서 마커 x `18.5 → 57.3 → 110.6 → 168.5 → 206.4 → 263.2`(order
+    `0→4→9→14→18→23`), 정지 직후 커서 27 · 인디케이터 x=303.8 · 27번 구간 경계 x=303.8로 **정확히
+    일치**. 스트립 스크린샷과 정지 상태 전체 화면으로 실제 콘텐츠를 확인했다(콘솔 로그가 아니라).
+  - **미검증(정직 표기)**: 부분 실패 트랙(OPENLOOP·R84APY)에서의 연속축은 별도 e2e로 재지 않았다.
+    도달 불가 구간은 경로 자체가 짧게 끝나 발행이 멈추는 구조이며, 기존 TC-007-5(부분 실패에서
+    추종이 오류 없이 멈춘다)가 통과한다는 사실까지가 이 라운드의 근거다.
 
-```json change-scope
-{
-  "ticketKey": null,
-  "featureId": "FEAT-018",
-  "TARGET_BEHAVIOR": "TC-018-1~7 — Lan2를 레인별 명시 경로(레인 0·1: [-28,8] 12cm 안쪽 이동 → 중심 (15,0) r54/42 U턴, 레인 2: 중심 (-51.5,12) r54 U턴)로 그리고, 중심선은 105+54π+105, 레인 면·추종 카메라·바운딩박스가 명시 경로를 소비한다. 순환은 D-033 동일.",
-  "requestType": "feature",
-  "testCaseIds": ["TC-018-1", "TC-018-2", "TC-018-3", "TC-018-4", "TC-018-5", "TC-018-6", "TC-018-7"],
-  "ALLOWED_PATHS": ["src/entities/track/lib/elevation", "src/widgets/track-canvas", "_workspace"],
-  "PUBLIC_CONTRACTS_TO_PRESERVE": [
-    "Lan1·직선·코너·웨이브의 경로·레인·카메라 좌표 비트 단위 동일(기존 단위 테스트 전부)",
-    "buildPiecePath·buildSceneLayout·buildLaneBands·buildFlythroughPath 시그니처 · SceneSegment 기존 필드",
-    "레인 순환 D-033 — Lan2 뒤 (lane+1)%3",
-    "WS67Y2 e2e 전부"
-  ],
-  "NON_GOALS": ["Lan3 기하", "r=66 막힌 밴드 렌더", "편집기 길이 공식 재현", "목록 유형명 변경"],
-  "CHANGE_BUDGET": "신규 2 + 수정 4 + 테스트 3~4 · 의존성 0",
-  "sourceDigest": null,
-  "needsConfirmation": false
-}
-```
+## 라운드 종료 게이트 (execution-contract §Iterate mode 5)
 
----
+- ① 승격 QA: **해당 없음** — `CAPABILITY_ESCALATION: none`(서버 경로·의존성·인증 변화 0).
+- ② Evidence 재발급: **해당 없음** — `_workspace/04_qa/evidence/`가 없다(이 프로젝트는 아직
+  full runner receipt를 발급한 적이 없다). stale로 남는 receipt가 없다.
+- ③ 문서 동기화: **완료** — `DOCS_TO_UPDATE` 6건 전부 개정됨(위 목록의 ✅).
 
-```json change-scope
-{
-  "ticketKey": null,
-  "featureId": "FEAT-004",
-  "TARGET_BEHAVIOR": "TC-004-2 — 순서 복원이 traversal-incomplete·search-budget-exceeded로 실패해도 START가 있으면 에러 화면이 아니라 validateClosure의 연결 접두부까지 렌더(truncated)하고 배너를 상시 노출한다. start-piece-missing은 종전 그대로 에러. R84APY 6/112 · OPENLOOP 131/132.",
-  "requestType": "bug-fix",
-  "testCaseIds": [
-    "TC-004-2"
-  ],
-  "ALLOWED_PATHS": [
-    "src/pages/track-viewer",
-    "e2e",
-    "fixtures/track",
-    "_workspace"
-  ],
-  "PUBLIC_CONTRACTS_TO_PRESERVE": [
-    "restoreOrder·validateClosure·buildSceneLayout 시그니처·판정 무변경",
-    "start-piece-missing·parse 실패 경로 불변(TC-003-4·TC-002 e2e)",
-    "정상 폐곡선의 ordered-count/start-selection 문구 동일(TC-003-1/2/5)",
-    "TrackScreen 배너 문구·셸 치수·testid · LoadErrorReason 타입"
-  ],
-  "NON_GOALS": [
-    "Lan2/Lan3 U턴 기하 모델",
-    "자리 없는 지원 피스의 3D 회색 배치",
-    "START 반대 방향 탐색",
-    "편집기 원본 수정"
-  ],
-  "CHANGE_BUDGET": "TrackViewerPage.tsx 1개 · e2e 1파일 +2 · 픽스처 1 + README 1행 · 문서 2곳 · 의존성 0",
-  "sourceDigest": null,
-  "needsConfirmation": false
-}
-```
+## 이 라운드에서 드러난 범위 밖 사실 (고치지 않았다)
+
+1. **`orderAtDistance`가 2표본 직선 피스에서 한 구간 늦게 센다.** 직선은 표본이 둘뿐이고 이음새의
+   중복 점이 버려져 `t=1` 하나만 남는다. 그래서 그 피스를 지나는 동안 정수 축은 **앞 피스**를
+   말하고, 그 피스는 이음새 직후의 짧은 거리 창에서만 보고된다(WS67Y2 order 1: 실제 54~108cm를
+   달리는데 보고 창은 108~109.84cm). 재생 중 목록 강조와 스트립이 함께 한 칸 늦는다.
+   **이번 라운드는 이 속성을 바꾸지 않았다** — 연속축의 정수부를 `order + t`가 아니라
+   `orderAtDistance`의 판정에 맞춰 정의해 **두 표면이 어긋나지 않게** 했을 뿐이다. 고치려면
+   FEAT-007의 커서 발행 의미가 바뀌므로 TC-007-1·TC-013-6 재판정이 따라온다.
+2. **`--color-accent`가 정의돼 있지 않다.** 인디케이터는 `var(--color-accent, #7AA2F7)`의 폴백으로
+   그려진다 — 토큰 밖 하드코딩 색이며 라이트 모드에서도 바뀌지 않는다.
+3. **스트립 x축이 인덱스 균등이다.** REQ-F-023 원문은 "거리축"인데 구현은 `index/(total-1)`이다.
+   연속축을 넣어도 등속 주행에서 마커 속도는 구간 길이에 따라 달라진다.
+4. **`__perfStats.flythroughFps`가 미구현이다.** performance-budget §1이 측정 방법으로 명시했으나
+   `perf-stats.ts`에는 `orbitFps`만 있다. 플라이스루 fps는 그때까지 NOT_MEASURED다.
+5. **`TC-013-6`이 `acceptanceRefs`에 없다.** PC-013 라운드의 누락. 이번에는 `TC-012-6`만 더했다.
+6. **빠른 재생에서 목록 강조가 몇 프레임 뒤처진다.** dev 구동 실측(2026-09-02): 같은 순간
+   `data-follow-order`가 23인데 슬라이더 `aria-valuenow`는 20이었다. 둘 다 렌더 루프의 **같은
+   `order` 값**에서 나가지만 DOM dataset은 그 프레임에 동기로 쓰이고 공유 커서는 132행 목록을
+   포함한 React 재렌더를 거친다. **이번 변경이 만든 것이 아니라 커서 경로의 기존 성질**이며,
+   연속축이 React를 우회하도록 설계한 이유가 정확히 이것이다. 재생 중에는 마커가 목록 강조보다
+   살짝 앞설 수 있고 정지하면 정확히 수렴한다(위 303.8 ≡ 303.8). 3번 항목(`orderAtDistance`의
+   직선 피스 지연)과는 별개 원인이다.

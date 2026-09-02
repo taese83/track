@@ -64,6 +64,84 @@ test('TC-012-2(부분) · 목록에서 옮긴 커서가 스트립 인디케이�
   expect(await centerX(page.getByTestId('profile-indicator'))).toBeGreaterThan(before)
 })
 
+test('TC-012-2 · 자동 재생 중 인디케이터가 카메라를 따라 이동한다', async ({ page }) => {
+  await openTrack(page)
+  const canvas = page.getByTestId('track-canvas')
+  await expect(canvas).toHaveAttribute('data-render-state', 'ready', { timeout: 20_000 })
+
+  const before = await centerX(page.getByTestId('profile-indicator'))
+  await page.getByTestId('follow-toggle').click()
+  await page.getByTestId('follow-play').click()
+  await expect(canvas).toHaveAttribute('data-follow-playing', 'true')
+
+  const samples: number[] = []
+  for (let take = 0; take < 6; take += 1) {
+    await page.waitForTimeout(300)
+    samples.push(await centerX(page.getByTestId('profile-indicator')))
+  }
+  console.log(`TC-012-2 인디케이터 x ${samples.map((x) => x.toFixed(1)).join(' → ')}`)
+
+  // 뒤로 가지 않고 실제로 나아간다
+  for (let index = 1; index < samples.length; index += 1) {
+    expect(samples[index]!).toBeGreaterThan(samples[index - 1]!)
+  }
+  expect(samples[0]!).toBeGreaterThan(before)
+})
+
+test('TC-012-6 · 구간이 바뀌지 않는 동안에도 인디케이터가 움직인다(계단이 아니다)', async ({
+  page,
+}) => {
+  await openTrack(page)
+  const canvas = page.getByTestId('track-canvas')
+  await expect(canvas).toHaveAttribute('data-render-state', 'ready', { timeout: 20_000 })
+
+  await page.getByTestId('follow-toggle').click()
+  await page.getByTestId('follow-play').click()
+  await expect(canvas).toHaveAttribute('data-follow-playing', 'true')
+
+  // 같은 `data-follow-order` 안에서 x가 자라는 표본을 찾는다 — 이것이 이 티켓의 전부다.
+  // 종전 구현에서는 order가 고정된 동안 x가 **항상** 같았다(2026-09-02 실측: 550ms 정지).
+  const readings: { order: string; x: number }[] = []
+  for (let take = 0; take < 40; take += 1) {
+    await page.waitForTimeout(60)
+    readings.push({
+      order: (await canvas.getAttribute('data-follow-order')) ?? '',
+      x: await centerX(page.getByTestId('profile-indicator')),
+    })
+  }
+
+  const movedWithinOrder = readings.filter(
+    (reading, at) =>
+      at > 0 && reading.order === readings[at - 1]!.order && reading.x > readings[at - 1]!.x,
+  )
+  console.log(
+    `TC-012-6 같은 구간 안 이동 ${movedWithinOrder.length}건 / 표본 ${readings.length - 1}쌍`,
+  )
+  expect(movedWithinOrder.length).toBeGreaterThan(0)
+})
+
+test('TC-012-6 · 재생을 멈추면 인디케이터가 공유 커서 자리로 돌아온다', async ({ page }) => {
+  await openTrack(page)
+  const canvas = page.getByTestId('track-canvas')
+  await expect(canvas).toHaveAttribute('data-render-state', 'ready', { timeout: 20_000 })
+
+  await page.getByTestId('follow-toggle').click()
+  await page.getByTestId('follow-play').click()
+  await page.waitForTimeout(900)
+  await page.getByTestId('follow-play').click()
+  await expect(canvas).toHaveAttribute('data-follow-playing', 'false')
+
+  const slider = page.getByTestId('profile-strip-slider')
+  const cursor = Number(await slider.getAttribute('aria-valuenow'))
+  expect(cursor).toBeGreaterThan(0)
+
+  // 커서가 가리키는 자리 = 그 구간 경계선의 x. 둘이 같아야 세 표면이 한 곳을 가리킨다.
+  const indicator = await centerX(page.getByTestId('profile-indicator'))
+  const boundary = await centerX(page.getByTestId('profile-boundary').nth(cursor))
+  console.log(`TC-012-6 정지 후 인디케이터 ${indicator.toFixed(1)} · 경계 ${boundary.toFixed(1)}`)
+  expect(Math.abs(indicator - boundary)).toBeLessThan(1.5)
+})
+
 test('TC-012-4 · y축의 "상대 스케일(실측 아님)" 표기가 항상 남는다', async ({ page }) => {
   await openTrack(page)
 

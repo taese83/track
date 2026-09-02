@@ -61,6 +61,10 @@ interface ErrorScreenProps {
 | 3D 표시 | 스트립 드래그 스크럽 | `ProfileStrip.onScrub` | `setCursor(i,'strip')` → 목록 해당 행 강조 + **그 행으로 스크롤(nearest)·roving 포커스 동기**(PC-013, 목록이 DOM 포커스를 갖지 않을 때만), 캔버스 이동 | TC-012-2 · TC-013-6 |
 | 부분 실패 | 스트립 회색 구간 드래그 | `ProfileStrip` | `onScrub` 미호출 → 카메라 불변 | TC-012-3 |
 | 3D 표시 | 스트립 화살표 경계에서 추가 이동 | `ProfileStrip.onScrub` | 도달 가능 최대/최소 인덱스에서 멈춤(실패 구간 진입 없음) | — |
+| 3D 표시 | 추종 자동 재생 중(구간 경계 통과) | `TrackCanvas` → `setCursor(i,'canvas')` | 목록 행 강조·스크롤·roving 포커스 동기, 스트립 인디케이터가 그 구간으로 | TC-007-1 · TC-013-6 |
+| 3D 표시 | 추종 자동 재생 중(**한 구간 안 진행**) | `TrackCanvas` → `publishProgress(order+t)` (매 프레임, 커서 불변) | **스트립 인디케이터만** 보간 이동. 목록·`aria-valuenow`·카메라 목표는 불변 | TC-012-6 (PC-014) |
+| 3D 표시 | 스트립·목록으로 찍은 지점으로 카메라가 이동하는 중(seek) | `publishProgress(null)` | 인디케이터는 사용자가 찍은 지점에 그대로 — 카메라 뒤로 끌려가지 않는다 | TC-007-2 |
+| 3D 표시 | 재생 정지 · 추종 해제 | `publishProgress(null)` | 인디케이터가 `currentIndex` 위치로 즉시 복귀 | TC-012-6 |
 | 3D 표시 | 캔버스 자유 오빗 후 정지 | `TrackCanvas.onOrbitDepart` (debounce ≥250ms) | `setCursor(i,'canvas')` → 목록·스트립 동기화 | — |
 | 3D 표시 | 동일 인덱스로 재발행(예: 스트립이 캔버스가 이미 반영한 값을 재확인) | 리듀서 등가 검사 | 동일 state 참조 반환, 재렌더/재통지 없음 → 순환 종료 | 순환방지 회귀 시나리오(§shared.md) |
 | WebGL 미지원 | 목록 전체폭 확장 | `SectionList(variant='full-width')` | 캔버스 컬럼 미렌더, 스트립은 유지(고도 그래프 2D) | TC-013-5, TC-014-2 |

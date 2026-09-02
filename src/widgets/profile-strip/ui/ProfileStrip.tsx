@@ -6,7 +6,7 @@
 //
 // 접힘에서도 40px 헤더 바는 **항상 마운트**된다. 완전히 숨기면 FEAT-007의 유일한 조작
 // 표면이 사라진다(layout-spec §Chart 리사이즈 계약).
-import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import type { KeyboardEvent, PointerEvent } from 'react'
 
 import { axisTicks, clampToReachable, pointAtRatio } from '../lib/profile-points'
@@ -21,6 +21,13 @@ export interface ProfileStripProps {
   collapsed: boolean
   onToggleCollapsed: () => void
   loading?: boolean
+  /**
+   * 연속 진행축 구독(PC-014, TC-012-6). 추종 재생 중에는 이 값이 인디케이터 위치를 정하고,
+   * `null`이면 `currentIndex`로 돌아간다. 이 채널은 React state가 아니므로 통지가 와도
+   * 재렌더는 일어나지 않는다 — 인디케이터 노드의 transform만 바뀐다(shared.md §연속 진행 채널).
+   * 생략하면 구간 단위로만 움직인다(발행자 없는 화면 — WebGL 대체 표현 등).
+   */
+  subscribeProgress?: (listener: (fractionalIndex: number | null) => void) => () => void
 }
 
 /** layout-spec §Chart 리사이즈 계약 — 이보다 작으면 스트립 대신 진입점만 남긴다 */
@@ -50,6 +57,7 @@ export function ProfileStrip({
   collapsed,
   onToggleCollapsed,
   loading = false,
+  subscribeProgress,
 }: ProfileStripProps) {
   const { points, closureGapRelative } = model
   const total = points.length
@@ -76,6 +84,44 @@ export function ProfileStrip({
     current === undefined
       ? '구간 없음'
       : `${current.kindLabel}, ${currentIndex + 1}/${total}`
+
+  /*
+    인디케이터만 렌더 밖에서 움직인다(PC-014). 연속 진행값을 state에 넣으면 132개 경계선과
+    곡선까지 매 프레임 다시 그리게 되는데, 바뀌는 것은 세로선 하나의 x뿐이다. 그래서 값은
+    ref에 담고 노드의 transform만 직접 쓴다 — 프레임당 DOM 쓰기 1건, 재렌더 0건이다
+    (performance-budget §추종 재생 중 프레임 예산).
+  */
+  const indicatorRef = useRef<SVGGElement>(null)
+  const progressRef = useRef<number | null>(null)
+  const cursorRef = useRef(currentIndex)
+  const totalRef = useRef(total)
+
+  // 참조가 고정이라 구독이 구간마다 다시 걸리지 않는다 — 커서를 클로저로 잡으면 그렇게 된다
+  const paintIndicator = useCallback(() => {
+    const node = indicatorRef.current
+    if (node === null) return
+    const count = totalRef.current
+    const raw = progressRef.current ?? cursorRef.current
+    // 마지막 구간을 다 달리면 값이 `total`에 닿는다 — x축에는 그 자리가 없다
+    const bounded = Math.min(Math.max(raw, 0), Math.max(count - 1, 0))
+    node.setAttribute('transform', `translate(${xOf(bounded, count)} 0)`)
+  }, [])
+
+  // 렌더마다(= 커서가 바뀔 때마다) 페인트 전에 위치를 맞춘다. `useEffect`로 미루면 커서가
+  // 바뀐 프레임에 인디케이터가 한 번 깜빡인다.
+  useLayoutEffect(() => {
+    cursorRef.current = currentIndex
+    totalRef.current = total
+    paintIndicator()
+  })
+
+  useEffect(() => {
+    if (subscribeProgress === undefined) return undefined
+    return subscribeProgress((fractionalIndex) => {
+      progressRef.current = fractionalIndex
+      paintIndicator()
+    })
+  }, [subscribeProgress, paintIndicator])
 
   const scrubTo = useCallback(
     (index: number) => {
@@ -272,17 +318,23 @@ export function ProfileStrip({
                   />
                 )}
 
+                {/*
+                  위치는 `transform`이 정한다 — 아래 `line`은 원점의 세로선이고 `paintIndicator`가
+                  그 그룹을 옮긴다. x를 JSX에 두면 연속축 갱신이 곧 재렌더가 된다.
+                */}
                 {current !== undefined && (
-                  <line
-                    x1={xOf(currentIndex, total)}
-                    x2={xOf(currentIndex, total)}
-                    y1={0}
-                    y2={VIEW_HEIGHT}
-                    stroke="var(--color-accent, #7AA2F7)"
-                    strokeWidth={2}
-                    vectorEffect="non-scaling-stroke"
-                    data-testid="profile-indicator"
-                  />
+                  <g ref={indicatorRef} transform={`translate(${xOf(currentIndex, total)} 0)`}>
+                    <line
+                      x1={0}
+                      x2={0}
+                      y1={0}
+                      y2={VIEW_HEIGHT}
+                      stroke="var(--color-accent, #7AA2F7)"
+                      strokeWidth={2}
+                      vectorEffect="non-scaling-stroke"
+                      data-testid="profile-indicator"
+                    />
+                  </g>
                 )}
               </svg>
             </div>

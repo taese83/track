@@ -116,6 +116,15 @@ interface ProfileStripProps {
 }
 ```
 
+- **연속 진행축**(PC-014, TC-012-6): 인디케이터 위치는 두 축의 합성이다. 평소에는 `currentIndex`가
+  정하고, `subscribeProgress`(shared.md §연속 진행 채널)가 `null`이 아닌 값을 통지하는 동안에는 그
+  소수 인덱스가 정한다. 스트립은 이 통지를 **state에 넣지 않고** 인디케이터 노드의 transform만
+  직접 갱신한다 — 프레임당 DOM 쓰기 1건이고 React 재렌더는 0건이다. `points` 132개의 경계선·곡선은
+  다시 그리지 않는다. 통지가 `null`로 돌아오면 즉시 `currentIndex` 위치로 복귀한다.
+- **접근성 값은 구간 단위를 유지한다**: `aria-valuenow`/`aria-valuetext`/40px 헤더 요약은 계속
+  `currentIndex`만 반영한다(a11y-responsive §포커스 순서의 "aria-valuemin/max/now=구간 인덱스"가
+  정본). 연속축은 시각 표현 전용이다.
+
 - **시맨틱**: 단일 Tab stop, `role="slider" aria-valuemin={0} aria-valuemax={total-1} aria-valuenow={currentIndex} aria-valuetext="{segmentKind 라벨}, {index+1}/{total}"`. `←/→`=인접 **도달 가능한** 인덱스로 이동(실패 구간은 건너뛰지 않고 그 경계에서 멈춤 — 실패 지점 너머로 화살키가 넘어가지 않는다), `Home/End`=처음/마지막 도달 가능 인덱스, Enter 불필요(이동 즉시 반영, a11y-responsive 명시).
 - **드래그 스크럽**: pointermove로 최근접 인덱스 계산 → 실패 구간(회색 점선) 위에서는 `onScrub` 호출 자체를 하지 않는다(TC-012-3, 1차 방어). 2차 방어는 `isReachable()`(shared.md).
 - **y축**: "상대 스케일(실측 아님)" 텍스트를 항상 렌더(FEAT-010, 조건부 숨김 금지). 축 눈금은 nice number 4~6개(data-viz 원칙).
@@ -148,7 +157,8 @@ interface TrackCanvasProps {
 - **미지원 피스**(FEAT-009): 와이어프레임 박스 + `@react-three/drei` `Html` 오버레이로 "미지원: {타입명}" 라벨, 각 개별 세그먼트마다 독립 라벨(하나로 뭉뚱그리지 않음, TC-009-3).
 - **부분 실패**: `truncated`가 true면 복원 구간 끝에 시각적 절단 마커(예: 열린 프레임/점선 페이드)를 렌더 — 조용히 잘리지 않고 "여기서 끊겼다"를 드러낸다(제품 계약 §5).
 - **오빗 힌트 오버레이**: 좌상단 1회성 회전/줌 힌트, 이후 접힘. absolute 배치라 셸 치수 불변.
-- **오빗 발행 규칙**: `onOrbitDepart`는 `useFrame`/렌더 루프 안에서 매 프레임 호출 금지(shared.md §순환 갱신 방지책 1차 게이트 적용 대상). 카메라 이동 애니메이션 자체는 `--duration-*` 모션 토큰을 쓰지 않는다(design-system §4 — 카메라·자동재생은 3D 코드 소관, 인터랙션 전환 토큰의 목적 밖 소비 금지).
+- **오빗 발행 규칙**: `onOrbitDepart`는 `useFrame`/렌더 루프 안에서 매 프레임 호출 금지(shared.md §순환 갱신 방지책 1차 게이트 적용 대상).
+- **연속 진행 발행 규칙**(PC-014): 추종 재생 중 `useFrame`에서 `publishProgress(order + t)`를 **매 프레임** 호출한다. 이것은 위 금지의 예외가 아니라 **대상 밖**이다 — 커서가 아니라 재렌더를 만들지 않는 별도 채널이기 때문이다(shared.md §연속 진행 채널). 추종 해제·재생 정지·`seeking` 진입 시 `publishProgress(null)`을 1회 보낸다. 공유 커서 발행(`setCursor(order,'canvas')`)은 종전대로 구간이 바뀔 때만이다. 카메라 이동 애니메이션 자체는 `--duration-*` 모션 토큰을 쓰지 않는다(design-system §4 — 카메라·자동재생은 3D 코드 소관, 인터랙션 전환 토큰의 목적 밖 소비 금지).
 - **키보드**: 컨테이너 `tabIndex=0`, 방향키=오빗 회전, `+`/`-`=줌(a11y-responsive §포커스 순서).
 - **reduced-motion**: 자동재생 자동 진입 금지 + 카메라 전환 즉시 컷(design-system §4 그대로 승계).
 

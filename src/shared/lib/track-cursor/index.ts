@@ -1,3 +1,5 @@
 export { TrackCursorProvider, useTrackCursor } from './TrackCursorProvider'
 export type { TrackCursorApi, TrackCursorProviderProps } from './TrackCursorProvider'
 export type { CursorBounds, CursorSource, TrackCursorState } from './cursor-reducer'
+export { createProgressChannel } from './progress-channel'
+export type { ProgressChannel, ProgressListener } from './progress-channel'

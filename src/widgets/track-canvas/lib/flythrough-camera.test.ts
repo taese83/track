@@ -21,6 +21,7 @@ import {
   buildFlythroughPath,
   distanceOfOrder,
   easeToward,
+  fractionalOrderAtDistance,
   initialFlythroughState,
   orderAtDistance,
   poseAt,
@@ -365,6 +366,90 @@ describe('공유 커서 ↔ 경로 거리 왕복', () => {
     for (const order of [0, 1, 17, 64, layout.segments.length - 1]) {
       expect(orderAtDistance(flythrough, distanceOfOrder(flythrough, order))).toBe(order)
     }
+  })
+})
+
+// TC-012-6 — 스트립 인디케이터가 구간 안에서도 움직이려면 거리축이 소수 인덱스로 와야 한다.
+// 여기서 지켜야 할 두 성질: **정수 축과 절대 어긋나지 않는다**(목록과 스트립이 같은 자리를
+// 가리킨다)와 **구간 안에서 단조 증가한다**(계단이 사라진다).
+describe('TC-012-6 — 연속 진행축(소수 세그먼트 인덱스)', () => {
+  it('정수부가 `orderAtDistance`와 경로 전 구간에서 일치한다', async () => {
+    const { layout, elevated } = await sceneOf('WS67Y2.js.txt')
+    const flythrough = buildFlythroughPath({ segments: layout.segments, elevated })
+
+    const steps = 400
+    for (let step = 0; step <= steps; step += 1) {
+      const at = (flythrough.length * step) / steps
+      const fractional = fractionalOrderAtDistance(flythrough, at)
+      // 경계에 정확히 닿으면 소수부가 1.0이 되어 다음 정수와 만난다 — 그 자리는 둘 다 인정한다
+      const integer = orderAtDistance(flythrough, at)
+      expect(Math.floor(fractional)).toBeGreaterThanOrEqual(integer)
+      expect(Math.floor(fractional)).toBeLessThanOrEqual(integer + 1)
+      expect(fractional).toBeGreaterThanOrEqual(integer)
+      expect(fractional).toBeLessThanOrEqual(integer + 1)
+    }
+  })
+
+  it('경로 전체에서 단조 증가한다 — 인디케이터가 뒤로 가지 않는다', async () => {
+    const { layout, elevated } = await sceneOf('WS67Y2.js.txt')
+    const flythrough = buildFlythroughPath({ segments: layout.segments, elevated })
+
+    let previous = -1
+    for (let step = 0; step <= 800; step += 1) {
+      const value = fractionalOrderAtDistance(flythrough, (flythrough.length * step) / 800)
+      expect(value).toBeGreaterThanOrEqual(previous)
+      previous = value
+    }
+  })
+
+  it('정수 축이 멈춰 있는 동안에도 값이 자란다 — 이것이 계단을 없애는 성질이다', async () => {
+    const { layout, elevated } = await sceneOf('WS67Y2.js.txt')
+    const flythrough = buildFlythroughPath({ segments: layout.segments, elevated })
+
+    // 정수 축이 같은 값을 유지하는 가장 긴 거리 구간을 찾아 그 안을 잰다
+    let bestOrder = 0
+    let bestStart = 0
+    let bestEnd = 0
+    let order = orderAtDistance(flythrough, 0)
+    let runStart = 0
+    for (const waypoint of flythrough.waypoints) {
+      if (waypoint.order === order) continue
+      if (waypoint.distance - runStart > bestEnd - bestStart) {
+        bestOrder = order
+        bestStart = runStart
+        bestEnd = waypoint.distance
+      }
+      order = waypoint.order
+      runStart = waypoint.distance
+    }
+    expect(bestEnd - bestStart).toBeGreaterThan(10)
+
+    const samples = Array.from({ length: 9 }, (_, step) =>
+      fractionalOrderAtDistance(flythrough, bestStart + ((bestEnd - bestStart) * step) / 8),
+    )
+    for (let index = 1; index < samples.length; index += 1) {
+      expect(samples[index]!).toBeGreaterThan(samples[index - 1]!)
+    }
+    expect(samples[0]!).toBeCloseTo(bestOrder, 6)
+    expect(samples[samples.length - 1]!).toBeCloseTo(bestOrder + 1, 6)
+  })
+
+  it('경로 밖 거리는 양 끝으로 잘린다', async () => {
+    const { layout, elevated } = await sceneOf('WS67Y2.js.txt')
+    const flythrough = buildFlythroughPath({ segments: layout.segments, elevated })
+    const last = flythrough.waypoints[flythrough.waypoints.length - 1]!
+
+    expect(fractionalOrderAtDistance(flythrough, -500)).toBe(
+      fractionalOrderAtDistance(flythrough, 0),
+    )
+    expect(fractionalOrderAtDistance(flythrough, flythrough.length + 500)).toBeCloseTo(
+      last.order,
+      6,
+    )
+  })
+
+  it('빈 경로에서는 0이다 — 부르는 쪽이 방어하지 않아도 된다', () => {
+    expect(fractionalOrderAtDistance({ waypoints: [], length: 0, truncated: false }, 12)).toBe(0)
   })
 })
 

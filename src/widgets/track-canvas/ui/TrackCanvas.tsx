@@ -26,6 +26,7 @@ import { useTrackCursor } from '@/shared/lib/track-cursor'
 import {
   advanceFlythrough,
   buildFlythroughPath,
+  fractionalOrderAtDistance,
   distanceOfOrder,
   initialFlythroughState,
   jumpTo,
@@ -305,6 +306,7 @@ function FlythroughRig({
   stateRef,
   publishProgress,
   onCursorChange,
+  onStripProgress,
 }: {
   path: FlythroughPath
   stateRef: { current: FlythroughState }
@@ -312,6 +314,12 @@ function FlythroughRig({
   publishProgress: (order: number, distance: number) => void
   /** 추종 중 공유 커서를 끌고 간다. seek 중에는 부르지 않는다 */
   onCursorChange: (order: number) => void
+  /**
+   * 스트립 인디케이터의 연속 진행축(PC-014). 커서와 달리 **매 프레임** 발행한다 — 재렌더를
+   * 만들지 않는 채널이라 프레임당 비용이 DOM 쓰기 1건이다(shared.md §연속 진행 채널).
+   * 재생이 아니거나 seek 중이면 `null`을 보내 인디케이터를 커서 자리로 되돌린다.
+   */
+  onStripProgress: (fractionalIndex: number | null) => void
 }) {
   const camera = useThree((state) => state.camera)
   const lastOrder = useRef(-1)
@@ -349,6 +357,16 @@ function FlythroughRig({
       lastOrder.current = order
       if (!next.seeking) onCursorChange(order)
     }
+
+    // 연속 진행축은 **매 프레임** 간다(TC-012-6). 커서와 같은 조건으로 묶지 않는 이유가
+    // 이 기능의 전부다 — 구간이 바뀔 때만 보내면 다시 계단이 된다.
+    //
+    // seek 중에 보내지 않는 것은 커서와 같은 이유다: 사용자가 찍은 지점이 정본이고,
+    // 카메라가 따라가는 중간 위치를 보내면 인디케이터가 그 자리에서 뒤로 끌려간다.
+    // 재생이 아니면 `null`이다 — 정지 화면에서는 세 표면이 정확히 같은 구간을 가리킨다.
+    onStripProgress(
+      next.playing && !next.seeking ? fractionalOrderAtDistance(path, next.distance) : null,
+    )
   })
 
   return null
@@ -368,7 +386,8 @@ export function TrackCanvas({ layout, elevated }: TrackCanvasProps) {
 
   // FEAT-007 — 추종 시점. 공유 커서는 세 표면의 **유일한** 동기화 축이다(component-spec
   // §소유권). 스트립이 스크럽하면 여기로 들어오고, 재생 중에는 여기서 나간다.
-  const { currentIndex, lastSource, setCursor } = useTrackCursor()
+  const { currentIndex, lastSource, setCursor, publishProgress: publishStripProgress } =
+    useTrackCursor()
   const [following, setFollowing] = useState(false)
   const [playing, setPlayingUi] = useState(false)
   const [speed, setSpeed] = useState<number>(SPEED_STEPS[1])
@@ -475,6 +494,17 @@ export function TrackCanvas({ layout, elevated }: TrackCanvasProps) {
       ? jumpTo(flythroughRef.current, goal)
       : scrubTo(flythroughRef.current, goal)
   }, [following, currentIndex, lastSource, flythroughPath, reduceMotion])
+
+  /**
+   * 추종을 끄면 렌더 루프가 통째로 사라지므로 마지막 연속 진행값이 채널에 남는다. 그대로
+   * 두면 스트립 인디케이터가 커서와 어긋난 자리에 굳는다 — 여기서 `null`로 닫는다.
+   * 언마운트도 같다(화면 상태 전환·경로 교체).
+   */
+  useEffect(() => {
+    if (following) return () => publishStripProgress(null)
+    publishStripProgress(null)
+    return undefined
+  }, [following, publishStripProgress])
 
   /**
    * 추종 상태를 DOM에 드러낸다. 3D 캔버스는 픽셀만 남기므로 브라우저 검증이 "따라가고
@@ -586,6 +616,7 @@ export function TrackCanvas({ layout, elevated }: TrackCanvasProps) {
             stateRef={flythroughRef}
             publishProgress={publishFollow}
             onCursorChange={handleFollowCursor}
+            onStripProgress={publishStripProgress}
           />
         ) : null}
         <OrbitControls

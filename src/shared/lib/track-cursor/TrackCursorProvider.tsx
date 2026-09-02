@@ -3,7 +3,7 @@
 //
 // `TrackViewerPage`가 화면 상태 `3D 표시`/`부분 실패`/`WebGL 미지원`에 진입할 때만
 // 마운트한다 — `입력 대기`/`로딩`/`완전 실패`는 경로 자체가 없어 커서가 성립하지 않는다.
-import { createContext, useCallback, useContext, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 
 import {
@@ -13,6 +13,8 @@ import {
   stepBy as reduceStepBy,
 } from './cursor-reducer'
 import type { CursorBounds, CursorSource, TrackCursorState } from './cursor-reducer'
+import { createProgressChannel } from './progress-channel'
+import type { ProgressListener } from './progress-channel'
 
 export interface TrackCursorApi extends TrackCursorState {
   setCursor: (index: number, source: CursorSource) => void
@@ -20,6 +22,14 @@ export interface TrackCursorApi extends TrackCursorState {
   stepBy: (delta: number, source: CursorSource) => void
   /** 부분 실패 시 실패 구간 이후 false */
   isReachable: (index: number) => boolean
+  /**
+   * 연속 진행축 발행(PC-014). 커서와 **다른 축**이며 재렌더를 만들지 않으므로 렌더 루프
+   * 안에서 불러도 된다 — §순환 갱신 방지책 1차 게이트의 대상이 아니다(그 금지는 커서에
+   * 대한 것이다). 발행자는 추종 카메라 하나뿐이고 `null`은 "연속 진행 없음"이다.
+   */
+  publishProgress: (fractionalIndex: number | null) => void
+  /** 연속 진행축 구독. 구독자는 프로파일 스트립 하나뿐이다 */
+  subscribeProgress: (listener: ProgressListener) => () => void
 }
 
 const TrackCursorContext = createContext<TrackCursorApi | null>(null)
@@ -58,9 +68,22 @@ export function TrackCursorProvider({
   )
   const isReachable = useCallback((index: number) => isReachableAt(bounds, index), [bounds])
 
+  // 채널은 Provider 수명 동안 하나다. `api`가 커서 변화마다 새 객체가 되어도 아래 두
+  // 콜백의 참조는 고정이라 구독이 구간마다 다시 걸리지 않는다.
+  const channelRef = useRef<ReturnType<typeof createProgressChannel>>(undefined)
+  channelRef.current ??= createProgressChannel()
+  const publishProgress = useCallback(
+    (fractionalIndex: number | null) => channelRef.current?.publish(fractionalIndex),
+    [],
+  )
+  const subscribeProgress = useCallback(
+    (listener: ProgressListener) => channelRef.current?.subscribe(listener) ?? (() => {}),
+    [],
+  )
+
   const api = useMemo<TrackCursorApi>(
-    () => ({ ...state, setCursor, stepBy, isReachable }),
-    [state, setCursor, stepBy, isReachable],
+    () => ({ ...state, setCursor, stepBy, isReachable, publishProgress, subscribeProgress }),
+    [state, setCursor, stepBy, isReachable, publishProgress, subscribeProgress],
   )
 
   return <TrackCursorContext.Provider value={api}>{children}</TrackCursorContext.Provider>

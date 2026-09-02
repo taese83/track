@@ -117,7 +117,7 @@ function SectionColumn({
  * 접힘은 이 열의 로컬 상태다 — 공유 커서와 달리 다른 표면이 알 필요가 없다.
  */
 function ProfileColumn({ model }: { model: ProfileModel }) {
-  const { currentIndex, setCursor } = useTrackCursor()
+  const { currentIndex, setCursor, subscribeProgress } = useTrackCursor()
   const [collapsed, setCollapsed] = useState(false)
 
   const handleToggle = useCallback(() => setCollapsed((prev) => !prev), [])
@@ -130,6 +130,7 @@ function ProfileColumn({ model }: { model: ProfileModel }) {
       onScrub={handleScrub}
       collapsed={collapsed}
       onToggleCollapsed={handleToggle}
+      subscribeProgress={subscribeProgress}
     />
   )
 }

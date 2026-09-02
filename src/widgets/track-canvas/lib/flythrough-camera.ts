@@ -277,6 +277,53 @@ export function orderAtDistance(path: FlythroughPath, distance: number): number 
   return current
 }
 
+/**
+ * 누적 거리에서 **소수** 세그먼트 인덱스로 되돌린다(PC-014, TC-012-6).
+ *
+ * `orderAtDistance`가 정수 축이라면 이쪽은 그 축 **안의 진행까지** 담는 연속 축이다. 스트립
+ * 인디케이터가 이 값을 쓰면 한 구간을 달리는 동안에도 움직인다 — 정수 축만 쓰던 종전에는
+ * 240cm/s 재생에서 550ms 동안 제자리에 있다가 두 칸을 건너뛰었다(2026-09-02 실측).
+ *
+ * **정수부는 `orderAtDistance`와 반드시 같다.** 그래서 `order + t`(표본이 들고 있는 피스 안
+ * 비율)를 그대로 쓰지 않는다. 직선 피스는 표본이 둘뿐이고 이음새의 중복 점이 버려져 표본이
+ * **하나**(`t=1`)만 남는데, 그 값을 쓰면 같은 거리에서 정수 축이 1을 말할 때 소수 축이 2.0을
+ * 말한다(WS67Y2 order 1 실측). 그러면 목록은 1행을, 스트립은 2번 자리를 가리켜 공유 커서
+ * 계약이 화면에서 깨진다. 대신 **정수 축이 그 값을 유지하는 거리 구간**을 찾아 그 안에서
+ * 비율을 잰다 — 두 축이 정의상 어긋날 수 없다.
+ */
+export function fractionalOrderAtDistance(path: FlythroughPath, distance: number): number {
+  const waypoints = path.waypoints
+  if (waypoints.length === 0) return 0
+  const clamped = Math.min(Math.max(distance, 0), path.length)
+
+  // 1) 지금 정수 축이 말하는 order와 그 order가 **시작된** 거리
+  let order = waypoints[0]!.order
+  let start = waypoints[0]!.distance
+  let index = 0
+  for (; index < waypoints.length; index += 1) {
+    const waypoint = waypoints[index]!
+    if (waypoint.distance > clamped) break
+    if (waypoint.order !== order) {
+      order = waypoint.order
+      start = waypoint.distance
+    }
+  }
+
+  // 2) 그 order가 **끝나는** 거리. 끝까지 안 바뀌면 경로 끝이 경계다
+  let end = path.length
+  for (; index < waypoints.length; index += 1) {
+    const waypoint = waypoints[index]!
+    if (waypoint.order !== order) {
+      end = waypoint.distance
+      break
+    }
+  }
+
+  const span = end - start
+  if (span <= 0) return order
+  return order + Math.min(Math.max((clamped - start) / span, 0), 1)
+}
+
 export interface FlythroughState {
   /** 화면에 실제로 반영되는 위치 */
   distance: number
