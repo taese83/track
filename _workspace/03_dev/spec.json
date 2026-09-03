@@ -97,7 +97,8 @@
     "TC-019-4",
     "TC-019-5",
     "TC-019-6",
-    "TC-019-7"
+    "TC-019-7",
+    "TC-019-8"
   ],
   "constitution": {
     "substrate": {
@@ -426,7 +427,7 @@
           },
           {
             "path": "_workspace/01_plan/feature-plan/specs-scene.md",
-            "sha256": "37e441fefe089884136224b99b19a429097853d01c8926384ca76b3ce5100dad"
+            "sha256": "ea95766989152e095f1d464feced2e94a144e63ad7369c1cf1019668e6602a38"
           },
           {
             "path": "_workspace/01_plan/feature-plan/specs-surfaces.md",
@@ -434,10 +435,10 @@
           },
           {
             "path": "_workspace/01_plan/feature-plan/traceability.md",
-            "sha256": "1faa3515b74c0edb6f7b4471f1bb72bc93edb9f008a30ea5f2e05c572fe6db6a"
+            "sha256": "1289347315c1439f20a78568544fb9ad6c2400355b5e108fd040018c105d1d26"
           }
         ],
-        "sha256": "d1a3b10323b782f056b77acf366ba8724fdfe5e4157e25fd24f4846712684a23"
+        "sha256": "e5fd0aa635560b29c4cad369ff6f7619aff7498ad8566e8d3b2df0ef40e7f252"
       },
       {
         "path": "_workspace/01_plan/tech-stack.md",
@@ -496,10 +497,10 @@
           },
           {
             "path": "_workspace/02_design/component-spec/widgets.md",
-            "sha256": "bffc963c33ab326da2f35ab49b3a10023ec27e82eab3376ee9687ebb91e3341c"
+            "sha256": "9e9ee6b92a6de032122cc0a8650e5ca64c4b45b0d16fa537245415b5a545e2f1"
           }
         ],
-        "sha256": "1100b924cb3ea4cee6200aec606e2809fc742262b2681b8a547a89a418c1fee6"
+        "sha256": "506d07ac327dcc610dbfc9d2c71db55a264950f54d4f2fc87637b2c703d102cb"
       },
       {
         "path": "_workspace/02_design/state-contract.md",
@@ -513,9 +514,9 @@
       {
         "path": "_workspace/02_design/solution-design.md",
         "present": true,
-        "sha256": "d3b80262d8f4d512e086ed758e7dba622e1ca4e7f8e31897a0c58ec918d4a24e"
+        "sha256": "084c677ff60bdc72e5a2d87a62df25020363689ef10266e2d7e987bdd0ed8744"
       }
     ],
-    "combined": "ec2b4a84527c6e2b5863c27ae359e4b61ac55187aea6b7b066dc31e728edd40d"
+    "combined": "b07925a581574f1aaa006f616e3562b192843243a7b226f392bf9c57aba16917"
   }
 }

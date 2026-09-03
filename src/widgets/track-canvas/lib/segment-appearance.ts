@@ -3,8 +3,8 @@
 import type { SegmentDirection } from './segment-encoding'
 
 /** design-system tokens §2. 3D 표면 전용 원본 실측색이며 텍스트에는 쓰지 않는다 */
-const RISE_SURFACE = '#AD0A09'
-const FALL_SURFACE = '#004E8F'
+export const RISE_SURFACE = '#AD0A09'
+export const FALL_SURFACE = '#004E8F'
 
 /**
  * 고도가 변하지 않는 구간의 표면색. **design-system에 대응 토큰이 없다** — §2 팔레트는
@@ -14,10 +14,10 @@ const FALL_SURFACE = '#004E8F'
  * 그래서 계측기 톤의 무채색을 잠정값으로 두고, 실패 구간(`#5C636C`)보다 밝게 두어
  * "트랙 아님" 신호와 섞이지 않게 한다.
  */
-const FLAT_SURFACE = '#A8AEB8'
+export const FLAT_SURFACE = '#A8AEB8'
 
 /** design-system tokens §2 `fail-segment` — 무채색으로 "트랙 아님"을 말한다 */
-const UNSUPPORTED_SURFACE = '#5C636C'
+export const UNSUPPORTED_SURFACE = '#5C636C'
 
 /**
  * 가운데 레인을 가르는 밝기 차(0~255). **`filter`를 쓰지 않는다** — SVG/CSS filter는 도형을

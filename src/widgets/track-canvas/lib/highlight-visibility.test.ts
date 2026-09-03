@@ -6,12 +6,23 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  contrastRatio,
   easeProgress,
+  edgeContrastOn,
+  HIGHLIGHT_EDGE_DARK,
+  HIGHLIGHT_EDGE_LIGHT,
+  HIGHLIGHT_FILL,
   isPointInView,
   lerpPoint,
   TARGET_EASE_MS,
   VIEW_MARGIN_NDC,
 } from './highlight-visibility'
+import {
+  FALL_SURFACE,
+  FLAT_SURFACE,
+  RISE_SURFACE,
+  UNSUPPORTED_SURFACE,
+} from './segment-appearance'
 
 describe('isPointInView', () => {
   it('화면 한가운데는 안이다', () => {
@@ -84,5 +95,44 @@ describe('lerpPoint', () => {
     expect(lerpPoint(from, to, 0)).toEqual(from)
     expect(lerpPoint(from, to, 1)).toEqual(to)
     expect(lerpPoint(from, to, 0.5)).toEqual({ x: 50, y: 0, z: 0 })
+  })
+})
+
+describe('TC-019-8 · 테두리 대비', () => {
+  // 실제 표면색 상수를 그대로 가져온다 — 노면 색이 바뀌면 이 검사가 함께 깨져야 한다.
+  const surfaces = {
+    평지: FLAT_SURFACE,
+    상승: RISE_SURFACE,
+    하강: FALL_SURFACE,
+    미지원: UNSUPPORTED_SURFACE,
+  }
+
+  it('네 노면 **모두**에서 두 톤 중 하나가 3:1을 넘는다', () => {
+    for (const [name, surface] of Object.entries(surfaces)) {
+      expect(edgeContrastOn(surface), `${name} 노면`).toBeGreaterThanOrEqual(3)
+    }
+  })
+
+  it('두 톤이 실제로 역할을 나눈다 — 밝은 평지는 어두운 톤이, 어두운 노면은 밝은 톤이 읽힌다', () => {
+    expect(contrastRatio(HIGHLIGHT_EDGE_DARK, FLAT_SURFACE)).toBeGreaterThan(
+      contrastRatio(HIGHLIGHT_EDGE_LIGHT, FLAT_SURFACE),
+    )
+    for (const dark of [RISE_SURFACE, FALL_SURFACE]) {
+      expect(contrastRatio(HIGHLIGHT_EDGE_LIGHT, dark)).toBeGreaterThan(
+        contrastRatio(HIGHLIGHT_EDGE_DARK, dark),
+      )
+    }
+  })
+
+  it('단일 색으로는 불가능했다는 사실을 고정한다 — 회귀 시 이 검사가 근거를 되돌려준다', () => {
+    // PC-015의 단색 primary는 평지에서 1.10:1이었다(이 라운드가 고친 결함).
+    expect(contrastRatio(HIGHLIGHT_FILL, FLAT_SURFACE)).toBeLessThan(1.5)
+    // 반대로 진한 보라 하나로 평지를 살리면 어두운 노면이 죽는다
+    expect(contrastRatio('#6D28D9', FALL_SURFACE)).toBeLessThan(1.5)
+  })
+
+  it('대비 계산이 WCAG 정의를 따른다 — 흰/검 21:1, 자기 자신 1:1', () => {
+    expect(contrastRatio('#FFFFFF', '#000000')).toBeCloseTo(21, 2)
+    expect(contrastRatio('#A78BFA', '#A78BFA')).toBeCloseTo(1, 10)
   })
 })

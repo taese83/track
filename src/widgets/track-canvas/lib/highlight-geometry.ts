@@ -19,17 +19,46 @@ import { buildTrackGeometries } from './track-geometry'
 /** 면 오버레이를 노면 위로 띄우는 높이(cm). 0이면 z-fighting으로 하이라이트가 깜빡인다 */
 export const HIGHLIGHT_SURFACE_LIFT_CM = 0.6
 
-/** 윤곽선은 면보다 더 띄운다 — 같은 높이면 자기 오버레이 안에 파묻혀 형태 채널이 사라진다 */
+/** 테두리는 면보다 더 띄운다 — 같은 높이면 자기 오버레이 안에 파묻혀 형태 채널이 사라진다 */
 export const HIGHLIGHT_OUTLINE_LIFT_CM = 1.4
+
+/**
+ * 테두리 한 톤의 폭(cm). 두 톤이 나란히 깔리므로 실제 테두리는 이 값의 두 배다(ASSUMPTION E).
+ *
+ * **왜 선이 아니라 폭을 가진 띠인가**: WebGL의 선 굵기는 대부분 플랫폼에서 1px로 고정되어
+ * three의 `linewidth`가 무시된다. 132피스 전체 보기에서 한 구간의 윤곽선은 17px밖에 되지
+ * 않아(2026-09-02 실측) 대비를 고쳐도 얇으면 여전히 안 보인다. 씬 단위 폭이라 확대하면
+ * 함께 굵어지고 축소하면 함께 가늘어진다 — 트랙의 일부처럼 거동한다.
+ */
+export const HIGHLIGHT_BORDER_WIDTH_CM = 2
 
 /** `buildTrackGeometries`가 색으로 묶을 때 쓰는 임의 키. 실제 색은 렌더가 정한다 */
 const SINGLE_BUCKET = 'highlight'
 
+/**
+ * 빈 지오메트리도 `position`을 갖는다 — 속성이 아예 없는 BufferGeometry를 three의 mesh에
+ * 넘기면 경계 계산·렌더 경로가 `undefined`를 만난다. 그릴 것이 없는 것과 형태가 깨진 것은
+ * 다르다.
+ */
+function emptyGeometry(): BufferGeometry {
+  const geometry = new BufferGeometry()
+  geometry.setAttribute('position', new BufferAttribute(new Float32Array(0), 3))
+  return geometry
+}
+
 export interface HighlightGeometry {
   /** 레인 면을 덮는 반투명 오버레이 */
   surface: BufferGeometry
-  /** 구간 **바깥 둘레**의 선분 쌍 목록 */
-  outline: BufferGeometry
+  /** 둘레 바깥쪽 띠 — 밝은 톤. 어두운 노면에서 이쪽이 읽힌다 */
+  borderLight: BufferGeometry
+  /** 그 안쪽에 나란히 붙는 띠 — 어두운 톤. 밝은 평지에서 이쪽이 읽힌다 */
+  borderDark: BufferGeometry
+}
+
+/** 띠 하나를 이루는 두 가장자리 폴리라인 */
+interface Strip {
+  lo: BandPoint[]
+  hi: BandPoint[]
 }
 
 function liftPoints(points: readonly BandPoint[], lift: number): BandPoint[] {
@@ -72,39 +101,116 @@ export function outerRingsOf(band: SegmentBands): { lo: BandPoint[]; hi: BandPoi
   return [{ lo: [...first.lo], hi: [...last.hi] }]
 }
 
-function pushSegment(target: number[], a: BandPoint, b: BandPoint) {
-  target.push(a.x, a.y, a.z, b.x, b.y, b.z)
+/**
+ * `from`에서 `to` 쪽으로 `distance`만큼 간 점. **반대쪽 가장자리를 넘지 않는다** — 좁은
+ * 구간(명시 경로의 레인 하나는 12cm)에서 띠가 반대편으로 뒤집히면 면이 접힌다.
+ */
+function towards(from: BandPoint, to: BandPoint, distance: number): BandPoint {
+  const dx = to.x - from.x
+  const dy = to.y - from.y
+  const dz = to.z - from.z
+  const length = Math.hypot(dx, dy, dz)
+  if (length === 0) return { ...from }
+  const k = Math.min(distance / length, 1)
+  return { x: from.x + dx * k, y: from.y + dy * k, z: from.z + dz * k }
+}
+
+/** 가장자리 폴리라인을 마주 보는 쪽으로 `distance`만큼 안쪽으로 민 폴리라인 */
+function insetEdge(edge: readonly BandPoint[], facing: readonly BandPoint[], distance: number) {
+  return edge.map((point, at) => towards(point, facing[at] ?? point, distance))
 }
 
 /**
- * 둘레를 **닫힌 고리**로 낸다 — 양 옆 두 줄에 진입·진출 마구리 두 줄을 더한다. 마구리가
- * 없으면 구간의 시작과 끝이 열려 있어 어디까지가 이 구간인지가 화면에서 끊기지 않는다.
+ * 마구리(진입·진출)에서 진행 방향으로 `distance`만큼 들어간 단면. 표본 간격보다 깊이 들어가야
+ * 하면 첫 스팬 전체로 잘린다 — 짧은 피스에서 다음 단면을 넘어가지 않게 한다.
  */
-export function buildHighlightOutline(band: SegmentBands): BufferGeometry {
-  const lifted = liftBand(band, HIGHLIGHT_OUTLINE_LIFT_CM)
-  const positions: number[] = []
+function crossAtDepth(ring: Strip, endIndex: number, nextIndex: number, distance: number) {
+  return {
+    lo: towards(ring.lo[endIndex]!, ring.lo[nextIndex]!, distance),
+    hi: towards(ring.hi[endIndex]!, ring.hi[nextIndex]!, distance),
+  }
+}
 
-  for (const ring of outerRingsOf(lifted)) {
-    const count = Math.min(ring.lo.length, ring.hi.length)
-    for (let index = 0; index + 1 < count; index += 1) {
-      pushSegment(positions, ring.lo[index]!, ring.lo[index + 1]!)
-      pushSegment(positions, ring.hi[index]!, ring.hi[index + 1]!)
-    }
-    pushSegment(positions, ring.lo[0]!, ring.hi[0]!)
-    pushSegment(positions, ring.lo[count - 1]!, ring.hi[count - 1]!)
+/**
+ * 둘레를 따라가는 띠 한 겹. `inner`~`outer` 거리 구간을 채운다(둘 다 구간 **안쪽** 방향).
+ * 양 옆 두 줄에 진입·진출 마구리 두 장을 더해 **닫힌 고리**를 만든다 — 마구리가 없으면
+ * 구간의 시작과 끝이 열려 어디까지가 이 구간인지가 끊긴다.
+ */
+function borderStrips(ring: Strip, near: number, far: number): Strip[] {
+  const count = Math.min(ring.lo.length, ring.hi.length)
+  if (count < 2) return []
+  const last = count - 1
+
+  const strips: Strip[] = [
+    { lo: insetEdge(ring.lo, ring.hi, near), hi: insetEdge(ring.lo, ring.hi, far) },
+    { lo: insetEdge(ring.hi, ring.lo, near), hi: insetEdge(ring.hi, ring.lo, far) },
+  ]
+
+  for (const [endIndex, nextIndex] of [
+    [0, 1],
+    [last, last - 1],
+  ] as const) {
+    const nearCross = crossAtDepth(ring, endIndex, nextIndex, near)
+    const farCross = crossAtDepth(ring, endIndex, nextIndex, far)
+    strips.push({ lo: [nearCross.lo, nearCross.hi], hi: [farCross.lo, farCross.hi] })
   }
 
-  const geometry = new BufferGeometry()
-  geometry.setAttribute('position', new BufferAttribute(new Float32Array(positions), 3))
-  return geometry
+  return strips
+}
+
+/** 띠 여러 장을 버퍼 하나로. 삼각형 배치는 `buildTrackGeometries`가 정본이다 */
+function stripsToGeometry(strips: readonly Strip[]): BufferGeometry {
+  if (strips.length === 0) return emptyGeometry()
+  const lanes: LaneBand[] = strips.map((strip, lane) => ({ lane, lo: strip.lo, hi: strip.hi }))
+  const [bucket] = buildTrackGeometries(
+    [
+      {
+        order: 0,
+        pieceId: '',
+        pieceClass: '',
+        isSupported: true,
+        lanes,
+        separated: false,
+      },
+    ],
+    () => SINGLE_BUCKET,
+  )
+  return bucket?.geometry ?? new BufferGeometry()
+}
+
+/**
+ * 둘레의 두 톤 띠. 바깥이 밝은 톤, 그 안쪽에 어두운 톤이 나란히 붙는다 — 어느 노면 위에서든
+ * 둘 중 하나가 3:1을 넘는다(TC-019-8, `highlight-visibility.ts`의 색 상수가 정본).
+ * 둘 다 구간 **안쪽**으로만 깔린다: 바깥으로 내밀면 이웃 구간을 덮는다.
+ */
+export function buildHighlightBorders(
+  band: SegmentBands,
+  width: number = HIGHLIGHT_BORDER_WIDTH_CM,
+): { light: BufferGeometry; dark: BufferGeometry } {
+  const rings = outerRingsOf(liftBand(band, HIGHLIGHT_OUTLINE_LIFT_CM))
+  const light: Strip[] = []
+  const dark: Strip[] = []
+  for (const ring of rings) {
+    light.push(...borderStrips(ring, 0, width))
+    dark.push(...borderStrips(ring, width, width * 2))
+  }
+  return { light: stripsToGeometry(light), dark: stripsToGeometry(dark) }
 }
 
 /** 레인 면을 덮는 오버레이. 삼각형 배치는 `buildTrackGeometries`가 정본이다 */
 export function buildHighlightSurface(band: SegmentBands): BufferGeometry {
-  const [bucket] = buildTrackGeometries([liftBand(band, HIGHLIGHT_SURFACE_LIFT_CM)], () => SINGLE_BUCKET)
-  return bucket?.geometry ?? new BufferGeometry()
+  const [bucket] = buildTrackGeometries(
+    [liftBand(band, HIGHLIGHT_SURFACE_LIFT_CM)],
+    () => SINGLE_BUCKET,
+  )
+  return bucket?.geometry ?? emptyGeometry()
 }
 
 export function buildHighlightGeometry(band: SegmentBands): HighlightGeometry {
-  return { surface: buildHighlightSurface(band), outline: buildHighlightOutline(band) }
+  const borders = buildHighlightBorders(band)
+  return {
+    surface: buildHighlightSurface(band),
+    borderLight: borders.light,
+    borderDark: borders.dark,
+  }
 }

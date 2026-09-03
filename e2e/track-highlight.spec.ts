@@ -5,13 +5,18 @@
 //
 // 하이라이트는 3D 픽셀이라 DOM에 흔적을 남기지 않는다. 두 축으로 잰다:
 // ① `data-highlight-order` — 어느 구간을 짚고 있는가(구조)
-// ② 캔버스 스크린샷의 primary 색 픽셀 수 — 실제로 그려졌는가(픽셀).
+// ② 캔버스 스크린샷의 테두리 색 픽셀 수 — 실제로 그려졌는가(픽셀).
 // ②는 베이스라인 diff가 **아니다**(nonGoals "픽셀 스크린샷 diff로 CI를 게이팅하지 않는다") —
 // 고정 hex 하나가 화면에 있는지 세는 존재 판정이며 기준 이미지를 갖지 않는다.
 import { expect, test, type Locator, type Page } from '@playwright/test'
 
-/** design-system tokens §2 `primary` — 윤곽선이 이 색 그대로 그려진다(면은 반투명이라 섞인다) */
-const PRIMARY_RGB = { r: 0xa7, g: 0x8b, b: 0xfa }
+/**
+ * 테두리 밝은 톤 `highlight-edge-light #C4B5FD`. 테두리는 불투명해 이 색 그대로 화면에 남는다
+ * (면은 반투명이라 아래 노면색과 섞여 값이 배경마다 달라진다 — 세는 대상이 아니다).
+ * 여유를 좁게 잡는다: `primary-hover #B9A3FC`가 가까워 넓게 잡으면 UI 크롬이 씬으로 샌다.
+ */
+const EDGE_LIGHT_RGB = { r: 0xc4, g: 0xb5, b: 0xfd }
+const EDGE_TOLERANCE = { r: 18, g: 18, b: 14 }
 
 async function submit(page: Page, value: string) {
   await page.getByTestId('url-input').fill(value)
@@ -26,10 +31,10 @@ async function openTrack(page: Page, code = 'WS67Y2'): Promise<Locator> {
 }
 
 /**
- * 캔버스 안의 primary 픽셀 수. PNG 디코더를 의존성으로 들이지 않으려고 스크린샷을 다시
+ * 캔버스 안의 테두리 픽셀 수. PNG 디코더를 의존성으로 들이지 않으려고 스크린샷을 다시
  * 브라우저로 보내 2D 캔버스에서 센다(CHANGE_BUDGET 의존성 0).
  */
-async function primaryPixels(page: Page, canvas: Locator): Promise<number> {
+async function edgePixels(page: Page, canvas: Locator): Promise<number> {
   const box = await canvas.locator('canvas').boundingBox()
   if (box === null) throw new Error('캔버스 박스를 읽지 못했다')
   // 캔버스 위에 **겹친** 조작 오버레이를 가린다. clip은 겹침을 걷어내지 못한다 — 추종 토글과
@@ -45,7 +50,7 @@ async function primaryPixels(page: Page, canvas: Locator): Promise<number> {
   })
 
   return page.evaluate(
-    async ({ data, target }) => {
+    async ({ data, target, tolerance }) => {
       const image = new Image()
       await new Promise<void>((resolve, reject) => {
         image.addEventListener('load', () => resolve())
@@ -65,16 +70,16 @@ async function primaryPixels(page: Page, canvas: Locator): Promise<number> {
         // 안티에일리어싱 여유. 편집기 팔레트(빨강 #AD0A09·파랑 #004E8F·청록·주황)는 어느
         // 채널로도 이 창에 들어오지 않는다 — 보라를 고른 이유가 그것이다(tokens §2).
         if (
-          Math.abs(pixels[at]! - target.r) <= 36
-          && Math.abs(pixels[at + 1]! - target.g) <= 36
-          && Math.abs(pixels[at + 2]! - target.b) <= 26
+          Math.abs(pixels[at]! - target.r) <= tolerance.r
+          && Math.abs(pixels[at + 1]! - target.g) <= tolerance.g
+          && Math.abs(pixels[at + 2]! - target.b) <= tolerance.b
         ) {
           hits += 1
         }
       }
       return hits
     },
-    { data: shot.toString('base64'), target: PRIMARY_RGB },
+    { data: shot.toString('base64'), target: EDGE_LIGHT_RGB, tolerance: EDGE_TOLERANCE },
   )
 }
 
@@ -105,14 +110,14 @@ test('TC-019-1 · 목록 행을 클릭하면 그 구간이 씬에서 하이라�
   await expect(canvas).toHaveAttribute('data-follow-mode', 'false')
   await expect(canvas).toHaveAttribute('data-highlight-order', '0')
 
-  const before = await primaryPixels(page, canvas)
+  const before = await edgePixels(page, canvas)
 
   await page.getByTestId('section-row-40').click()
   await expect(canvas).toHaveAttribute('data-highlight-order', '40')
   await expect(page.getByTestId('section-row-40')).toHaveAttribute('aria-selected', 'true')
 
-  const after = await primaryPixels(page, canvas)
-  console.log(`TC-019-1 primary 픽셀 ${before} → ${after}`)
+  const after = await edgePixels(page, canvas)
+  console.log(`TC-019-1 테두리 픽셀 ${before} → ${after}`)
   expect(after).toBeGreaterThan(0)
 
   // 동시에 하나뿐이다 — 다음 행을 고르면 앞의 것이 남지 않는다
@@ -135,7 +140,7 @@ test('TC-019-2 · 스트립 조작이 옮긴 지점을 목록·스트립·하이
   await expect(canvas).toHaveAttribute('data-highlight-order', cursor!)
   await expect(page.getByTestId(`section-row-${cursor}`)).toHaveAttribute('aria-selected', 'true')
 
-  expect(await primaryPixels(page, canvas)).toBeGreaterThan(0)
+  expect(await edgePixels(page, canvas)).toBeGreaterThan(0)
 })
 
 test('TC-019-3 · 트랙 아래에서 올려다봐도 윤곽선이 보인다(깊이 검사를 하지 않는다)', async ({
@@ -152,7 +157,7 @@ test('TC-019-3 · 트랙 아래에서 올려다봐도 윤곽선이 보인다(깊
   await expect(canvas).toHaveAttribute('data-highlight-order', '60')
   await page.waitForTimeout(600)
 
-  const above = await primaryPixels(page, canvas)
+  const above = await edgePixels(page, canvas)
   expect(above).toBeGreaterThan(0)
 
   // 극각을 90°(π/2) 너머로 돌려 **트랙 밑면**에서 본다(TC-006-6의 360° 순환). 그러면 노면이
@@ -165,7 +170,7 @@ test('TC-019-3 · 트랙 아래에서 올려다봐도 윤곽선이 보인다(깊
   const polar = Number((await canvas.getAttribute('data-camera-polar')) ?? '0')
   expect(polar).toBeGreaterThan(Math.PI / 2 + 0.2)
 
-  const below = await primaryPixels(page, canvas)
+  const below = await edgePixels(page, canvas)
   console.log(`TC-019-3 위에서 ${above}px · 밑면에서 ${below}px (극각 ${polar.toFixed(3)}rad)`)
   expect(below).toBeGreaterThan(0)
 })
@@ -199,7 +204,7 @@ test('TC-019-4 · 화면 안이면 카메라를 건드리지 않고, 밖이면 �
   expect(Number(moved.distance) / Number(zoomed.distance)).toBeCloseTo(1, 3)
 
   // 옮겼으니 보인다
-  expect(await primaryPixels(page, canvas)).toBeGreaterThan(0)
+  expect(await edgePixels(page, canvas)).toBeGreaterThan(0)
 })
 
 test('TC-019-5 · 추종을 켜면 하이라이트가 사라지고 끄면 커서 자리에 돌아온다', async ({
@@ -212,7 +217,7 @@ test('TC-019-5 · 추종을 켜면 하이라이트가 사라지고 끄면 커서
   await page.getByTestId('follow-toggle').click()
   await expect(canvas).toHaveAttribute('data-follow-mode', 'true')
   await expect(canvas).not.toHaveAttribute('data-highlight-order', /.*/)
-  expect(await primaryPixels(page, canvas)).toBe(0)
+  expect(await edgePixels(page, canvas)).toBe(0)
 
   await page.getByTestId('follow-toggle').click()
   await expect(canvas).toHaveAttribute('data-follow-mode', 'false')

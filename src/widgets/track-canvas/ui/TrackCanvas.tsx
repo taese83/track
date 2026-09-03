@@ -44,6 +44,10 @@ import type { SegmentBands } from '../lib/lane-bands'
 import { buildHighlightGeometry, isHighlightable } from '../lib/highlight-geometry'
 import {
   easeProgress,
+  HIGHLIGHT_EDGE_DARK,
+  HIGHLIGHT_EDGE_LIGHT,
+  HIGHLIGHT_FILL,
+  HIGHLIGHT_FILL_OPACITY,
   isPointInView,
   lerpPoint,
   TARGET_EASE_MS,
@@ -108,24 +112,6 @@ const MARKER_COLOR = '#F2F4F8'
 
 /** design-system tokens §2 `warning` — 미지원은 경고이지 트랙이 아니다 */
 const PLACEHOLDER_COLOR = '#E8B339'
-
-/**
- * design-system tokens §2 `primary`(다크). 그 토큰의 정의 근거가 이미 "액션/포커스/**현재
- * 위치 마커** — 편집기 피스 팔레트(빨강·파랑·청록·주황)와 겹치지 않는 유일한 안전 hue"다.
- * CSS 변수를 읽지 않고 hex를 쓰는 것은 three 재질이 `var()`를 모르기 때문이며,
- * 캔버스 `clearColor`가 이미 다크 하드코딩이라 라이트 모드 분기가 성립하지 않는다.
- */
-const HIGHLIGHT_COLOR = '#A78BFA'
-
-/**
- * 면 오버레이 불투명도. design-system에 3D 표면 오버레이 토큰이 없다 — §4의 "캔버스
- * 오버레이 ≥0.88"은 3D 위에 뜨는 **DOM 패널** 계약이지 표면 덧칠이 아니다. 아래 원본
- * 편집기색이 비쳐야 대조(사용자 1순위 성공 조건)가 살아 있으므로 낮게 둔다.
- *
- * 0.35로 뒀다가 캡처 실측(2026-09-02, WS67Y2 확대)에서 평지 무채색 위 결과가 너무 옅어
- * 0.45로 올렸다. 하강색 `#004E8F` 위에서도 합성색이 여전히 푸른 보라라 원본 hue가 읽힌다.
- */
-const HIGHLIGHT_SURFACE_OPACITY = 0.45
 
 /** 세그먼트 가운데 레인의 중간 표본 — 표식과 라벨이 붙는 자리 */
 function anchorOf(band: SegmentBands): { x: number; y: number; z: number } | null {
@@ -433,7 +419,8 @@ function CursorHighlight({
   useEffect(
     () => () => {
       geometry?.surface.dispose()
-      geometry?.outline.dispose()
+      geometry?.borderLight.dispose()
+      geometry?.borderDark.dispose()
     },
     [geometry],
   )
@@ -505,24 +492,63 @@ function CursorHighlight({
         면은 깊이 검사를 **그대로 둔다** — 언덕 뒤 구간이 면까지 뚫고 보이면 "가려져 있다"는
         사실이 화면에서 지워진다. `depthWrite`만 끈다(반투명 오버레이가 뒤 표면을 가리지 않게).
       */}
+      {/*
+        `toneMapped={false}`가 세 재질 모두에 붙는다. R3F 기본 ACES 톤매핑은 **물리 조명을
+        받는 표면**을 위한 것이고, 하이라이트는 조명이 아니라 UI 신호다. 켜 두면 지정한 hex와
+        화면 픽셀이 갈린다 — 실측(2026-09-03): 밝은 톤 `#C4B5FD`(196,181,253)가 화면에서
+        (195,177,225)로, 어두운 톤 `#2E1065`(46,16,101)가 (94,72,154)로 나왔다. 그러면
+        design-system에 적은 대비값이 화면의 대비가 아니게 된다(평지 6.83 → 실측 3.18).
+        끄면 토큰 값이 곧 화면 값이고 평지 대비가 6.62로 돌아온다.
+      */}
       <mesh geometry={geometry.surface} renderOrder={1}>
         <meshBasicMaterial
-          color={HIGHLIGHT_COLOR}
+          color={HIGHLIGHT_FILL}
           transparent
-          opacity={HIGHLIGHT_SURFACE_OPACITY}
+          opacity={HIGHLIGHT_FILL_OPACITY}
           side={2}
           depthWrite={false}
+          toneMapped={false}
         />
       </mesh>
 
       {/*
-        윤곽선은 **깊이 검사를 하지 않는다**(TC-019-3) — 가려진 지점을 골랐을 때 "저 뒤에
+        테두리는 **깊이 검사를 하지 않는다**(TC-019-3) — 가려진 지점을 골랐을 때 "저 뒤에
         있다"가 보여야 이 기능이 132구간 트랙에서 쓸모가 있다. `renderOrder`를 올려 마지막에
         그린다: depthTest만 끄고 순서를 두지 않으면 뒤에 그려지는 불투명 면이 덮어 버린다.
+
+        두 톤을 나란히 둔다(TC-019-8) — 밝은 평지에서는 어두운 쪽이, 어두운 상승·하강에서는
+        밝은 쪽이 3:1을 넘긴다. 단일 색으로는 셋 모두를 만족시킬 수 없다(PC-016).
+        선이 아니라 **면**인 것은 WebGL의 선 굵기가 대부분 1px로 고정이기 때문이다.
+
+        `transparent`를 불투명도 1로 켜는 것은 순서 때문이다. three는 **투명 객체를 불투명
+        객체보다 뒤에** 그리고 `renderOrder`는 그 두 목록 **안에서만** 작동한다. 테두리를
+        불투명으로 두면 반투명 면(renderOrder 1)이 나중에 그려져 테두리를 덮는다 —
+        실측(2026-09-03): 밝은 톤이 (196,181,253)이 아니라 면이 0.45로 얹힌 (183,162,252)로,
+        어두운 톤이 (46,16,101)이 아니라 (100,71,168)로 나왔다. 판독을 책임지는 채널이
+        정확히 그만큼 희석된다. 같은 목록에 넣으면 renderOrder가 다시 유효해진다.
       */}
-      <lineSegments geometry={geometry.outline} renderOrder={2}>
-        <lineBasicMaterial color={HIGHLIGHT_COLOR} depthTest={false} depthWrite={false} />
-      </lineSegments>
+      <mesh geometry={geometry.borderLight} renderOrder={2}>
+        <meshBasicMaterial
+          color={HIGHLIGHT_EDGE_LIGHT}
+          side={2}
+          transparent
+          opacity={1}
+          depthTest={false}
+          depthWrite={false}
+          toneMapped={false}
+        />
+      </mesh>
+      <mesh geometry={geometry.borderDark} renderOrder={3}>
+        <meshBasicMaterial
+          color={HIGHLIGHT_EDGE_DARK}
+          side={2}
+          transparent
+          opacity={1}
+          depthTest={false}
+          depthWrite={false}
+          toneMapped={false}
+        />
+      </mesh>
     </group>
   )
 }

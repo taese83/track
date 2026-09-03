@@ -5,9 +5,10 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  buildHighlightBorders,
   buildHighlightGeometry,
-  buildHighlightOutline,
   buildHighlightSurface,
+  HIGHLIGHT_BORDER_WIDTH_CM,
   HIGHLIGHT_OUTLINE_LIFT_CM,
   HIGHLIGHT_SURFACE_LIFT_CM,
   isHighlightable,
@@ -100,40 +101,86 @@ describe('outerRingsOf', () => {
   })
 })
 
-describe('buildHighlightOutline', () => {
-  it('둘레가 닫힌다 — 옆 두 줄에 진입·진출 마구리 두 줄을 더한다', () => {
-    const count = 5
-    const geometry = buildHighlightOutline(bandOf([straightLane(0, count), straightLane(1, count)]))
+describe('buildHighlightBorders', () => {
+  it('옆줄에서 두 톤이 겹치지 않고 나란히 깔린다 — 밝은 쪽이 바깥, 어두운 쪽이 그 안쪽', () => {
+    // 폭 36(z −6~30)짜리 곧은 구간. 띠 폭 2면 밝은 띠는 가장자리~2, 어두운 띠는 2~4다.
+    // 마구리(진입·진출)는 폭 **전체**를 덮으므로 x로 걸러 옆줄만 본다.
+    const band = bandOf([straightLane(0, 4), straightLane(1, 4), straightLane(2, 4)])
+    const { light, dark } = buildHighlightBorders(band, 2)
 
-    // 선분 하나 = 정점 2 = float 6. 옆줄 2*(count-1) + 마구리 2
-    const segments = positionsOf(geometry).length / 6
-    expect(segments).toBe(2 * (count - 1) + 2)
+    const sideZs = (geometry: Parameters<typeof positionsOf>[0]) => {
+      const flat = positionsOf(geometry)
+      const out: number[] = []
+      for (let at = 0; at + 2 < flat.length; at += 3) {
+        if (flat[at]! > 5 && flat[at]! < 25) out.push(flat[at + 2]!)
+      }
+      return out
+    }
+
+    const lightZ = sideZs(light)
+    const darkZ = sideZs(dark)
+    // 바깥 가장자리에 닿는 것은 밝은 띠뿐이다
+    expect(Math.min(...lightZ)).toBeCloseTo(-6, 3)
+    expect(Math.max(...lightZ)).toBeCloseTo(30, 3)
+    // 어두운 띠는 그 안쪽 2~4 구간에만 있다(겹치지 않는다)
+    expect(Math.min(...darkZ)).toBeCloseTo(-4, 3)
+    expect(Math.max(...darkZ)).toBeCloseTo(28, 3)
   })
 
-  it('마구리가 진입·진출 양 끝을 잇는다 — 한쪽만 닫으면 구간의 끝이 열린 채 남는다', () => {
-    const lanes = [straightLane(0, 3)]
-    const flat = positionsOf(buildHighlightOutline(bandOf(lanes)))
-    const xs = flat.filter((_, index) => index % 3 === 0)
+  it('두 톤 모두 구간 **안쪽**에만 있다 — 바깥으로 내밀면 이웃 구간을 덮는다', () => {
+    const lanes = [straightLane(0, 5), straightLane(1, 5), straightLane(2, 5)]
+    const band = bandOf(lanes)
+    const outerLo = lanes[0]!.lo[0]!.z
+    const outerHi = lanes[2]!.hi[0]!.z
 
-    // 마지막 두 선분이 마구리다: 각각 같은 x에서 lo↔hi를 잇는다
-    const entry = flat.slice(flat.length - 12, flat.length - 6)
-    const exit = flat.slice(flat.length - 6)
-    expect(entry[0]).toBe(entry[3])
-    expect(exit[0]).toBe(exit[3])
-    expect(entry[0]).toBe(Math.min(...xs))
-    expect(exit[0]).toBe(Math.max(...xs))
+    for (const geometry of Object.values(buildHighlightBorders(band, 2))) {
+      const zs = positionsOf(geometry).filter((_, index) => index % 3 === 2)
+      expect(Math.min(...zs)).toBeGreaterThanOrEqual(outerLo - 1e-3)
+      expect(Math.max(...zs)).toBeLessThanOrEqual(outerHi + 1e-3)
+    }
   })
 
-  it('따로 놓인 레인은 레인마다 닫힌 고리를 갖는다', () => {
-    const count = 4
-    const band = bandOf([straightLane(0, count), straightLane(1, count)], { separated: true })
-    const segments = positionsOf(buildHighlightOutline(band)).length / 6
+  it('마구리가 있어 고리가 닫힌다 — 양 옆 2장 + 진입·진출 2장 = 띠 4장', () => {
+    const band = bandOf([straightLane(0, 6)])
+    // 띠 1장 = 표본 n개면 삼각형 2(n-1)개. 옆줄 2장은 n=6, 마구리 2장은 n=2
+    const triangles = positionsOf(buildHighlightBorders(band, 2).light).length / 3
+    expect(triangles).toBe((6 * 2) * 2 + (2 * 2) * 2)
+  })
 
-    expect(segments).toBe(2 * (2 * (count - 1) + 2))
+  it('따로 놓인 레인(FEAT-018)은 레인마다 자기 테두리를 갖는다', () => {
+    const band = bandOf([straightLane(0, 4), straightLane(1, 4)], { separated: true })
+    const one = bandOf([straightLane(0, 4)], { separated: true })
+
+    expect(positionsOf(buildHighlightBorders(band, 2).light).length).toBe(
+      positionsOf(buildHighlightBorders(one, 2).light).length * 2,
+    )
+  })
+
+  it('좁은 구간에서도 띠가 반대쪽을 넘지 않는다 — 넘으면 면이 접힌다', () => {
+    // 폭 12(z −6~6)인 레인 하나에 폭 8짜리 띠를 두 겹 요구한다(합 16 > 12)
+    const band = bandOf([straightLane(0, 4)], { separated: true })
+    const zs = positionsOf(buildHighlightBorders(band, 8).dark).filter(
+      (_, index) => index % 3 === 2,
+    )
+    expect(Math.min(...zs)).toBeGreaterThanOrEqual(-6 - 1e-3)
+    expect(Math.max(...zs)).toBeLessThanOrEqual(6 + 1e-3)
   })
 
   it('빈 레인이면 빈 버퍼를 낸다 — 호출자가 예외를 다루지 않게', () => {
-    expect(positionsOf(buildHighlightOutline(bandOf([])))).toHaveLength(0)
+    const { light, dark } = buildHighlightBorders(bandOf([]))
+    expect(positionsOf(light)).toHaveLength(0)
+    expect(positionsOf(dark)).toHaveLength(0)
+  })
+
+  it('기본 폭이 상수를 따른다', () => {
+    const band = bandOf([straightLane(0, 4), straightLane(1, 4), straightLane(2, 4)])
+    const zs = positionsOf(buildHighlightBorders(band).light).filter(
+      (_, index) => index % 3 === 2,
+    )
+    expect(Math.min(...zs) + HIGHLIGHT_BORDER_WIDTH_CM * 2).toBeCloseTo(
+      -6 + HIGHLIGHT_BORDER_WIDTH_CM * 2,
+      3,
+    )
   })
 })
 
@@ -154,10 +201,14 @@ describe('buildHighlightSurface', () => {
 })
 
 describe('buildHighlightGeometry', () => {
-  it('윤곽선이 면보다 높다 — 같은 높이면 자기 오버레이에 파묻혀 형태 채널이 사라진다', () => {
-    const { surface, outline } = buildHighlightGeometry(bandOf([straightLane(0, 4, 30)]))
+  it('테두리가 면보다 높다 — 같은 높이면 자기 오버레이에 파묻혀 형태 채널이 사라진다', () => {
+    const { surface, borderLight, borderDark } = buildHighlightGeometry(
+      bandOf([straightLane(0, 4, 30)]),
+    )
 
-    expect(Math.max(...heightsOf(outline))).toBeGreaterThan(Math.max(...heightsOf(surface)))
+    const top = Math.max(...heightsOf(surface))
+    expect(Math.max(...heightsOf(borderLight))).toBeGreaterThan(top)
+    expect(Math.max(...heightsOf(borderDark))).toBeGreaterThan(top)
     expect(HIGHLIGHT_OUTLINE_LIFT_CM).toBeGreaterThan(HIGHLIGHT_SURFACE_LIFT_CM)
   })
 
