@@ -98,7 +98,15 @@
     "TC-019-5",
     "TC-019-6",
     "TC-019-7",
-    "TC-019-8"
+    "TC-019-8",
+    "FEAT-020",
+    "TC-020-1",
+    "TC-020-2",
+    "TC-020-3",
+    "TC-020-4",
+    "TC-020-5",
+    "TC-020-6",
+    "TC-020-7"
   ],
   "constitution": {
     "substrate": {
@@ -330,7 +338,7 @@
     },
     {
       "scope": "src/widgets/track-canvas",
-      "rationale": "FEAT-006/007/008/009/011/015/017/019가 공유하는 3D 표면 — 이 여덟은 경계로 갈라지지 않으므로 순차화가 필요하다"
+      "rationale": "FEAT-006/007/008/009/011/015/017/019/020이 공유하는 3D 표면 — 이 아홉은 경계로 갈라지지 않으므로 순차화가 필요하다"
     },
     {
       "scope": "src/widgets/profile-strip",
@@ -419,7 +427,7 @@
           },
           {
             "path": "_workspace/01_plan/feature-plan/feature-list.md",
-            "sha256": "a22aa2468ffa652073d65f3f77abb5ec1cb14827b337b16086cdb95d2b4539f2"
+            "sha256": "c411c822ec8e31141b4d2cac0321edca053a34f0ba3c345288a7e731de8e52f3"
           },
           {
             "path": "_workspace/01_plan/feature-plan/specs-pipeline.md",
@@ -427,7 +435,7 @@
           },
           {
             "path": "_workspace/01_plan/feature-plan/specs-scene.md",
-            "sha256": "ea95766989152e095f1d464feced2e94a144e63ad7369c1cf1019668e6602a38"
+            "sha256": "9bd132caca8ad7121e8aed2f8f0b914fddafee22d6a6cc04c2fca751b1623dd8"
           },
           {
             "path": "_workspace/01_plan/feature-plan/specs-surfaces.md",
@@ -435,10 +443,10 @@
           },
           {
             "path": "_workspace/01_plan/feature-plan/traceability.md",
-            "sha256": "1289347315c1439f20a78568544fb9ad6c2400355b5e108fd040018c105d1d26"
+            "sha256": "c775374af624c08f09c429de7cbcafd7797ece70b0373e43e95d2ebf6e98a1d1"
           }
         ],
-        "sha256": "e5fd0aa635560b29c4cad369ff6f7619aff7498ad8566e8d3b2df0ef40e7f252"
+        "sha256": "40dedd1ebf290dcf90ebfed3e8226b888ca3af85736d833cead3ce1fa72ad053"
       },
       {
         "path": "_workspace/01_plan/tech-stack.md",
@@ -497,10 +505,10 @@
           },
           {
             "path": "_workspace/02_design/component-spec/widgets.md",
-            "sha256": "9e9ee6b92a6de032122cc0a8650e5ca64c4b45b0d16fa537245415b5a545e2f1"
+            "sha256": "69217788d685f9498189c08c3ce3b3cda3edbd9387ea71e3b3dd35c67f10341d"
           }
         ],
-        "sha256": "506d07ac327dcc610dbfc9d2c71db55a264950f54d4f2fc87637b2c703d102cb"
+        "sha256": "00bcfc476e8d159f86a2577ced0f35a7510362eadfa95a67c1b7b06ef5745205"
       },
       {
         "path": "_workspace/02_design/state-contract.md",
@@ -514,9 +522,9 @@
       {
         "path": "_workspace/02_design/solution-design.md",
         "present": true,
-        "sha256": "084c677ff60bdc72e5a2d87a62df25020363689ef10266e2d7e987bdd0ed8744"
+        "sha256": "b9e90550ec7731800ab909bd5cf892ba45bb5643ecf11d68fe297e92ae25c57e"
       }
     ],
-    "combined": "b07925a581574f1aaa006f616e3562b192843243a7b226f392bf9c57aba16917"
+    "combined": "a02fb0b057fc1908d9556e50f5c157c9f2052513a8f520e6f4f0416d86717917"
   }
 }

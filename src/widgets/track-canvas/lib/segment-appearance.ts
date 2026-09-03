@@ -30,10 +30,13 @@ const MID_LANE_LIFT = 14
 /** 가운데 레인 인덱스. 레인 3개의 한가운데다 */
 const MID_LANE = 1
 
+/** 음수 `amount`면 어둡게 한다 — 양끝을 모두 자른다(벽 색이 이 방향을 쓴다) */
 function lift(hex: string, amount: number): string {
   const value = Number.parseInt(hex.slice(1), 16)
   const channels = [(value >> 16) & 255, (value >> 8) & 255, value & 255]
-  return `#${channels.map((c) => Math.min(c + amount, 255).toString(16).padStart(2, '0')).join('')}`
+  return `#${channels
+    .map((c) => Math.min(Math.max(c + amount, 0), 255).toString(16).padStart(2, '0'))
+    .join('')}`
 }
 
 /**
@@ -57,4 +60,22 @@ export function surfaceColorOf(isSupported: boolean, direction: SegmentDirection
   if (direction === 'rise') return RISE_SURFACE
   if (direction === 'fall') return FALL_SURFACE
   return FLAT_SURFACE
+}
+
+/**
+ * 벽을 노면보다 얼마나 어둡게 할지(0~255, 채널별 감산). **새 유채색을 만들지 않는 것**이 이
+ * 방식의 요점이다 — 벽에 별도 색을 주면 화면의 유채색이 한 종류 늘고 편집기 팔레트(빨강·파랑·
+ * 청록·주황)와 겹칠 위험이 생긴다(하이라이트가 보라를 고른 이유와 같은 제약). 파생이면
+ * design-system §1의 "원본색으로 도면과 대조한다"가 벽으로 그대로 확장된다.
+ *
+ * 값은 잠정이며 캡처로 조정한다(ASSUMPTION H).
+ */
+const WALL_SHADE = -38
+
+/**
+ * 벽 색. **레인별 밝기 보정을 받지 않는다**(`laneSurfaceColorOf`와 다른 점) — 벽은 두 레인이
+ * 공유하므로 어느 쪽 보정을 따를지 정할 수 없다. 세그먼트 단위 색 하나다.
+ */
+export function wallColorOf(isSupported: boolean, direction: SegmentDirection): string {
+  return lift(surfaceColorOf(isSupported, direction), WALL_SHADE)
 }

@@ -249,14 +249,43 @@ test('TC-013-6 · 자동 재생이 미는 커서를 목록이 따라가되, 목�
   await expect
     .poll(async () => Number(await canvas.getAttribute('data-follow-order')), { timeout: 15_000 })
     .toBeGreaterThan(40)
+  // **order와 tabindex를 같은 순간에 읽는다.** 재생 중에는 `data-follow-order`(useFrame에서
+  // DOM에 동기로 쓴다)와 132행 목록의 roving 포커스(React 재렌더를 거친다) 사이에 몇 프레임
+  // 지연이 있다 — FEAT-012 라운드에 기록된 성질이고 FEAT-020(벽)이 렌더 비용을 올려 그 창이
+  // 넓어졌다. 먼저 order를 읽어 두고 나중에 그 행을 단언하면 커서가 이미 지나간 행을 검사하게
+  // 되어 영영 맞지 않는다. 한 번의 evaluate 안에서 둘을 함께 읽으면 그 경합이 사라진다.
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const order = document
+          .querySelector('[data-testid="track-canvas"]')
+          ?.getAttribute('data-follow-order')
+        return document
+          .querySelector(`[data-testid="section-row-${order}"]`)
+          ?.getAttribute('tabindex')
+      }),
+    )
+    .toBe('0')
+
   const reached = Number(await canvas.getAttribute('data-follow-order'))
-  await expect(page.getByTestId(`section-row-${reached}`)).toHaveAttribute('tabindex', '0')
   await expect.poll(() => rowIsInView(page, reached)).toBe(true)
 
   // 사용자가 목록 안에서 탐색을 시작하면(목록이 DOM 포커스 보유) 재생이 계속 커서를 밀어도
   // 그 행은 밀려나지 않는다 — code-reviewer 2026-08-31 지적의 회귀 테스트
-  const anchor = Math.max(reached - 8, 0)
-  await page.getByTestId(`section-row-${anchor}`).focus()
+  // **사용자가 실제로 들어오는 경로로 진입한다.** 임의 행에 `.focus()`만 걸면 DOM 포커스와
+  // 앱의 roving 상태(`focusedIndex`)가 어긋난 상태가 되는데, 사용자는 그 상태를 만들 수 없다 —
+  // Tab은 roving 행으로 들어가고 클릭은 `onSelect`를 거친다. 어긋난 상태에서는 목록이 포커스를
+  // 얻은 순간 roving effect가 DOM 포커스를 자기 행으로 되가져가므로, 테스트가 제품이 아니라
+  // 자기가 만든 모순을 재는 셈이 된다(2026-09-03, FEAT-020 라운드에서 드러남).
+  const roving = page.locator('[role="option"][tabindex="0"]')
+  await roving.focus()
+  for (let step = 0; step < 8; step += 1) await page.keyboard.press('ArrowUp')
+
+  // 방향키로 올라간 자리를 **읽어서** 기준으로 삼는다 — 몇 번째 행인지 계산해 두면 재생이
+  // 그 사이 커서를 민 만큼 어긋난다
+  const anchorTestId = await roving.getAttribute('data-testid')
+  const anchor = Number(anchorTestId?.replace('section-row-', ''))
+  expect(Number.isInteger(anchor)).toBe(true)
   await expect(page.getByTestId(`section-row-${anchor}`)).toBeFocused()
   const orderBefore = Number(await canvas.getAttribute('data-follow-order'))
   await expect

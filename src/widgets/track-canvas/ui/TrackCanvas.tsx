@@ -62,7 +62,8 @@ import {
 import type { MarkerPlacement } from '../lib/marker-geometry'
 import { LARGE_TRACK_NOTICE } from '../lib/perf-mitigation'
 import { markerShapeOf, segmentTextOf } from '../lib/segment-encoding'
-import { laneSurfaceColorOf, surfaceColorOf } from '../lib/segment-appearance'
+import { laneSurfaceColorOf, surfaceColorOf, wallColorOf } from '../lib/segment-appearance'
+import { buildWallGeometries, wallLinesOf } from '../lib/wall-geometry'
 import type { SceneLayout } from '../lib/scene-layout'
 
 /** 수직 화각. 초기 거리 계산(`initialOrbitFor`)과 같은 값을 써야 프레이밍이 맞는다 */
@@ -151,6 +152,12 @@ function TrackMesh({
       ),
     )
 
+    // FEAT-020 — 레인 경계의 5cm 벽. 색은 세그먼트 단위이며 레인별 밝기 보정을 받지 않는다
+    // (벽을 두 레인이 공유한다). 줄 수·방향은 `wall-geometry.ts`가 정한다.
+    const walls = buildWallGeometries(bands, (band) =>
+      wallColorOf(band.isSupported, byOrder.get(band.order)?.direction ?? 'none'),
+    )
+
     // FEAT-015 — 색 하나로 유형을 말하지 않는다. 형태(표식·파선)와 텍스트(라벨)를 더한다.
     const placements: MarkerPlacement[] = []
     const labels: { key: string; text: string; at: { x: number; y: number; z: number } }[] = []
@@ -180,6 +187,7 @@ function TrackMesh({
       placeholders: buildPlaceholderGeometry(layout.unsupportedPlaceholders),
       placeholderLabels: layout.unsupportedPlaceholders,
       surfaces,
+      walls,
       boundaries: buildBoundaryGeometry(bands),
       markers: buildMarkerGeometry(placements),
       dashed: buildDashedOutlineGeometry(
@@ -199,6 +207,7 @@ function TrackMesh({
   useEffect(
     () => () => {
       scene.surfaces.forEach((surface) => surface.geometry.dispose())
+      scene.walls.forEach((wall) => wall.geometry.dispose())
       scene.boundaries.dispose()
       scene.markers.dispose()
       scene.dashed.dispose()
@@ -213,6 +222,17 @@ function TrackMesh({
         <mesh key={surface.color} geometry={surface.geometry}>
           {/* 양면 렌더 — 레인 면은 두께가 없어 아래에서 보면 사라진다 */}
           <meshStandardMaterial color={surface.color} side={2} roughness={0.8} metalness={0} />
+        </mesh>
+      ))}
+
+      {/*
+        FEAT-020 — 레인 경계의 벽. 레인 면과 같은 재질·양면이다(두께가 없어 안쪽에서 보면
+        사라진다). 경계선(아래)보다 **먼저** 두는 것은 의미가 아니라 읽기 순서다 — 벽은 노면과
+        같은 성격의 형상이고 경계선·표식은 그 위에 얹는 표시다.
+      */}
+      {scene.walls.map((wall) => (
+        <mesh key={wall.color} geometry={wall.geometry}>
+          <meshStandardMaterial color={wall.color} side={2} roughness={0.85} metalness={0} />
         </mesh>
       ))}
 
@@ -591,6 +611,16 @@ export function TrackCanvas({ layout, elevated }: TrackCanvasProps) {
     return isHighlightable(band) ? band : null
   }, [bands, currentIndex, following])
 
+  /**
+   * 벽이 실제로 몇 줄 섰는가(FEAT-020). 3D는 픽셀만 남기므로 브라우저 검증이 "벽이 있다"를
+   * 확인할 방법이 없다 — `data-follow-order`·`data-highlight-order`와 같은 이유·같은 방식이다.
+   * 줄 수 판정 자체는 `wallLinesOf`가 정본이고 여기서는 세기만 한다.
+   */
+  const wallLineCount = useMemo(
+    () => bands.reduce((total, band) => total + wallLinesOf(band).length, 0),
+    [bands],
+  )
+
   const highlightAnchor = useMemo(
     () => (highlightBand === null ? null : anchorOf(highlightBand)),
     [highlightBand],
@@ -789,6 +819,7 @@ export function TrackCanvas({ layout, elevated }: TrackCanvasProps) {
       data-testid="track-canvas"
       data-render-state={ready ? 'ready' : 'pending'}
       data-segment-count={layout.segments.length}
+      data-wall-lines={wallLineCount}
       data-mitigated={layout.mitigation.mitigated}
       data-follow-mode={following}
       data-follow-playing={playing}
