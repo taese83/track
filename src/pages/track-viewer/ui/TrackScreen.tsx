@@ -28,7 +28,6 @@ import type { SceneLayout } from '@/widgets/track-canvas'
 
 import { buildScreenProfileModel } from '../lib/profile-model'
 
-import { EvidenceOverlay } from './EvidenceOverlay'
 
 export interface TrackScreenProps {
   layout: SceneLayout
@@ -191,7 +190,6 @@ export function TrackScreen({
         */}
         <div className="relative min-w-0 flex-1">
           <TrackCanvas layout={layout} elevated={elevated} />
-          <EvidenceOverlay elevated={elevated} totalPieceCount={totalPieceCount} />
         </div>
       </div>
 

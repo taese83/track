@@ -34,21 +34,10 @@
   --color-info: #60a5fa;
   --color-info-subtle: rgb(96 165 250 / 0.1);
 
-  /*
-   * 근거 등급 배지 (REQ-F-013 / FEAT-010). tokens.md §근거 등급 배지가 정본이며 이 값은
-   * text와 border 양쪽에 같이 쓴다. 색은 3차 채널이다 — 1차 텍스트 라벨, 2차 보더 형태
-   * (unknown만 점선), 3차가 색. 4등급 전부 유채색이면 rise/fall 팔레트와 충돌하므로
-   * 양끝(measured/inferred)만 유채색이다.
-   */
-  --color-badge-measured: #7ee2a8;
-  --color-badge-confirmed: #c9ced6;
-  --color-badge-inferred: #f5c15c;
-  --color-badge-unknown: #9aa1aa;
 
   --font-ui: system-ui, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
 
   --radius-base: 6px;
-  --radius-badge: 4px;
 
   --duration-fast: 120ms;
   --duration-base: 200ms;
@@ -85,33 +74,11 @@
   --color-info: #2563eb;
   --color-info-subtle: rgb(37 99 235 / 0.08);
 
-  /*
-   * tokens.md는 배지 값을 다크 기준으로만 적었다(§근거 등급 배지 표 머리글 "text/border
-   * (다크)"). 라이트용 hex를 새로 지어내지 않고, 같은 근거로 이미 승인된 라이트 토큰에
-   * 매핑한다 — measured=green 관례, inferred=amber(warning 인접) 관례, confirmed·unknown은
-   * 무채 2단계. 라이트 hex를 발명하면 승인받지 않은 디자인 결정이 된다.
-   */
-  --color-badge-measured: var(--color-success);
-  --color-badge-confirmed: var(--color-text-secondary);
-  --color-badge-inferred: var(--color-warning);
-  --color-badge-unknown: var(--color-text-disabled);
 
   color-scheme: light;
 }
 
 /* 모션 토큰은 선언 목적이 고정돼 있다: fast=인터랙션 전환, base=패널 개폐/배너 등장 */
-/*
- * forced-colors에서는 색 채널이 통째로 사라진다(design-system §5). 배지는 1차 텍스트
- * 라벨과 2차 보더 **형태**로 이미 판독되므로, 색만 시스템 색으로 승계시키고 실선/점선
- * 구분은 인라인 border-style로 그대로 남긴다.
- */
-@media (forced-colors: active) {
-  [data-evidence-badge] {
-    border-color: CanvasText;
-    color: CanvasText;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   :root {
     --duration-fast: 0ms;

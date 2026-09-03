@@ -89,7 +89,7 @@ index.html
   있고 `entities/track`·`widgets/app-header`·`shared/ui/*`에는 없다. 실제로 `Routes.tsx`는
   `@/pages/not-found`(배럴)와 `@/pages/track-viewer/ui/TrackViewerPage`(직접 경로)를 섞어 쓴다.
 - 디렉터리 이름이 kebab-case(`top-bar`, `load-track`)와 PascalCase(`AlertSlot`)로 갈린다.
-  component-spec도 이 갈림을 그대로 승계했다(`shared/ui/EvidenceBadge/` vs `shared/ui/legend/`).
+  component-spec도 이 갈림을 그대로 승계했다(`shared/ui/EvidenceBadge/` vs `shared/ui/legend/`). **두 디렉터리는 PC-018(2026-09-03)로 삭제됐다** — 대소문자 관례의 실증 사례가 하나 줄었다는 사실만 남는다.
 - **이 두 가지는 미결정으로 올리지 않는다** — 되돌리기 비용이 낮고 관례가 이미 문서(component-spec)에
   경로 단위로 고정돼 있어 개발이 그것을 따르면 된다. 다만 "일관된 관례가 있다"고 적는 것은
   거짓이므로 여기 그대로 남긴다.
@@ -185,7 +185,7 @@ FEAT 단위 티켓 14건이 병행될 예정이라 이 경계가 실사용된다
 | `src/entities/track` | 4단계 파이프라인 타입·순수 함수 정본 | `data-model.md`의 4타입이 여기 산다 — 단, 하위 배치는 OD-001에 종속 |
 | `src/features/load-track` | FEAT-001 클라이언트 | 실존 슬라이스 |
 | `src/shared/lib/track-cursor` | 공유 커서 owner | component-spec이 경로까지 고정 |
-| `src/shared/ui` | EvidenceBadge/AlertSlot/Legend/TopBar | component-spec이 경로까지 고정 |
+| `src/shared/ui` | AlertSlot/TopBar (EvidenceBadge·Legend는 PC-018로 삭제) | component-spec이 경로까지 고정 |
 | `src/widgets/track-canvas` | FEAT-006/007/008/009/011/015/017/019/020 3D 표면 | component-spec |
 | `src/widgets/profile-strip` | FEAT-012 owner | component-spec |
 | `src/widgets/section-list` | FEAT-013/014 대체 표현 | component-spec |
@@ -337,7 +337,7 @@ substrate의 두 키는 **하네스 기본값**(eslint/prettier)으로 채워지
     {"scope": "src/entities/track/lib/elevation", "rationale": "FEAT-005 고도 프로파일 · FEAT-016 웨이브 횡돌출(피스 내부 2D 경로 변형이라 같은 모듈이다) · FEAT-017 판 축을 프로파일 계약에 실어 렌더러로 내보낸다"},
     {"scope": "src/features/load-track", "rationale": "FEAT-001 클라이언트 슬라이스(실존)"},
     {"scope": "src/shared/lib/track-cursor", "rationale": "공유 커서. component-spec이 경로까지 고정했고 목록·캔버스·스트립·컨트롤이 모두 구독한다 — FEAT-013이 만들고 나머지는 소비만 한다"},
-    {"scope": "src/shared/ui", "rationale": "EvidenceBadge·AlertSlot·Legend·TopBar 공용 프리미티브"},
+    {"scope": "src/shared/ui", "rationale": "AlertSlot·TopBar 공용 프리미티브 — EvidenceBadge·Legend는 PC-018로 삭제"},
     {"scope": "src/widgets/track-canvas", "rationale": "FEAT-006/007/008/009/011/015/017/019/020이 공유하는 3D 표면 — 이 아홉은 경계로 갈라지지 않으므로 순차화가 필요하다"},
     {"scope": "src/widgets/profile-strip", "rationale": "FEAT-012 owner. FEAT-007은 이벤트 구독자일 뿐이다"},
     {"scope": "src/widgets/section-list", "rationale": "FEAT-013 owner이자 FEAT-014 대체 표현의 주 콘텐츠"},
@@ -349,7 +349,7 @@ substrate의 두 키는 **하네스 기본값**(eslint/prettier)으로 채워지
   "acceptanceSource": "feature-plan",
   "acceptanceRefs": [
     "FEAT-001", "FEAT-002", "FEAT-003", "FEAT-004", "FEAT-005", "FEAT-006", "FEAT-007",
-    "FEAT-008", "FEAT-009", "FEAT-010", "FEAT-011", "FEAT-012", "FEAT-013", "FEAT-014",
+    "FEAT-008", "FEAT-009", "FEAT-011", "FEAT-012", "FEAT-013", "FEAT-014",
     "TC-001-1", "TC-001-2", "TC-001-3", "TC-001-4", "TC-001-5", "TC-001-6", "TC-001-7", "TC-001-8", "TC-001-9",
     "TC-002-1", "TC-002-2", "TC-002-3", "TC-002-4", "TC-002-5",
     "TC-003-1", "TC-003-2", "TC-003-3", "TC-003-4", "TC-003-5", "TC-003-6",
@@ -359,7 +359,6 @@ substrate의 두 키는 **하네스 기본값**(eslint/prettier)으로 채워지
     "TC-007-1", "TC-007-2", "TC-007-3", "TC-007-4", "TC-007-5", "TC-007-6",
     "TC-008-1", "TC-008-2", "TC-008-3",
     "TC-009-1", "TC-009-2", "TC-009-3",
-    "TC-010-1", "TC-010-2", "TC-010-3", "TC-010-4", "TC-010-5",
     "TC-011-1", "TC-011-2", "TC-011-3", "TC-011-4",
     "TC-012-1", "TC-012-2", "TC-012-3", "TC-012-4", "TC-012-5", "TC-012-6",
     "TC-013-1", "TC-013-2", "TC-013-3", "TC-013-4", "TC-013-5",

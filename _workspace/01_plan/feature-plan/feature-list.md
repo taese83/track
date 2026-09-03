@@ -26,7 +26,7 @@ Page Group을 늘리지 않고 아래 Feature List의 `Screen` 열에 화면 상
 | FEAT-008 | 레인체인지 표현 | 좌우 차선 이동 구간을 시각적으로 구분한다 | Must | PAGE-001 | 3d-view, section-list | keep |
 | FEAT-018 | 레인보우 체인저(Lan2) 기하 | U턴형 레인체인지를 편집기 도면대로 레인별 명시 경로로 그린다 — 안쪽 레인은 작은 U턴, 나머지 둘은 한 칸 안으로 옮겨 큰 U턴 | Should | PAGE-001 | 3d-view | keep (2026-09-01 사용자 요청, D-049) |
 | FEAT-009 | 미지원 피스 노출 | 모르는 부분을 조용히 숨기지 않고 알려준다 | Must | PAGE-001 | 3d-view, section-list | keep |
-| FEAT-010 | 근거 등급 표기 (정직성) | 추정치와 실측치를 구분해 신뢰 범위를 알린다 | Must | PAGE-001 | 3d-view, profile-strip | keep |
+| FEAT-010 | 근거 등급 표기 (정직성) | 추정치와 실측치를 구분해 신뢰 범위를 알린다 | ~~Must~~ | PAGE-001 | ~~3d-view~~, profile-strip | **cut (2026-09-03 사용자 결정, PC-018)** — 3D 뷰 하단 바·범례 제거. 스트립 y축 "상대 스케일(실측 아님)"만 남으며 그것은 FEAT-012/TC-012-4가 낸다 |
 | FEAT-011 | 대형 트랙 성능 완화 | 큰 트랙에서도 조작감을 유지한다 | Must | PAGE-001 | 3d-view | keep |
 | FEAT-012 | 하단 프로파일 스트립 (표면) | 고도 변화를 한눈에 보고 원하는 지점으로 바로 이동한다 | Must | PAGE-001 | profile-strip | keep |
 | FEAT-013 | 텍스트 구간 목록 (표면) | 전체 구간을 목록으로 훑고 특정 지점으로 점프한다 | Must | PAGE-001 | section-list | keep |

@@ -64,11 +64,9 @@
 | TopBar("다른 트랙 보기" 고정) | shared/ui/top-bar | surface, border, primary |
 | UrlInputForm | features/load-track | surface, error, focus ring |
 | StatusBanner(부분 실패·완화·WebGL) | shared/ui/status-banner | semantic 4종 subtle-bg+solid |
-| EvidenceBadge(4등급) | shared/ui/evidence-badge | badge 4토큰 + caption 타입 |
 | ProfileStrip | widgets/profile-strip | rise/fall(채움), rise-fg/fall-fg(선), fail-segment, primary(현재 마커) |
 | TrackCanvas(3D 씬) | widgets/track-canvas | bg-canvas(clearColor), rise/fall(표면 원본색), fail-segment, warning(미지원 플레이스홀더), primary(하이라이트 면 오버레이) + 3D 전용 파생 highlight-edge-light/dark(이중 테두리, FEAT-019·PC-016) + rise/fall/flat의 어두운 파생(트랙 벽, FEAT-020·PC-017) |
 | SectionListTable | widgets/section-list | data 타입, tabular-nums, rise-fg/fall-fg |
 | ControlCluster(시점·재생·"탐색 속도") | widgets/view-controls | surface .88 오버레이, duration-fast |
-| Legend(범례) | shared/ui/legend | rise-fg/fall-fg + 아이콘 세트 |
 
 

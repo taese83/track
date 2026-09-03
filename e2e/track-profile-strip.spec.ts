@@ -157,34 +157,34 @@ test('TC-012-4 · y축의 "상대 스케일(실측 아님)" 표기가 항상 남
   await expect(note).toBeVisible()
 })
 
-// TC-010-4의 나머지 절. FEAT-010 라운드에서는 프로파일 그래프가 없어(FEAT-012 미착수)
-// 축 문구를 잴 대상 자체가 없었다 — 그래서 fix 티켓 #30이 열려 있었다.
+// TC-012-4 — y축의 "상대 스케일(실측 아님)" 표기.
 //
-// ⚠ Given 편차(정직 표기): 티켓 본문의 Given은 "고저차 시각 과장(수직 스케일 확대)이
-// 적용된 경우"인데, PC-008이 과장 배율을 3× → **1×**로 내려 현재 과장은 적용되지 않는다.
-// 여기서 재는 것은 Then의 두 절이다 — 축 표기가 개폐 내내 유지되는가, 범례 중앙이
-// 흔들리지 않는가. 과장이 다시 들어오면 그 조건에서 재확인해야 한다.
-test('TC-010-4 · 범례를 개폐해도 축 표기가 유지되고 범례 중앙이 흔들리지 않는다', async ({
+// 이 검사는 원래 TC-010-4(근거 등급)의 나머지 절이었고 범례 개폐 중에도 표기가 유지되는지를
+// 함께 쟀다. **PC-018(2026-09-03)로 근거 등급 바와 범례가 제거되면서 범례 절은 대상이
+// 사라졌고**, 축 표기는 FEAT-012 자기 계약(TC-012-4)으로 남는다 — 그리고 이제 그것이 화면에
+// 남은 **유일한 정직성 표기**다. 그래서 이 검사는 약해지는 것이 아니라 더 중요해진다.
+//
+// ⚠ Given 편차(정직 표기): 티켓 본문의 Given은 "고저차 시각 과장(수직 스케일 확대)이 적용된
+// 경우"인데, PC-008이 과장 배율을 3× → **1×**로 내려 현재 과장은 적용되지 않는다.
+// 과장이 다시 들어오면 그 조건에서 재확인해야 한다.
+test('TC-012-4 · y축 "상대 스케일(실측 아님)" 표기가 조건부 숨김 없이 상시 노출된다', async ({
   page,
 }) => {
   await openTrack(page)
 
   const note = page.getByTestId('profile-strip-scale-note')
-  const trigger = page.getByTestId('legend-trigger')
-  const overlayCenter = await centerX(page.getByTestId('evidence-overlay'))
-
   await expect(note).toBeVisible()
-  expect(Math.abs((await centerX(page.getByTestId('legend-root'))) - overlayCenter)).toBeLessThan(1)
+  await expect(note).toHaveText('상대 스케일(실측 아님)')
 
-  await trigger.click()
-  await expect(page.getByTestId('legend-panel')).toBeVisible()
+  // 스트립을 접었다 펴도 사라지지 않는다 — 접힘 상태에서도 40px 헤더는 남는다
+  await page.getByTestId('profile-strip-toggle').click()
   await expect(note).toBeVisible()
-  expect(Math.abs((await centerX(page.getByTestId('legend-root'))) - overlayCenter)).toBeLessThan(1)
+  await page.getByTestId('profile-strip-toggle').click()
+  await expect(note).toBeVisible()
 
-  await trigger.click()
-  await expect(page.getByTestId('legend-panel')).toBeHidden()
-  await expect(note).toBeVisible()
-  expect(Math.abs((await centerX(page.getByTestId('legend-root'))) - overlayCenter)).toBeLessThan(1)
+  // PC-018 회귀 가드: 제거된 표면이 되살아나지 않았는지 함께 본다
+  await expect(page.getByTestId('evidence-overlay')).toHaveCount(0)
+  await expect(page.getByTestId('legend-root')).toHaveCount(0)
 })
 
 test('스트립은 WebGL 대체 화면에서도 유지된다', async ({ page }) => {

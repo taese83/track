@@ -12,7 +12,6 @@
     "FEAT-007",
     "FEAT-008",
     "FEAT-009",
-    "FEAT-010",
     "FEAT-011",
     "FEAT-012",
     "FEAT-013",
@@ -66,11 +65,6 @@
     "TC-009-1",
     "TC-009-2",
     "TC-009-3",
-    "TC-010-1",
-    "TC-010-2",
-    "TC-010-3",
-    "TC-010-4",
-    "TC-010-5",
     "TC-011-1",
     "TC-011-2",
     "TC-011-3",
@@ -334,7 +328,7 @@
     },
     {
       "scope": "src/shared/ui",
-      "rationale": "EvidenceBadge·AlertSlot·Legend·TopBar 공용 프리미티브"
+      "rationale": "AlertSlot·TopBar 공용 프리미티브 — EvidenceBadge·Legend는 PC-018로 삭제"
     },
     {
       "scope": "src/widgets/track-canvas",
@@ -427,7 +421,7 @@
           },
           {
             "path": "_workspace/01_plan/feature-plan/feature-list.md",
-            "sha256": "c411c822ec8e31141b4d2cac0321edca053a34f0ba3c345288a7e731de8e52f3"
+            "sha256": "d847cd93938cc8934f2566be9b0cf9edf0bb77f95e2f834d14c24f707726cd92"
           },
           {
             "path": "_workspace/01_plan/feature-plan/specs-pipeline.md",
@@ -435,18 +429,18 @@
           },
           {
             "path": "_workspace/01_plan/feature-plan/specs-scene.md",
-            "sha256": "9bd132caca8ad7121e8aed2f8f0b914fddafee22d6a6cc04c2fca751b1623dd8"
+            "sha256": "0269cc2811eb5ba3b1d1a4e28cad27424b18aae79d89db3c97f412771a5a885d"
           },
           {
             "path": "_workspace/01_plan/feature-plan/specs-surfaces.md",
-            "sha256": "c6c6f4ef6ff877f0ded6c6760a2ac53c50df8b6bf21eb60462fea25edcc7bbc7"
+            "sha256": "abb64d65213fd58c5582a483f6699f5239e55751bdaf248cad5c1543c6792fce"
           },
           {
             "path": "_workspace/01_plan/feature-plan/traceability.md",
-            "sha256": "c775374af624c08f09c429de7cbcafd7797ece70b0373e43e95d2ebf6e98a1d1"
+            "sha256": "557d5e5c4521dc96f1a1d35de9905384f5973446dd406951697d5dbd2d56e407"
           }
         ],
-        "sha256": "40dedd1ebf290dcf90ebfed3e8226b888ca3af85736d833cead3ce1fa72ad053"
+        "sha256": "049632476bc0ff7cbe94d9f8166b12665ccdb054f031efaf7b2a4e6ce22cb299"
       },
       {
         "path": "_workspace/01_plan/tech-stack.md",
@@ -489,7 +483,7 @@
         "shards": [
           {
             "path": "_workspace/02_design/component-spec/INDEX.md",
-            "sha256": "bc37845e1ea17af6f8956ea62eed87fb26e29f5a6777d412181cfbee37ac95c2"
+            "sha256": "d1136c54be4c81c8373e213498bc640e1ad95c6cf7ff488f6db2f4d900ec2ccd"
           },
           {
             "path": "_workspace/02_design/component-spec/features.md",
@@ -501,14 +495,14 @@
           },
           {
             "path": "_workspace/02_design/component-spec/shared.md",
-            "sha256": "0e03476bc6f701e2ff34f7fe29790c90d6054ec7176dd44fe58836bf688a504b"
+            "sha256": "b0ff2650afedeccb1298a88c2836b6fe12868a84de92026dbe845a8b26919ec9"
           },
           {
             "path": "_workspace/02_design/component-spec/widgets.md",
             "sha256": "69217788d685f9498189c08c3ce3b3cda3edbd9387ea71e3b3dd35c67f10341d"
           }
         ],
-        "sha256": "00bcfc476e8d159f86a2577ced0f35a7510362eadfa95a67c1b7b06ef5745205"
+        "sha256": "d3d717e3c85b1ea29446581ee900cc3530d94bb7cb5efc7bc7c99e3473318893"
       },
       {
         "path": "_workspace/02_design/state-contract.md",
@@ -522,9 +516,9 @@
       {
         "path": "_workspace/02_design/solution-design.md",
         "present": true,
-        "sha256": "b9e90550ec7731800ab909bd5cf892ba45bb5643ecf11d68fe297e92ae25c57e"
+        "sha256": "9bfae940e06c9279d71669fe4c20cf0edaa85f676eadda8362965cb39c64712c"
       }
     ],
-    "combined": "a02fb0b057fc1908d9556e50f5c157c9f2052513a8f520e6f4f0416d86717917"
+    "combined": "80ac66d00519ea744d565e91db0b7b44af39a8d402cf3834e32ab98b88324a93"
   }
 }

@@ -89,27 +89,18 @@ interface TrackCursorApi {
 
 | Component | File Path | Props Interface | Description |
 |---|---|---|---|
-| EvidenceBadge | `src/shared/ui/EvidenceBadge/EvidenceBadge.tsx` | `EvidenceBadgeProps` | 4등급 배지, 고정폭, 상시 렌더(FEAT-010) |
 | AlertSlot | `src/shared/ui/AlertSlot/AlertSlot.tsx` | `AlertSlotProps` | 40px 상시 예약 슬롯, 레벨별 role/aria-live 전환 |
-| Legend | `src/shared/ui/legend/Legend.tsx` | `LegendProps` | rise/fall + 등급 4종 범례, 기본 접힘 |
 | TopBar | `src/shared/ui/top-bar/TopBar.tsx` | `TopBarProps` | 헤더 레이아웃 프리미티브(banner 컨테이너 + 우측 액션 슬롯), `widgets/app-header/AppHeader`가 조립해 소비(§widgets.md) |
 
 ## Component Detail Specs
 
-### EvidenceBadge — FEAT-010, REQ-F-013
+### ~~EvidenceBadge~~ · ~~Legend~~ — FEAT-010, REQ-F-013
 
-```ts
-type EvidenceGrade = 'measured' | 'confirmed' | 'inferred' | 'unknown'
+**PC-018(2026-09-03)로 제거됨** — 3D 뷰 하단 근거 등급 바와 범례를 사용자 결정으로 지웠다. `REQ-F-013`은 Won't로 내렸다. 두 컴포넌트는 이 오버레이가 유일한 소비자였으므로 함께 삭제했다(직접 고아, `minimal-change-contract` §7).
 
-interface EvidenceBadgeProps {
-  grade: EvidenceGrade   // 라벨은 내부 고정 매핑(실측/확인/추정/미확인) — override 불가, 오처방 방지
-}
-```
-
-- 채널 순서(design-system §근거 등급 배지, 협상 불가): **1차 텍스트 라벨 → 2차 보더 형태(measured/confirmed/inferred=실선, unknown=점선) → 3차 색**(`--color-badge-*`).
-- `min-width: 56px` 고정 토큰, 4등급 모두 동일 — 등급이 바뀌어도 주변 레이아웃이 흔들리지 않는다(layout-spec §Layout stability #3).
-- 상태: 상시 렌더 단일 상태뿐이다. 조건부 숨김·loading variant 없음 — 부모(SectionList 등)가 데이터 미도착 구간은 스켈레톤 행으로 대체하므로 배지 자체는 "데이터 있음"을 전제로 한다.
-- `forced-colors: active`: 보더 스타일이 `CanvasText` 계열로 승계되어 점선/실선 구분이 색 없이도 유지된다(design-system §5).
+되살릴 때 필요한 것: 4등급(measured/confirmed/inferred/unknown)의 **채널 순서**가 협상 불가였다 —
+1차 텍스트 라벨 → 2차 보더 형태(unknown만 점선) → 3차 색. 그리고 4등급 모두 같은 `min-width`를
+써서 등급이 바뀌어도 주변 레이아웃이 흔들리지 않아야 했다.
 
 ### AlertSlot — layout-spec §Layout stability #1
 
@@ -130,27 +121,6 @@ interface AlertSlotProps {
 - role/aria-live는 레벨에 따라 래퍼가 스스로 전환한다: `level==='error'` → `role="alert" aria-live="assertive"`, 그 외(`info`/`warning`) → `role="status" aria-live="polite"`.
 - `actionLabel`/`onAction`은 완전 실패의 "재시도" 1개 버튼(primary, hierarchy-actions §버튼 위계)에 쓰인다. 버튼이 없는 배너(부분 실패 상시 배너 등)는 두 prop을 생략.
 - 애니메이션: 등장/퇴장 `--duration-base`(200ms) 페이드만, transform 이동 없음(높이 불변 계약과 충돌 방지). `prefers-reduced-motion`에서 0ms.
-
-### Legend — FEAT-010 보조
-
-```ts
-interface LegendItem {
-  key: 'rise' | 'fall' | EvidenceGrade
-  label: string
-  icon: 'arrow-up' | 'arrow-down' | 'badge-outline'
-}
-
-interface LegendProps {
-  items: LegendItem[]
-  defaultOpen?: boolean   // 기본 false(접힘) — states.md "근거등급 범례(접이식, 기본 접힘)"
-}
-```
-
-- 트리거는 native `<button aria-expanded>` (원칙 12: 클릭 가능 요소는 native button). 패널 개폐 `--duration-base`.
-- 캔버스 오버레이 계약(design-system §4): 배경 불투명도 ≥0.88.
-- 위치 안정성 계약: 캔버스 오버레이의 가로 전체를 차지하는 정렬 레이어가 `display: grid; justify-items: center`로 중앙축을 소유하고, `Legend` 루트도 트리거와 패널을 `justify-items: center`로 같은 축에 놓는다. 정렬 레이어만 전체 폭을 차지하고 `Legend` 자체는 콘텐츠 폭을 사용한다.
-- 펼친 패널은 트리거 아래에서 중앙축을 기준으로 커지며, 패널 폭을 트리거의 좌측 시작점이나 flex 잔여 공간으로 계산하지 않는다. 따라서 접힘·펼침 전후 트리거의 중심 X 좌표와 `Legend` 루트의 중앙축은 동일하다.
-- 정렬 레이어는 비대화된 클릭 영역을 만들지 않도록 `pointer-events: none`, 실제 `Legend` 루트와 native button/패널은 `pointer-events: auto`로 둔다. 패널은 사용 가능한 인라인 폭을 넘지 않고 항목 줄바꿈을 허용해 320 CSS px 및 400% reflow에서도 중앙 정렬·내용·포커스 링이 잘리지 않는다.
 
 ### TopBar — 프리미티브
 
